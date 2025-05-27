@@ -1,3 +1,4 @@
+// src/pages/MainPage.tsx
 import React, { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -7,7 +8,6 @@ import Market from "./Market";
 import Community from "./Community";
 
 const MainPage: React.FC = () => {
-  // activeMenu 내부 값은 영어 키로 설정
   const [activeMenu, setActiveMenu] = useState("home");
 
   let content;

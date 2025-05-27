@@ -46,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({ activeMenu, setActiveMenu }) => {
         </div>
         {/* 우측: 로그인 버튼 -> Link를 사용하여 /login 경로로 이동 */}
         <div className="flex items-center justify-end">
-          <Link to="/login">
+          <Link to="/auth/login">
             <button className="transition-all duration-300 p-2 hover:bg-white/30 hover:rounded-full">
               <Icons name="user" className="w-8 h-8" />
             </button>
