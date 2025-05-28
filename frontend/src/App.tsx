@@ -5,7 +5,7 @@ import viteLogo from "/vite.svg";
 function App() {
   const [count, setCount] = useState(0);
 
-  return (
+  return ~(
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
       <div className="flex space-x-4">
         <a href="https://vite.dev" target="_blank">
