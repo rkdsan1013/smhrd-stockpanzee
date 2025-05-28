@@ -1,6 +1,6 @@
 # smhrd-stockpanzee
 
-# ![image](https://github.com/user-attachments/assets/32fa8dc2-860a-48af-aa48-13059568776b)
+![image](https://github.com/user-attachments/assets/32fa8dc2-860a-48af-aa48-13059568776b)
 
 # RAG, LLM 기반 투자 정보 요약 서비스
 
