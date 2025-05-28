@@ -1,5 +1,18 @@
 {
+<<<<<<< HEAD
   "devDependencies": {
     "prettier": "^3.5.3"
+=======
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cheerio": "^1.0.0",
+    "iconv-lite": "^0.6.3"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.35",
+    "@types/node": "^22.15.23",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+>>>>>>> 4c989fb (Add local project files to JJG branch)
   }
 }
