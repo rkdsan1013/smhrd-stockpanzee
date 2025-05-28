@@ -1,5 +1,7 @@
 # smhrd-stockpanzee
 
+# ![image](https://github.com/user-attachments/assets/32fa8dc2-860a-48af-aa48-13059568776b)
+
 # RAG, LLM 기반 투자 정보 요약 서비스
 
  **실시간 뉴스 수집 · AI 요약 · 감정 분석 · 커뮤니티 여론 반영까지 한 번에!**
