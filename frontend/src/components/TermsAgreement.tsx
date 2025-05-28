@@ -1,6 +1,6 @@
 // src/components/TermsAgreement.tsx
 import React, { useState } from "react";
-import termsContent from "./termsContent";
+import termsContent from "../data/termsContent";
 
 interface TermsAgreementProps {
   onAgree: () => void;
