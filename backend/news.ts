@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 
 // 🔒 네이버 API 인증 정보
-// 네이버 API 인증
 const NAVER_CLIENT_ID = "4ttiJ6J5Wy6NCRUuWa4f";
 const NAVER_CLIENT_SECRET = "9rpUKKTDAg";
 
