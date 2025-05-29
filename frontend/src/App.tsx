@@ -5,15 +5,27 @@ import MainPage from "./pages/MainPage";
 import AuthTemplate from "./pages/AuthTemplate";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
+import Home from "./pages/Home";
+import News from "./pages/News";
+import Market from "./pages/Market";
+import Community from "./pages/Community";
+import PostCreationPage from "./pages/PostCreationPage";
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainPage />} />
-        {/* 인증 관련 페이지: /auth 하위에서 공통 템플릿을 활용 */}
+        {/* 메인 레이아웃 하위 페이지 */}
+        <Route path="/" element={<MainPage />}>
+          <Route index element={<Home />} />
+          <Route path="news" element={<News />} />
+          <Route path="market" element={<Market />} />
+          <Route path="community" element={<Community />} />
+          {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
+          <Route path="post" element={<PostCreationPage />} />
+        </Route>
+        {/* 인증 관련 페이지 */}
         <Route path="/auth" element={<AuthTemplate />}>
-          {/* 기본은 로그인 폼 */}
           <Route index element={<LoginForm />} />
           <Route path="login" element={<LoginForm />} />
           <Route path="register" element={<RegisterForm />} />
