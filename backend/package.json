@@ -15,16 +15,21 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "jose": "^6.0.11",
     "mysql2": "^3.14.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.2",
-    "@types/node": "^22.15.21",
+    "@types/node": "^22.15.27",
     "@types/socket.io": "^3.0.1",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9.27.0",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",

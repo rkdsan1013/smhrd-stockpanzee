@@ -2,25 +2,33 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TermsAgreement from "./TermsAgreement";
+// 타입 전용(import type) 사용 – verbatimModuleSyntax 옵션 활성 시 필요합니다.
+import type { RegisterData } from "../services/authService";
+import authService from "../services/authService";
 
 const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: 약관 동의, 2: 회원가입 입력폼
 
-  // 회원가입 입력폼 상태
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  // 약관 동의 후 처리
   const handleAgreeForRegister = () => {
     setStep(2);
   };
 
-  // 회원가입 제출 처리 (임시 처리: 홈 이동)
-  const handleRegisterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleRegisterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    navigate("/");
+    const data: RegisterData = { username, email, password };
+    try {
+      const response = await authService.registerUser(data);
+      console.log(response.message);
+      navigate("/"); // 가입 성공 후 홈 이동
+    } catch (error: any) {
+      setErrorMsg(error.message || "회원가입 중 오류 발생");
+    }
   };
 
   if (step === 1) {
@@ -34,6 +42,7 @@ const RegisterForm: React.FC = () => {
     return (
       <div>
         <h2 className="text-center text-3xl font-bold mb-6">회원가입</h2>
+        {errorMsg && <p className="text-red-500">{errorMsg}</p>}
         <form onSubmit={handleRegisterSubmit} className="space-y-5">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-300">
@@ -43,7 +52,7 @@ const RegisterForm: React.FC = () => {
               id="username"
               type="text"
               placeholder="사용자 이름을 입력하세요"
-              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -56,7 +65,7 @@ const RegisterForm: React.FC = () => {
               id="email"
               type="email"
               placeholder="이메일을 입력하세요"
-              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -69,7 +78,7 @@ const RegisterForm: React.FC = () => {
               id="password"
               type="password"
               placeholder="비밀번호를 입력하세요"
-              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

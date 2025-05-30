@@ -1,29 +1,39 @@
 // src/components/LoginForm.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+// 타입 전용(import type) 사용
+import type { LoginData } from "../services/authService";
+import authService from "../services/authService";
 import Icons from "./Icons";
 import TermsAgreement from "./TermsAgreement";
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const [googleStep, setGoogleStep] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  // 이메일 로그인 처리 (임시 처리: 홈 이동)
-  const handleLocalLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLocalLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    navigate("/");
+    const data: LoginData = { email, password };
+    try {
+      const response = await authService.loginUser(data);
+      console.log(response.message);
+      navigate("/"); // 로그인 성공 후 홈 이동
+    } catch (error: any) {
+      setErrorMsg(error.message || "로그인 중 오류 발생");
+    }
   };
 
-  // Google 로그인 버튼 클릭 시 2단계 약관 동의로 전환
   const handleGoogleLoginClick = () => {
     setGoogleStep(true);
   };
 
-  // 약관 동의 후 Google 로그인 (임시 처리)
   const handleAgreeForGoogle = () => {
     setGoogleStep(false);
     navigate("/");
-    // 여기서 실제 Google OAuth 로직을 추가할 수 있습니다.
+    // 실제 Google OAuth 로직을 추가할 수 있음
   };
 
   const handleCancelGoogleTerms = () => {
@@ -42,6 +52,7 @@ const LoginForm: React.FC = () => {
   return (
     <div>
       <h2 className="text-center text-3xl font-bold mb-6">로그인</h2>
+      {errorMsg && <p className="text-red-500">{errorMsg}</p>}
       <form onSubmit={handleLocalLoginSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-300">
@@ -51,7 +62,9 @@ const LoginForm: React.FC = () => {
             id="email"
             type="email"
             placeholder="이메일을 입력하세요"
-            className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div>
@@ -62,7 +75,9 @@ const LoginForm: React.FC = () => {
             id="password"
             type="password"
             placeholder="비밀번호를 입력하세요"
-            className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
         </div>
         <button
