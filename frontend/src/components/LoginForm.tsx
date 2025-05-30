@@ -1,21 +1,48 @@
 // src/components/LoginForm.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icons from "./Icons";
+import TermsAgreement from "./TermsAgreement";
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const [googleStep, setGoogleStep] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // 이메일 로그인 처리 (임시 처리: 홈 이동)
+  const handleLocalLoginSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // 로그인 성공 후 예시로 홈으로 이동합니다.
     navigate("/");
   };
+
+  // Google 로그인 버튼 클릭 시 2단계 약관 동의로 전환
+  const handleGoogleLoginClick = () => {
+    setGoogleStep(true);
+  };
+
+  // 약관 동의 후 Google 로그인 (임시 처리)
+  const handleAgreeForGoogle = () => {
+    setGoogleStep(false);
+    navigate("/");
+    // 여기서 실제 Google OAuth 로직을 추가할 수 있습니다.
+  };
+
+  const handleCancelGoogleTerms = () => {
+    setGoogleStep(false);
+  };
+
+  if (googleStep) {
+    return (
+      <div>
+        <h2 className="text-center text-3xl font-bold mb-6">Google 계정 로그인 약관 동의</h2>
+        <TermsAgreement onAgree={handleAgreeForGoogle} onCancel={handleCancelGoogleTerms} />
+      </div>
+    );
+  }
 
   return (
     <div>
       <h2 className="text-center text-3xl font-bold mb-6">로그인</h2>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleLocalLoginSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-300">
             이메일
@@ -52,6 +79,7 @@ const LoginForm: React.FC = () => {
       </div>
       <button
         type="button"
+        onClick={handleGoogleLoginClick}
         className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-red-600 rounded hover:bg-red-700 transition-all duration-300"
       >
         <Icons name="google" className="w-6 h-6" />
