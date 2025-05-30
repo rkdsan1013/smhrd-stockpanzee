@@ -3,22 +3,21 @@ import * as cheerio from "cheerio";
 import fs from "fs";
 import path from "path";
 
-// 🔒 네이버 API 인증 정보
+// 🟩 네이버 API 인증 정보
 const NAVER_CLIENT_ID = "4ttiJ6J5Wy6NCRUuWa4f";
 const NAVER_CLIENT_SECRET = "9rpUKKTDAg";
 
-// 🛑 정치 키워드 목록
+// 🟥 정치 키워드 (제목/요약 필터링용)
 const politicalKeywords = [
-  "윤석열", "이재명", "민주당", "국민의힘", "총선", "대선", "대통령", "국회",
-  "의원", "정당", "공약", "후보", "선거", "정치", "정책"
+  "윤석열", "이재명", "민주당", "국민의힘", "총선", "대선", "대통령",
+  "국회", "의원", "정당", "공약", "후보", "선거", "정치", "정책"
 ];
 
-// 키워드 필터 함수 (title + description)
 function isPolitical(text: string): boolean {
   return politicalKeywords.some(keyword => text.includes(keyword));
 }
 
-// 기사에서 썸네일(og:image) 추출
+// 🖼️ 기사 링크에서 썸네일 가져오기 (og:image)
 async function getThumbnailFromArticle(url: string): Promise<string | null> {
   try {
     const res = await axios.get(url, {
@@ -32,7 +31,7 @@ async function getThumbnailFromArticle(url: string): Promise<string | null> {
   }
 }
 
-// 뉴스 수집 (정치 뉴스 제거)
+// 📰 뉴스 수집 (정치 뉴스 필터링 포함)
 async function fetchNewsFromNaver(query: string, display: number = 20) {
   const url = "https://openapi.naver.com/v1/search/news.json";
 
@@ -69,15 +68,26 @@ async function fetchNewsFromNaver(query: string, display: number = 20) {
   return newsList.filter(item => item !== null);
 }
 
-// JSON 저장
-function saveToJSON(data: any, filename: string) {
+// 💾 기존 뉴스와 병합 & 중복 제거 후 저장
+function saveMergedNews(newData: any[], filename: string) {
   const filePath = path.resolve(__dirname, filename);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-  console.log(`✅ 저장 완료: ${filePath}`);
+  let existing: any[] = [];
+
+  if (fs.existsSync(filePath)) {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    existing = JSON.parse(raw);
+  }
+
+  const existingTitles = new Set(existing.map(item => item.title));
+  const uniqueNews = newData.filter(item => !existingTitles.has(item.title));
+
+  const merged = [...existing, ...uniqueNews];
+
+  fs.writeFileSync(filePath, JSON.stringify(merged, null, 2), "utf-8");
+  console.log(`✅ 저장 완료 (${uniqueNews.length}개 추가됨): ${filePath}`);
 }
 
-// 실행
-fetchNewsFromNaver("주식", 20).then((newsList) => {
-  console.log(newsList);
-  saveToJSON(newsList, "stock_news_filtered.json");
+// 🏁 실행
+fetchNewsFromNaver("주식", 20).then(newsList => {
+  saveMergedNews(newsList, "stock_news_filtered.json");
 });
