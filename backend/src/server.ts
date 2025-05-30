@@ -4,12 +4,14 @@ import http from "http";
 import cors from "cors";
 import { setupSocket } from "./socket";
 import pool from "./config/db";
+import { createAssetsRouter } from "./routes/assets";
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/api/assets", createAssetsRouter());
 
 const server = http.createServer(app);
 setupSocket(server);
