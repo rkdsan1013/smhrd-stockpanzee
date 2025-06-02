@@ -12,7 +12,7 @@ export async function findUserByEmail(email: string): Promise<any[]> {
 }
 
 /**
- * 회원가입을 수행합니다.
+ * 회원가입을 위해 사용자를 등록합니다.
  */
 export async function registerUser(
   userUuidBuffer: Buffer,

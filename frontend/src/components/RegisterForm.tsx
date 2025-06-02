@@ -1,8 +1,7 @@
-// src/components/RegisterForm.tsx
+// /frontend/src/components/RegisterForm.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TermsAgreement from "./TermsAgreement";
-// 타입 전용(import type) 사용 – verbatimModuleSyntax 옵션 활성 시 필요합니다.
 import type { RegisterData } from "../services/authService";
 import authService from "../services/authService";
 
@@ -25,7 +24,7 @@ const RegisterForm: React.FC = () => {
     try {
       const response = await authService.registerUser(data);
       console.log(response.message);
-      navigate("/"); // 가입 성공 후 홈 이동
+      navigate("/"); // 가입 성공 후 홈으로 이동
     } catch (error: any) {
       setErrorMsg(error.message || "회원가입 중 오류 발생");
     }

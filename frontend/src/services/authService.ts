@@ -1,5 +1,5 @@
-// src/services/authService.ts
-import apiClient from "./apiClient";
+// /frontend/src/services/authService.ts
+import apiClient, { get, post, put, patch, remove } from "./apiClient";
 
 // 타입 전용(import type) 사용
 export type RegisterData = {
@@ -20,23 +20,20 @@ export interface AuthResponse {
 
 const registerUser = async (data: RegisterData): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/register", data);
-    return response.data;
+    const response = await post<AuthResponse>("/auth/register", data);
+    return response;
   } catch (error: any) {
-    throw error.response?.data || error.message;
+    throw error;
   }
 };
 
 const loginUser = async (data: LoginData): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>("/auth/login", data);
-    return response.data;
+    const response = await post<AuthResponse>("/auth/login", data);
+    return response;
   } catch (error: any) {
-    throw error.response?.data || error.message;
+    throw error;
   }
 };
 
-export default {
-  registerUser,
-  loginUser,
-};
+export default { registerUser, loginUser };

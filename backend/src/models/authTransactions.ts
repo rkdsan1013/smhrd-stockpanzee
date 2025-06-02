@@ -3,7 +3,7 @@ import pool from "../config/db";
 import { INSERT_USER, INSERT_USER_PROFILE } from "./authQueries";
 
 /**
- * 회원가입 시 users와 user_profiles 테이블에 동시에 데이터를 삽입하는 트랜잭션 함수
+ * 회원가입 시 users와 user_profiles 테이블에 데이터를 삽입하는 트랜잭션
  */
 export async function registerUserTransaction(
   userUuidBuffer: Buffer,

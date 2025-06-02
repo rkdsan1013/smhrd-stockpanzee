@@ -1,7 +1,6 @@
-// src/components/LoginForm.tsx
+// /frontend/src/components/LoginForm.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// 타입 전용(import type) 사용
 import type { LoginData } from "../services/authService";
 import authService from "../services/authService";
 import Icons from "./Icons";
@@ -20,7 +19,7 @@ const LoginForm: React.FC = () => {
     try {
       const response = await authService.loginUser(data);
       console.log(response.message);
-      navigate("/"); // 로그인 성공 후 홈 이동
+      navigate("/"); // 로그인 성공 후 홈으로 이동
     } catch (error: any) {
       setErrorMsg(error.message || "로그인 중 오류 발생");
     }
@@ -33,7 +32,7 @@ const LoginForm: React.FC = () => {
   const handleAgreeForGoogle = () => {
     setGoogleStep(false);
     navigate("/");
-    // 실제 Google OAuth 로직을 추가할 수 있음
+    // 실제 Google OAuth 로직 추가 가능
   };
 
   const handleCancelGoogleTerms = () => {

@@ -3,19 +3,18 @@ import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
-import { setupSocket } from "./socket";
-import pool from "./config/db";
+import { setupSocket } from "./socket"; // WebSocket 관련 설정 (구현되어 있다 가정)
 import authRoutes from "./routes/auth";
 
 dotenv.config();
 
 const app = express();
 
-// CORS 설정: 클라이언트 오리진 명시 및 credentials 허용
+// CORS 설정 (예: 프론트엔드 오리진을 지정)
 app.use(
   cors({
-    origin: "http://localhost:5173", // 클라이언트 오리진
-    credentials: true, // 쿠키 등 자격 증명 정보를 허용
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
   }),
 );
 
