@@ -26,10 +26,10 @@ const axiosInstance = axios.create({
   timeout: 15000,
 });
 
-// 요청 인터셉터 - 토큰 헤더 추가
+// 요청 인터셉터: 토큰이 있는 경우 기본 Authorization 헤더로 추가
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    config.headers = config.headers || {}; // headers 초기화
+    config.headers = config.headers || {};
     const token = window.localStorage.getItem("token");
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
@@ -39,7 +39,7 @@ axiosInstance.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error),
 );
 
-// 응답 인터셉터 - 에러 메시지 통일 및 ApiError 반환
+// 응답 인터셉터: 에러 메시지 통일 및 ApiError 반환
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -60,7 +60,7 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-// 공통 요청 함수 (DRY 적용)
+// 공통 요청 함수 (DRY 원칙 적용)
 const request = async <T>(
   method: "get" | "post" | "put" | "patch" | "delete",
   url: string,
