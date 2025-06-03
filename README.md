@@ -34,14 +34,19 @@
 
 ---
 
-## 기술 스택
+## 🛠️ 사용 언어 및 도구
 
-| 구분 | 기술 |
-|------|------|
-| **Frontend** | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white&style=for-the-badge) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=for-the-badge) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white&style=for-the-badge) ![WebSocket](https://img.shields.io/badge/WebSocket-010101?logo=websocket&logoColor=white&style=for-the-badge) |
-| **Backend** | ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white&style=for-the-badge) ![Express.js](https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white&style=for-the-badge) ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white&style=for-the-badge) ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge) ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=githubactions&logoColor=white&style=for-the-badge) |
-| **AI / 분석 서버** | ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=for-the-badge) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white&style=for-the-badge) ![LangChain](https://img.shields.io/badge/LangChain-000000?logo=data&logoColor=white&style=for-the-badge) ![GPT-4.1mini](https://img.shields.io/badge/OpenAI%20GPT--4.1mini-412991?logo=openai&logoColor=white&style=for-the-badge) ![RAG](https://img.shields.io/badge/RAG-FF5733?logo=data&logoColor=white&style=for-the-badge) |
-| **UI/UX & Design** | ![Figma](https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white&style=for-the-badge) |
+| 구분                   | 기술 스택                                                                                             |
+|------------------------|--------------------------------------------------------------------------------------------------------|
+| **사용 언어**            | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)       |
+| **라이브러리 / 프레임워크** | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white) ![Express.js](https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white) |
+| **인증 / 보안**          | ![JWT](https://img.shields.io/badge/JWT-000000?logo=JSON%20web%20tokens&logoColor=white)             |
+| **개발 도구**            | ![VSCode](https://img.shields.io/badge/VSCode-007ACC?logo=visual-studio-code&logoColor=white)       |
+| **서버 환경**            | ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white) ![WebSocket](https://img.shields.io/badge/WebSocket-010101?logo=websocket&logoColor=white) |
+| **데이터베이스**         | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)                      |
+| **협업 도구**            | ![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white) ![Notion](https://img.shields.io/badge/Notion-000000?logo=notion&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white) ![Hancom](https://img.shields.io/badge/Hancom_Docs-0078D4?logo=microsoftword&logoColor=white) |
+| **배포 / 인프라**        | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Naver Cloud](https://img.shields.io/badge/Naver_Cloud_Platform-03C75A?logo=naver&logoColor=white) |
+
 
 ### 외부 API
 - `SERP Finance News API` (뉴스 수집)
