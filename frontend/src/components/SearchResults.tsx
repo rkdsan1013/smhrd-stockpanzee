@@ -22,7 +22,7 @@ interface SearchResultsProps {
 const SearchResults: FC<SearchResultsProps> = ({ searchTerm }) => {
   if (!searchTerm.trim()) return null;
 
-  // 더미 데이터 필터링
+  // 검색어와 매칭되는 항목 필터링
   const results = dummyAssets.filter(
     (asset) =>
       asset.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,6 +35,8 @@ const SearchResults: FC<SearchResultsProps> = ({ searchTerm }) => {
         results.map((asset) => (
           <div
             key={asset.id}
+            // 항목 클릭 시 임시 alert 발생
+            onClick={() => alert(`Clicked: ${asset.symbol} - ${asset.name}`)}
             className="px-4 py-2 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300 cursor-pointer"
           >
             <div className="font-semibold text-gray-900">
