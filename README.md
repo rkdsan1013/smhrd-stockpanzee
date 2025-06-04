@@ -29,7 +29,7 @@
 | 뉴스 보기 | 실시간 수집된 뉴스 요약 및 감정 분석 결과 표시 |
 | 실시간 주식 차트 | TradingView API 연동 |
 | 관심 종목 알림 | 키워드/종목 기반 맞춤형 알림 설정 |
-| 커뮤니티 여론 분석 | Reddit 및 X(Twitter) 기반 투자 심리 추정 |
+| 커뮤니티 여론 분석 | Reddit 기반 투자 심리 추정 |
 | 원문 링크 및 기업 정보 제공 | 뉴스 원문, 시가총액, 재무정보 등 부가 데이터 제공 |
 
 ---
@@ -49,11 +49,12 @@
 
 
 
-### 외부 API
-- `SERP Finance News API` (뉴스 수집)
-- `TradingView API` (차트 데이터)
-- `Reddit API`, `X API` (여론 수집)
-- `yfinance`, `Alpha Vantage`, `Coindesk`, 등
+### 외부 API (데이터 수집)
+- 국내 : 네이버 오픈 API, 네이버 금융 크롤링
+- 해외 : Finnhub Stock API, Alpha Vantage API, 크롤링
+- 암호화폐 : CoinDesk API, CoinGecko API
+- 차트정보 : TradingView API, 한국투자증권 Open API
+- 커뮤니티 반응 : Reddit API
 
 ---
 
@@ -83,10 +84,10 @@ docker-compose up --build
 ```
 팀 소개 - 팬지's(Panzee's)
 이름	역할
-조성근	PM, 산출물 관리, 데이터 모델링
-김현우	데이터 수집, DB, 프론트엔드, 백엔드
-서강산	백엔드, 프론트엔드, DB, 데이터 수집
-주재건	프론트엔드, 백엔드, 모델링, 데이터 수집
+조성근	PM, 서버배포, 산출문서
+김현우	해외 파트, Full Stack, DB
+서강산  암호화폐 파트, Full Stack, Git관리
+주재건	국내 파트, Full Stack, 발표
 ```
 ---
 ```
@@ -101,6 +102,7 @@ docker-compose up --build
 라이선스
 본 프로젝트는 MIT License를 따릅니다.
 ```
+
 
 
 
