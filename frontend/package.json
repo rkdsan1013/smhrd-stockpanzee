@@ -3,6 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "overrides": {
+    "react-quill": {
+      "peerDependencies": {
+        "react": "^16 || ^17 || ^18 || ^19"
+      }
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,8 +18,10 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.7",
+    "quill": "^2.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-quill": "^2.0.0",
     "react-router-dom": "^7.6.1",
     "tailwindcss": "^4.1.7"
   },

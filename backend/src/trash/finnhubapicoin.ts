@@ -13,7 +13,7 @@ interface Ticker {
   market: { name: string };
 }
 
-const COINS_FILE = "./binance_all_listed_coins.json";
+const COINS_FILE = "./binance_all_listed_coin2.json";
 
 async function fetchBinanceAllCoins(): Promise<void> {
   // Binance 거래쌍 목록 요청 (모든 코인 거래쌍 포함)
@@ -33,8 +33,8 @@ async function fetchBinanceAllCoins(): Promise<void> {
 
   // name, symbol, market 형식으로 가공
   const formatted = listedCoins.map((coin) => ({
-    name: coin.name,
     symbol: coin.symbol.toUpperCase(),
+    name: coin.name,
     market: "Binance",
   }));
 

@@ -1,0 +1,1652 @@
+[
+  {
+    "symbol": "AAVE",
+    "name": "Aave",
+    "market": "Binance"
+  },
+  {
+    "symbol": "S",
+    "name": "Agent S",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "AirDAO bridged USDC (AirDAO)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Alcor IBC Bridged USDT (WAX)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Allbridge Bridged SOL (Near Protocol)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ANIME",
+    "name": "A New Internet Money Era",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ANIME",
+    "name": "Animecoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ANIME",
+    "name": "Anime",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ANIME",
+    "name": "Animefication",
+    "market": "Binance"
+  },
+  {
+    "symbol": "APT",
+    "name": "Aptos",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ARB",
+    "name": "Arbitrum",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Arbitrum Bridged WBTC (Arbitrum One)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ARB",
+    "name": "ARB Protocol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Areon Bridged USDT (Areon Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "AVAX",
+    "name": "Avalanche",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Avalanche Bridged WBTC (Avalanche)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "AVAX",
+    "name": "Avalanche (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Based Pepe",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BTC",
+    "name": "batcat",
+    "market": "Binance"
+  },
+  {
+    "symbol": "AVAX",
+    "name": "Beam Bridged AVAX (Beam)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Beam Bridged USDC (Beam)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Beam Bridged USDT (Beam)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Berachain Bridged WBTC (Berachain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BNB",
+    "name": "Bifrost Bridged BNB (Bifrost)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Bifrost Bridged ETH (Bifrost)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bifrost Bridged USDC (Bifrost)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Binance Bridged USDC (BNB Smart Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BNB",
+    "name": "BNB",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BNB",
+    "name": "Binance Coin (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "AVAX",
+    "name": "Binance-Peg Avalanche",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ADA",
+    "name": "Binance-Peg Cardano",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Binance-Peg Dogecoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LTC",
+    "name": "Binance-Peg Litecoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEAR",
+    "name": "Binance-Peg NEAR Protocol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOT",
+    "name": "Binance-Peg Polkadot",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Binance-Peg SOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "XRP",
+    "name": "Binance-Peg XRP",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BTC",
+    "name": "Bitcoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TAO",
+    "name": "Bittensor",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BTC",
+    "name": "BlackrockTradingCurrency",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "BOB Network Bridged USDT (BOB Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Bridged Binance-Peg Ethereum (opBNB)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "CRV",
+    "name": "Bridged Curve DAO Token (Stargate)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "Bridged MAGA (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (BEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (Fuse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (Manta Pacific)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (opBNB)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (Scroll)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (StarkGate)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USDC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USDC (Chainport)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USDC (Core)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USDC (Immutable zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (Manta Pacific)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (Scroll)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (StarkGate)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged USDT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged USDT (Core)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Immutable Toolkit Bridged USDT (Immutable zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged WBTC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped Bitcoin (BOB Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped Bitcoin (Manta Pacific)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped Bitcoin (Scroll)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped Bitcoin (StarkGate)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped Bitcoin (Worldchain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Bridged Wrapped BTC (BEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Bridged Wrapped Ether (Eclipse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Bridged Ether (StarkGate)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ADA",
+    "name": "Cardano",
+    "market": "Binance"
+  },
+  {
+    "symbol": "MASK",
+    "name": "catwifmask",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Celer Bridged USDC (Astar)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Celer Bridged USDC (Conflux)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Celer Bridged USDC (Oasys)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Celer Bridged USDT (Conflux)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Celer Bridged WBTC (Conflux)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LINK",
+    "name": "Chainlink",
+    "market": "Binance"
+  },
+  {
+    "symbol": "COMP",
+    "name": "Compound",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WCT",
+    "name": "WalletConnect Token",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Cronos Bridged USDC (Cronos)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Cronos Bridged USDT (Cronos)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Cronos Bridged WBTC (Cronos)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Cronos zkEVM Bridged USDC (Cronos zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Cronos zkEVM Bridged WBTC (Cronos zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "CRV",
+    "name": "Curve DAO",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DEGO",
+    "name": "Dego Finance",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Department of Gov Efficiency",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Department Of Government Efficiency",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Department Of Government Efficiency",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Department Of Government Efficiency",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DEXE",
+    "name": "DeXe",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Dogecoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOGE",
+    "name": "Doge on Pulsechain",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "dogwifhat",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "DogWifHat",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "DOGWIFHOOD",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "DuckChain Bridged USDT (DuckChain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Eclipse Bridged USDC (Eclipse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "EDU Chain Bridged USDC (EDU Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "EDU Chain Bridged USDT (EDU Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "El Sapo Pepe",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Energi Bridged USDC (Energi)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ENA",
+    "name": "Ethena",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Ethereum (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETHFI",
+    "name": "Ether.fi",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Fantom Bridged WBTC (Fantom)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "FDUSD",
+    "name": "First Digital USD",
+    "market": "Binance"
+  },
+  {
+    "symbol": "FLOKI",
+    "name": "FLOKI",
+    "market": "Binance"
+  },
+  {
+    "symbol": "FLOKI",
+    "name": "Flokiwifhat",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (Force Bridge)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Fraxtal Bridged USDC (Fraxtal)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Fuse Bridged WBTC (Fuse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TAO",
+    "name": "Fusotao",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Gnosis xDAI Bridged USDC (Gnosis)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Gnosis xDai Bridged USDT (Gnosis)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Gnosis xDai Bridged WBTC (Gnosis Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "HAMSTER WIF HAT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Harmony Horizen Bridged USDC (Harmony)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "XRP",
+    "name": "HarryPotterObamaPacMan8Inu",
+    "market": "Binance"
+  },
+  {
+    "symbol": "HBAR",
+    "name": "Hedera",
+    "market": "Binance"
+  },
+  {
+    "symbol": "HUMA",
+    "name": "Huma Finance",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOT",
+    "name": "Hyperbridge Bridged DOT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Hyperlane Bridged SOL (Eclipse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "IBC Bridged USDC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "IBC Bridged USDT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Skale IMA Bridged USDC (Skale)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Immutable zkEVM Bridged ETH",
+    "market": "Binance"
+  },
+  {
+    "symbol": "INIT",
+    "name": "Inite",
+    "market": "Binance"
+  },
+  {
+    "symbol": "INIT",
+    "name": "Initia",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ICP",
+    "name": "Internet Computer",
+    "market": "Binance"
+  },
+  {
+    "symbol": "JUP",
+    "name": "Jupiter Project",
+    "market": "Binance"
+  },
+  {
+    "symbol": "JUP",
+    "name": "Jupiter",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Kaia Bridged USDT (Kaia)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "KAITO",
+    "name": "KAITO",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Kroma Bridged USDC (Kroma)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Kroma Bridged USDT (Kroma)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Kucoin Bridged USDC (KuCoin Community Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "KCC Bridged USDT (Kucoin Community Chain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "L2 Standard Bridged USDT (Base)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Laika Bridged ETH (Laika)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Laika Bridged USDC (Laika)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Larissa Bridged USDT (Larissa)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USDC (Etherlink)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged USDT (Etherlink)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "LayerZero Bridged WBTC (Soneium)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Lens Bridged USDC (Lens)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LINK",
+    "name": "Linea Bridged LINK (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Linea Bridged PEPE (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "UNI",
+    "name": "Linea Bridged UNI (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Linea Bridged WBTC (Linea)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LINK",
+    "name": "Link on Sol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Lisk Bridged USDT (Lisk)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Lisk Bridged Wrapped Bitcoin (Lisk)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LTC",
+    "name": "Litecoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ME",
+    "name": "Literally Me",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LPT",
+    "name": "Livepeer",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "MAGA",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ME",
+    "name": "Magic Eden",
+    "market": "Binance"
+  },
+  {
+    "symbol": "MKR",
+    "name": "Maker",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Mantle Bridged USDC (Mantle)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Mantle Bridged USDT (Mantle)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Mapped USDT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "MASK",
+    "name": "Mask Network",
+    "market": "Binance"
+  },
+  {
+    "symbol": "MASK",
+    "name": "MaskNumber",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Massa Bridged USDC (Massa)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "Meme TrumpCoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Merlin Chain Bridged Wrapped BTC (Merlin)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Meter Passport Bridged USDC (Meter)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Metis Bridged WBTC (Metis Andromeda)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Mode Bridged USDC (Mode)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Mode Bridged USDT (Mode)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Mode Bridged WBTC (Mode)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "MoonTrump",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Morph L2 Bridged USDC (Morph L2)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Morph L2 Bridged USDT (Morph L2)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Most Bridged USDC (Aleph Zero)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Multichain Bridged USDC (Dogechain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Multichain Bridged USDC (Fantom)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Multichain Bridged USDC (KardiaChain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Multichain Bridged USDC (Kava)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Multichain Bridged USDC (Moonbeam)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Multichain Bridged WBTC (Energi)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Multichain Bridged WBTC (Milkomeda)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Multichain Bridged WBTC (Moonriver)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEAR",
+    "name": "NEAR Protocol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro on ETH",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NEIRO",
+    "name": "Neiro on Tron",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "NeonPass Bridged SOL (Neon EVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "NeonPass Bridged USDC (Neon)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "NEWPEPE",
+    "market": "Binance"
+  },
+  {
+    "symbol": "NXPC",
+    "name": "Nexpace",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Next Gen PEPE",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Nomad Bridged USDC (Moonbeam)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Nova Merged ETH (zkLink)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Nova Merged USDT (zkLink)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Nova Merged USDC (zkLink)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Arbitrum Bridged USDC (Arbitrum Nova)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "Official Trump",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ONDO",
+    "name": "Ondo",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Optimism Bridged WBTC (Optimism)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ORDI",
+    "name": "ORDI",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ARB",
+    "name": "Osmosis allARB",
+    "market": "Binance"
+  },
+  {
+    "symbol": "BTC",
+    "name": "Osmosis allBTC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "Osmosis allETH",
+    "market": "Binance"
+  },
+  {
+    "symbol": "LINK",
+    "name": "Osmosis allLINK",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Osmosis allPEPE",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Osmosis allSOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TON",
+    "name": "Osmosis allTON",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Osmosis allUSDT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Parex Bridged USDT (Parex)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PAXG",
+    "name": "PAX Gold",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PNUT",
+    "name": "Peanut",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PNUT",
+    "name": "Peanut the Squirrel",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PENDLE",
+    "name": "Pendle",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PENGU",
+    "name": "Penguiana",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPE 0x69 ON BASE",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "The Original Pepe",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe 2nd Chance",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPE BLACK",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPE (Ordinals)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPECOIN on SOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PepeCoin on Solana",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe CTO",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPE GOLD",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PEPEGOLD",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe King Prawn",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe on Base",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe on Solana",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "PepeSol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe on SOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe (Solana)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PEPE",
+    "name": "Pepe Community",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PNUT",
+    "name": "Pnut",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOT",
+    "name": "Polkadot",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Polygon Bridged USDT (Polygon)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Polygon Bridged WBTC (Polygon POS)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Polygon Hermez Bridged USDC (Polygon zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Polygon Hermez Bridged USDT (Polygon zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Polygon Hermez Bridged USDT (x Layer)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Polygon zkEVM Bridged WBTC (Polygon zkEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "PENGU",
+    "name": "Pudgy Penguins",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Pundi AIFX Omnilayer Bridged USDT (Pundi AIFX Omnilayer)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Q Bridged USDC (Q Mainnet)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Rainbow Bridged USDC (Aurora)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Rainbow Bridged WBTC (Aurora)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Rainbow Bridged WBTC (Near Protocol)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "RENDER",
+    "name": "Render",
+    "market": "Binance"
+  },
+  {
+    "symbol": "XRP",
+    "name": "XRP",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "RSS3 Bridged USDC (RSS3)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Saga Bridged USDC (Saga)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Saga Bridged USDT (Saga)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Sanko Bridged USDC (Sanko)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Shido Bridged USDC (Shido)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "ShimmerBridge Bridged USDT (ShimmerEVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Skale IMA Bridged WBTC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Solana",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Wormhole Bridged SOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Soneium Bridged USDT (Soneium)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "S",
+    "name": "Sonic",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOPH",
+    "name": "SophiaVerse",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOPH",
+    "name": "Sophon",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Stargate Bridged USDT (Iota EVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Stargate Bridged USDT (Flare Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Stargate Bridged USDT (Fuse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Step Bridged WBTC (Step Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SUI",
+    "name": "Sui",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Sui Bridged USDT (Sui)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Superseed Bridged USDC (Superseed)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "SX Rollup Bridged USDC (SX Rollup)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Symbiosis Bridged USDC (Bahamut)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Symbiosis Bridged USDT (Bahamut)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Synapse Bridged USDC (Canto)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Synapse Bridged USDC (Elastos)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SYRUP",
+    "name": "Maple Finance",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Taiko Bridged USDC (Taiko)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TAO",
+    "name": "Tao Meme",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Taraxa Bridged USDT (Taraxa)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRB",
+    "name": "Tellor Tributes",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Tether",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Bridged Tether (PulseChain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Wormhole Bridged USDT (Sui)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TAO",
+    "name": "The Anthropic Order",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "The Infinite Garden",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TON",
+    "name": "Toncoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "ETH",
+    "name": "The Ticker Is ETH",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Thundercore Bridged USDC (Thundercore)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Thundercore Bridged USDT (Thundercore)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TON",
+    "name": "Tokamak Network",
+    "market": "Binance"
+  },
+  {
+    "symbol": "S",
+    "name": "Token S",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TON",
+    "name": "TON Community",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRX",
+    "name": "TRON",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRX",
+    "name": "TRON (BSC)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "TrumpEffect69420",
+    "market": "Binance"
+  },
+  {
+    "symbol": "UNI",
+    "name": "Uni",
+    "market": "Binance"
+  },
+  {
+    "symbol": "UNI",
+    "name": "UNICORN",
+    "market": "Binance"
+  },
+  {
+    "symbol": "UNI",
+    "name": "Uniswap",
+    "market": "Binance"
+  },
+  {
+    "symbol": "UNI",
+    "name": "Uniswap (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Unit0 Network Bridged USDT (Unit0 Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "USDC",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Bridged USD Coin (PulseChain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "VANA",
+    "name": "Vana",
+    "market": "Binance"
+  },
+  {
+    "symbol": "A",
+    "name": "Vaulta",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Viction Bridged USDT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "VIRTUAL",
+    "name": "Virtuals Protocol",
+    "market": "Binance"
+  },
+  {
+    "symbol": "XRP",
+    "name": "WarioXRPDumbledoreYugioh69Inu",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "WIF on ETH",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WIF",
+    "name": "Wif - SecondChance",
+    "market": "Binance"
+  },
+  {
+    "symbol": "MASK",
+    "name": "Wojak Mask",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WLD",
+    "name": "Worldcoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Wormhole Bridged USDC (Fantom)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Wormhole Bridged Wrapped SOL (Sui)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Wrapped Bitcoin",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Wrapped Bitcoin (PulseChain)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Wrapped BTC (DeFiVerse)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Wrapped BTC (Wormhole)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "SOL",
+    "name": "Wrapped SOL",
+    "market": "Binance"
+  },
+  {
+    "symbol": "DOT",
+    "name": "xcDOT",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Zero Network Bridged USDC (Zero Network)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "Zilliqa EVM Bridged USDC (Zilliqa EVM)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDT",
+    "name": "Zircuit Bridged USDT (Zircuit)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "USDC",
+    "name": "zkSync Bridged USDC (zkSync)",
+    "market": "Binance"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "zkSync Bridged WBTC (zkSync)",
+    "market": "Binance"
+  }
+]
