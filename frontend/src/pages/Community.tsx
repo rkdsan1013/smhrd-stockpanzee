@@ -128,7 +128,7 @@ const Community: React.FC = () => {
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
       {/* 상단 텍스트 */}
-      <h1 className="text-4xl font-bold mb-8 text-white text-center">테스트 Community.</h1>
+      {/* <h1 className="text-4xl font-bold mb-8 text-white text-center"> Panzee's Talk</h1> */}
 
       {/* 데스크톱 컨트롤 영역 (md 이상) */}
       <div className="hidden md:flex items-center justify-between mb-6">
