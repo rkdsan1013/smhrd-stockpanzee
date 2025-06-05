@@ -130,7 +130,7 @@ const Community: React.FC = () => {
       {/* 상단 텍스트 */}
       {/* <h1 className="text-4xl font-bold mb-8 text-white text-center"> Panzee's Talk</h1> */}
 
-      {/* 데스크톱 컨트롤 영역 (md 이상) */}
+      {/* 데스크탑 컨트롤 영역 (md 이상) */}
       <div className="hidden md:flex items-center justify-between mb-6">
         {/* 좌측: 인기/시간순 버튼 그룹 */}
         <div className="inline-flex border-2 border-gray-600 rounded-md p-1 space-x-1">
@@ -259,7 +259,7 @@ const Community: React.FC = () => {
         {currentPosts.map((post) => (
           <div
             key={post.id}
-            className="p-4 transition-colors duration-300 hover:bg-gray-800 rounded-md"
+            className="p-4 transition-all duration-300 hover:bg-gray-800 rounded-md"
           >
             <img
               src={post.image}
@@ -289,13 +289,13 @@ const Community: React.FC = () => {
         ))}
       </div>
 
-      {/* 페이지 이동 버튼 */}
+      {/* 페이지네이션 */}
       <div className="flex justify-center mt-6 space-x-2">
         {/* 이전 버튼 */}
         <button
           onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`w-10 h-10 rounded-md transition-all duration-300 cursor-pointer flex items-center justify-center ${
+          className={`w-10 h-10 rounded-md transition-all duration-300 flex items-center justify-center ${
             currentPage === 1
               ? "border border-gray-500 text-white opacity-50 cursor-not-allowed"
               : "border border-gray-700 text-white hover:bg-gray-700 hover:text-white"
@@ -303,23 +303,22 @@ const Community: React.FC = () => {
         >
           <Icons name="angleLeft" className="w-5 h-5" />
         </button>
-
         {/* 페이지 번호 버튼 */}
         {displayedPages.map((page, index) =>
           typeof page === "number" ? (
             <button
               key={index}
               onClick={() => handlePageChange(page)}
-              className={`w-10 h-10 rounded-md transition-all duration-300 cursor-pointer flex items-center justify-center ${
+              className={`w-10 h-10 transition-all duration-300 cursor-pointer flex items-center justify-center rounded ${
                 currentPage === page
-                  ? "bg-blue-600 border border-blue-600 text-white"
-                  : "bg-transparent text-white hover:bg-gray-700 hover:text-white"
+                  ? "bg-transparent text-blue-400 font-bold"
+                  : "bg-transparent text-white hover:bg-gray-700 hover:text-white hover:rounded"
               }`}
             >
               {page}
             </button>
           ) : (
-            <div key={index} className="w-10 h-10 flex items-center justify-center text-gray-400">
+            <div key={index} className="w-10 h-10 flex items-center justify-center text-gray-500">
               {page}
             </div>
           ),
@@ -329,7 +328,7 @@ const Community: React.FC = () => {
         <button
           onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`w-10 h-10 rounded-md transition-all duration-300 cursor-pointer flex items-center justify-center ${
+          className={`w-10 h-10 rounded-md transition-all duration-300 flex items-center justify-center ${
             currentPage === totalPages
               ? "border border-gray-500 text-white opacity-50 cursor-not-allowed"
               : "border border-gray-700 text-white hover:bg-gray-700 hover:text-white"
