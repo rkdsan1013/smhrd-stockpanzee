@@ -89,5 +89,5 @@ function saveMergedNews(newData: any[], filename: string) {
 
 // 🏁 실행
 fetchNewsFromNaver("주식", 20).then(newsList => {
-  saveMergedNews(newsList, "stock_news_filtered.json");
+  saveMergedNews(newsList, "stock_kor_news.json");
 });
