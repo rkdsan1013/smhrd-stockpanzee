@@ -11,14 +11,11 @@ const Community: React.FC = () => {
   const totalPosts = 500; // 총 500개의 더미 게시글
   const pad = (num: number) => num.toString().padStart(2, "0");
 
-  // ref: 초기 마운트 시 자동 스크롤 방지
+  // 페이지 전환 시 스크롤 관리를 위한 ref
   const initialMountRef = useRef(true);
-  // ref: 페이지 이동(하단 페이지 버튼 클릭)때에만 스크롤하도록 표시
   const pageNavigationRef = useRef(false);
 
-  // 더미 데이터 생성
-  // 각 게시글은 현재 시간 기준으로 i시간 전으로 생성되며,
-  // i % 3 값에 따라 "국내", "해외", "암호화폐" 카테고리를 나누고 제목은 해당 카테고리의 순번으로 설정합니다.
+  // 더미 데이터 생성 – 각 게시글은 i시간 전 생성, 3개 카테고리 분리됨
   let domesticCount = 0,
     overseasCount = 0,
     cryptoCount = 0;
@@ -56,7 +53,7 @@ const Community: React.FC = () => {
     };
   });
 
-  // 정렬: "latest"는 작성시간 내림차순, "popular"는 추천수 내림차순
+  // 정렬 – 최신순(작성시간 내림차순) / 인기순(추천수 내림차순)
   const sortedPosts = posts.slice().sort((a, b) => {
     if (selectedSort === "latest") {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -65,7 +62,7 @@ const Community: React.FC = () => {
     }
   });
 
-  // 탭 필터: "전체"는 모두, 그 외는 해당 카테고리만 표시
+  // 탭 필터 – "전체"는 모두, 그 외는 해당 카테고리 게시글만 필터링
   const filteredPosts =
     selectedTab === "전체"
       ? sortedPosts
@@ -78,22 +75,24 @@ const Community: React.FC = () => {
     currentPage * postsPerPage,
   );
 
-  // 헬퍼 함수: 페이지 번호 생략 처리, 현재 페이지 기준 앞뒤 2페이지, 첫/마지막 페이지 표시
+  // 페이지 번호 생략 헬퍼 함수 (totalPages가 7 이하이면 모두 표시, 그 외엔 앞뒤 2페이지 + 첫/마지막)
   const getDisplayPages = (totalPages: number, currentPage: number): (number | string)[] => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-    let pages: (number | string)[] = [];
+    const pages: (number | string)[] = [];
     pages.push(1);
-    if (currentPage > 3) {
-      pages.push("...");
-    }
     const start = Math.max(2, currentPage - 2);
     const end = Math.min(totalPages - 1, currentPage + 2);
+    // 왼쪽 표시: 만약 시작값이 2보다 크면 gap이 있는 것이므로 "..." 추가
+    if (start > 2) {
+      pages.push("...");
+    }
     for (let i = start; i <= end; i++) {
       pages.push(i);
     }
-    if (currentPage < totalPages - 2) {
+    // 오른쪽 표시: 만약 end가 totalPages - 1보다 작으면 gap이 있는 것이므로 "..." 추가
+    if (end < totalPages - 1) {
       pages.push("...");
     }
     pages.push(totalPages);
@@ -102,7 +101,7 @@ const Community: React.FC = () => {
 
   const displayedPages = getDisplayPages(totalPages, currentPage);
 
-  // 페이지 버튼 클릭 시 자동 스크롤: 하단 페이지 버튼 클릭시에만 h1(상단 텍스트)까지 스크롤
+  // 페이지 버튼 클릭 시 상단 h1까지 부드럽게 스크롤
   useEffect(() => {
     if (initialMountRef.current) {
       initialMountRef.current = false;
@@ -127,22 +126,19 @@ const Community: React.FC = () => {
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
-      {/* 상단 텍스트 */}
-      {/* <h1 className="text-4xl font-bold mb-8 text-white text-center"> Panzee's Talk</h1> */}
-
       {/* 데스크탑 컨트롤 영역 (md 이상) */}
       <div className="hidden md:flex items-center justify-between mb-6">
-        {/* 좌측: 인기/시간순 버튼 그룹 */}
-        <div className="inline-flex border-2 border-gray-600 rounded-md p-1 space-x-1">
+        {/* 좌측: 정렬 버튼 그룹 (세그먼티드 컨트롤 스타일, 정사각형 버튼) */}
+        <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
           <button
             onClick={() => {
               setSelectedSort("latest");
               setCurrentPage(1);
             }}
-            className={`w-10 h-10 flex items-center justify-center cursor-pointer transition-all duration-300 ${
+            className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
               selectedSort === "latest"
-                ? "bg-white/30 text-white rounded-md hover:bg-white/30"
-                : "bg-transparent text-white hover:bg-white/30 hover:rounded-md"
+                ? "bg-white/30 text-blue-500"
+                : "bg-transparent hover:bg-white/30"
             }`}
           >
             <Icons name="clock" className="w-5 h-5" />
@@ -152,17 +148,17 @@ const Community: React.FC = () => {
               setSelectedSort("popular");
               setCurrentPage(1);
             }}
-            className={`w-10 h-10 flex items-center justify-center cursor-pointer transition-all duration-300 ${
+            className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
               selectedSort === "popular"
-                ? "bg-white/30 text-white rounded-md hover:bg-white/30"
-                : "bg-transparent text-white hover:bg-white/30 hover:rounded-md"
+                ? "bg-white/30 text-blue-500"
+                : "bg-transparent hover:bg-white/30"
             }`}
           >
             <Icons name="fire" className="w-5 h-5" />
           </button>
         </div>
-        {/* 가운데: 네비 탭 버튼 그룹 */}
-        <div className="flex space-x-2">
+        {/* 가운데: 네비 탭 버튼 그룹 (세그먼티드 컨트롤) */}
+        <div className="flex bg-gray-800 p-1 rounded-full space-x-2">
           {["전체", "국내", "해외", "암호화폐"].map((tab) => (
             <button
               key={tab}
@@ -170,10 +166,10 @@ const Community: React.FC = () => {
                 setSelectedTab(tab);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded transition-all duration-300 text-white cursor-pointer ${
+              className={`px-4 py-2 transition-colors duration-200 text-white rounded-full ${
                 selectedTab === tab
-                  ? "bg-white/30 rounded-full"
-                  : "bg-transparent hover:bg-white/30 hover:rounded-full"
+                  ? "bg-white/30 text-blue-500"
+                  : "bg-transparent hover:bg-white/30"
               }`}
             >
               {tab}
@@ -183,7 +179,7 @@ const Community: React.FC = () => {
         {/* 우측: 글쓰기 버튼 */}
         <div>
           <Link to="/post">
-            <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold rounded-full shadow-md transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-400 hover:to-blue-600 hover:shadow-lg hover:opacity-90 cursor-pointer">
+            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
               글쓰기
             </button>
           </Link>
@@ -193,17 +189,16 @@ const Community: React.FC = () => {
       {/* 모바일 컨트롤 영역 (md 미만) */}
       <div className="flex md:hidden flex-col mb-6 space-y-4">
         <div className="flex items-center justify-between">
-          {/* 좌측: 인기/시간순 버튼 그룹 */}
-          <div className="inline-flex border-2 border-gray-600 rounded-md p-1 space-x-1">
+          <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
             <button
               onClick={() => {
                 setSelectedSort("latest");
                 setCurrentPage(1);
               }}
-              className={`w-10 h-10 flex items-center justify-center cursor-pointer transition-all duration-300 ${
+              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
                 selectedSort === "latest"
-                  ? "bg-white/30 text-white rounded-md hover:bg-white/30"
-                  : "bg-transparent text-white hover:bg-white/30 hover:rounded-md"
+                  ? "bg-white/30 text-blue-500"
+                  : "bg-transparent hover:bg-white/30"
               }`}
             >
               <Icons name="clock" className="w-5 h-5" />
@@ -213,27 +208,25 @@ const Community: React.FC = () => {
                 setSelectedSort("popular");
                 setCurrentPage(1);
               }}
-              className={`w-10 h-10 flex items-center justify-center cursor-pointer transition-all duration-300 ${
+              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
                 selectedSort === "popular"
-                  ? "bg-white/30 text-white rounded-md hover:bg-white/30"
-                  : "bg-transparent text-white hover:bg-white/30 hover:rounded-md"
+                  ? "bg-white/30 text-blue-500"
+                  : "bg-transparent hover:bg-white/30"
               }`}
             >
               <Icons name="fire" className="w-5 h-5" />
             </button>
           </div>
-          {/* 우측: 글쓰기 버튼 */}
           <div>
             <Link to="/post">
-              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold rounded-full shadow-md transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-400 hover:to-blue-600 hover:shadow-lg hover:opacity-90 cursor-pointer">
+              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
                 글쓰기
               </button>
             </Link>
           </div>
         </div>
-        {/* 아래: 중앙 정렬된 네비 탭 버튼 그룹 */}
         <div className="flex justify-center">
-          <div className="flex space-x-2">
+          <div className="flex bg-gray-800 p-1 rounded-full space-x-2">
             {["전체", "국내", "해외", "암호화폐"].map((tab) => (
               <button
                 key={tab}
@@ -241,10 +234,10 @@ const Community: React.FC = () => {
                   setSelectedTab(tab);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-2 rounded transition-all duration-300 text-white cursor-pointer ${
+                className={`px-3 py-2 transition-colors duration-200 text-white rounded-full ${
                   selectedTab === tab
-                    ? "bg-white/30 rounded-full"
-                    : "bg-transparent hover:bg-white/30 hover:rounded-full"
+                    ? "bg-white/30 text-blue-500"
+                    : "bg-transparent hover:bg-white/30"
                 }`}
               >
                 {tab}
@@ -259,7 +252,7 @@ const Community: React.FC = () => {
         {currentPosts.map((post) => (
           <div
             key={post.id}
-            className="p-4 transition-all duration-300 hover:bg-gray-800 rounded-md"
+            className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md"
           >
             <img
               src={post.image}
@@ -290,15 +283,15 @@ const Community: React.FC = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <div className="flex justify-center mt-6 space-x-2">
+      <div className="flex justify-center mt-6 space-x-3">
         {/* 이전 버튼 */}
         <button
           onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`w-10 h-10 rounded-md transition-all duration-300 flex items-center justify-center ${
+          className={`w-10 h-10 rounded-md transition-colors duration-200 flex items-center justify-center ${
             currentPage === 1
-              ? "border border-gray-500 text-white opacity-50 cursor-not-allowed"
-              : "border border-gray-700 text-white hover:bg-gray-700 hover:text-white"
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-white hover:text-gray-300"
           }`}
         >
           <Icons name="angleLeft" className="w-5 h-5" />
@@ -309,10 +302,8 @@ const Community: React.FC = () => {
             <button
               key={index}
               onClick={() => handlePageChange(page)}
-              className={`w-10 h-10 transition-all duration-300 cursor-pointer flex items-center justify-center rounded ${
-                currentPage === page
-                  ? "bg-transparent text-blue-400 font-bold"
-                  : "bg-transparent text-white hover:bg-gray-700 hover:text-white hover:rounded"
+              className={`w-10 h-10 transition-colors duration-200 cursor-pointer flex items-center justify-center rounded ${
+                currentPage === page ? "text-blue-500 font-bold" : "text-white hover:text-gray-300"
               }`}
             >
               {page}
@@ -323,15 +314,14 @@ const Community: React.FC = () => {
             </div>
           ),
         )}
-
         {/* 다음 버튼 */}
         <button
           onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`w-10 h-10 rounded-md transition-all duration-300 flex items-center justify-center ${
+          className={`w-10 h-10 rounded-md transition-colors duration-200 flex items-center justify-center ${
             currentPage === totalPages
-              ? "border border-gray-500 text-white opacity-50 cursor-not-allowed"
-              : "border border-gray-700 text-white hover:bg-gray-700 hover:text-white"
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-white hover:text-gray-300"
           }`}
         >
           <Icons name="angleRight" className="w-5 h-5" />
