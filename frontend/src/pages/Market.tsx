@@ -1,16 +1,31 @@
-import React from "react";
+import KorChart from "../components/KorChart";
+import KorSidebar from "../components/KorSidebar";
 
-const Market: React.FC = () => {
+const Market = () => {
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">마켓 페이지</h1>
-      <p>마켓 페이지의 내용이 여기에 표시됩니다.</p>
-      <div className="mt-6">
-        {[...new Array(10)].map((_, i) => (
-          <p key={i} className="mb-2">
-            마켓 데이터 {i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-          </p>
-        ))}
+    <div style={{
+      display: "flex",
+      padding: "2rem",
+      backgroundColor: "#0e1628",
+      color: "white",
+      height: "100vh",
+      boxSizing: "border-box",
+    }}>
+      {/* 왼쪽: 실시간 차트 */}
+      <div style={{ flex: 3, marginRight: "2rem" }}>
+        <h2>📈 실시간 주가 차트</h2>
+        <KorChart />
+      </div>
+
+      {/* 오른쪽: 기업 정보 사이드바 */}
+      <div style={{
+        flex: 1,
+        backgroundColor: "#1b253a",
+        borderRadius: "10px",
+        padding: "1rem",
+        overflowY: "auto"
+      }}>
+        <KorSidebar />
       </div>
     </div>
   );

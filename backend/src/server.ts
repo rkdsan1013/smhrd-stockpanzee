@@ -7,10 +7,14 @@ import { setupSocket } from "./socket";
 
 dotenv.config();
 
+//실시간 차트 연결
+import korStock from "./korStock";
+const app = express();
+app.use(korStock);
+
 // 라우트 모듈 임포트
 import authRoutes from "./routes/auth";
 
-const app = express();
 
 // CORS 설정 (예: 프론트엔드 오리진 지정)
 app.use(
