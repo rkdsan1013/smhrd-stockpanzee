@@ -52,7 +52,7 @@ const newsSummaryData: NewsSummaryItem[] = [
     category: "국내",
     sentiment: "부정",
   },
-  // 추가 뉴스…
+  // …추가 데이터…
 ];
 
 const getSentimentBadgeStyles = (
@@ -66,6 +66,7 @@ const getSentimentBadgeStyles = (
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
+  // 탭, 정렬, 즐겨찾기 상태
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
     "전체",
@@ -77,11 +78,11 @@ const Market: React.FC = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
   const [stockData, setStockData] = useState<StockItem[]>([]);
 
-  // 백엔드에서 자산 로드 후 category 계산
+  // API에서 자산 로드 후 category 계산
   useEffect(() => {
     fetchAssets()
       .then((assets: Asset[]) => {
-        const list = assets.map((a) => {
+        const list: StockItem[] = assets.map((a) => {
           let category: StockItem["category"];
           if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
           else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
@@ -104,10 +105,13 @@ const Market: React.FC = () => {
   }, []);
 
   // Market 탭 필터링
-  const filteredStocks =
-    selectedMarketTab === "전체"
-      ? stockData
-      : stockData.filter((s) => s.category === selectedMarketTab);
+  const filteredStocks = useMemo(
+    () =>
+      selectedMarketTab === "전체"
+        ? stockData
+        : stockData.filter((s) => s.category === selectedMarketTab),
+    [stockData, selectedMarketTab],
+  );
 
   // 정렬
   const sortedStocks = useMemo(() => {
@@ -126,7 +130,7 @@ const Market: React.FC = () => {
     [sortedStocks, viewMode, favorites],
   );
 
-  // 무한 스크롤: 10개씩 로드, 바닥에서 200px 이내일 때 트리거
+  // 무한 스크롤: 초기 10개, 스크롤 하단에서 200px 남으면 10개씩 추가
   const [visibleCount, setVisibleCount] = useState(10);
   useEffect(() => {
     setVisibleCount(10);
@@ -143,7 +147,6 @@ const Market: React.FC = () => {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, [visibleCount, finalStocks]);
-
   const visibleStocks = finalStocks.slice(0, visibleCount);
 
   const handleSort = (key: SortKey) =>
@@ -156,13 +159,16 @@ const Market: React.FC = () => {
   const toggleFavorite = (id: number) =>
     setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
+  // 고정 컬럼 레이아웃: 즐겨찾기 40px, 종목 영역(minmax(0,1fr)), 현재가 120px, 변동률 100px, 시가총액 120px
+  const gridCols = "grid grid-cols-[40px_minmax(0,1fr)_120px_100px_120px] items-center";
+
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* 좌측: 자산 리스트 */}
-        <div className="md:col-span-8">
+        {/* 좌측: 자산 리스트 (md:col-span-9) */}
+        <div className="md:col-span-9">
           <div className="flex items-center justify-between mb-4">
-            {/* 원형 탭: 전체 / 즐겨찾기 */}
+            {/* 원형 전체/즐겨찾기 탭 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "즐겨찾기"] as const).map((tab) => (
                 <button
@@ -182,7 +188,7 @@ const Market: React.FC = () => {
                 </button>
               ))}
             </div>
-            {/* 타원형 탭: 전체 / 국내 / 해외 / 암호화폐 */}
+            {/* 타원형 마켓 필터 탭 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
                 <button
@@ -200,36 +206,35 @@ const Market: React.FC = () => {
             </div>
           </div>
 
-          {/* 정렬 헤더 */}
-          <div className="flex items-center py-2 px-4 bg-gray-800 rounded-lg">
-            <div className="w-10 h-10" />
-            <div
-              onClick={() => handleSort("name")}
-              className="flex-1 text-left text-sm font-bold cursor-pointer hover:underline"
-            >
-              종목 / 심볼{" "}
-              {sortConfig.key === "name" && (sortConfig.direction === "asc" ? "▲" : "▼")}
+          {/* 헤더 (정렬 가능) */}
+          <div
+            className={`${gridCols} py-2 px-4 bg-gray-800 rounded-lg text-sm font-bold text-white`}
+          >
+            <div />
+            <div onClick={() => handleSort("name")} className="cursor-pointer hover:underline">
+              종목
+              {sortConfig.key === "name" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("currentPrice")}
-              className="w-1/4 text-right text-sm font-bold cursor-pointer hover:underline"
+              className="text-right cursor-pointer hover:underline"
             >
-              현재가{" "}
-              {sortConfig.key === "currentPrice" && (sortConfig.direction === "asc" ? "▲" : "▼")}
+              현재가
+              {sortConfig.key === "currentPrice" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("priceChange")}
-              className="w-1/4 text-right text-sm font-bold cursor-pointer hover:underline"
+              className="text-right cursor-pointer hover:underline"
             >
-              변동률{" "}
-              {sortConfig.key === "priceChange" && (sortConfig.direction === "asc" ? "▲" : "▼")}
+              변동률
+              {sortConfig.key === "priceChange" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("marketCap")}
-              className="w-1/4 text-right text-sm font-bold cursor-pointer hover:underline"
+              className="text-right cursor-pointer hover:underline"
             >
-              시가총액{" "}
-              {sortConfig.key === "marketCap" && (sortConfig.direction === "asc" ? "▲" : "▼")}
+              시가총액
+              {sortConfig.key === "marketCap" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
           </div>
 
@@ -238,77 +243,75 @@ const Market: React.FC = () => {
             {visibleStocks.map((stock, idx) => (
               <div
                 key={stock.id}
-                className={`flex items-center p-4 rounded-lg transition-colors duration-200 ${
+                className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
                   idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
                 } hover:bg-gray-800`}
               >
-                <div className="w-10 h-10 flex justify-center items-center">
-                  <button onClick={() => toggleFavorite(stock.id)} className="focus:outline-none">
-                    <Icons
-                      name="star"
-                      className={`w-6 h-6 ${
-                        favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-200"
-                      }`}
-                    />
-                  </button>
-                </div>
-                <div className="flex-1 flex items-center space-x-3">
-                  <img
-                    src={stock.logo}
-                    alt={stock.name}
-                    className="w-10 h-10 rounded-full object-cover"
+                <button
+                  onClick={() => toggleFavorite(stock.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
+                >
+                  <Icons
+                    name="star"
+                    className={`w-5 h-5 ${favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"}`}
                   />
-                  <div>
-                    <p className="text-white font-semibold">{stock.name}</p>
-                    <p className="text-sm text-gray-400">{stock.symbol}</p>
-                  </div>
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate text-white font-semibold">{stock.name}</p>
+                  <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
                 </div>
-                <div className="w-1/4 text-right text-white">
+                <div className="text-right text-white">
                   {stock.currentPrice.toLocaleString()} 원
                 </div>
                 <div
-                  className={`w-1/4 text-right font-semibold ${
-                    stock.priceChange >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
+                  className={`text-right font-semibold ${stock.priceChange >= 0 ? "text-green-500" : "text-red-500"}`}
                 >
-                  {stock.priceChange >= 0
-                    ? `+${stock.priceChange.toFixed(2)}%`
-                    : `${stock.priceChange.toFixed(2)}%`}
+                  {stock.priceChange >= 0 ? "+" : ""}
+                  {stock.priceChange.toFixed(2)}%
                 </div>
-                <div className="w-1/4 text-right text-white">{formatCurrency(stock.marketCap)}</div>
+                <div className="text-right text-white">{formatCurrency(stock.marketCap)}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 우측: 뉴스 현황 */}
-        <div className="md:col-span-4">
-          <div className="sticky top-20 bg-gray-800 p-4 rounded-lg transition-all duration-500 ease-in-out">
+        {/* 우측: 뉴스 요약 영역 (md:col-span-3) - 스크롤 버튼은 이 컨테이너 내부에 배치 */}
+        <div className="md:col-span-3">
+          <div className="sticky top-20 bg-gray-800 p-4 rounded-lg transition-all duration-500 ease-in-out flex flex-col h-[80vh]">
             <h2 className="text-xl font-bold text-white mb-4">뉴스 현황</h2>
-            {newsSummaryData.map((news) => (
-              <div
-                key={news.id}
-                className="p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 mb-3"
-              >
-                <div className="flex space-x-2 mb-1">
-                  <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
-                    {news.category}
-                  </span>
-                  <span
-                    className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(
-                      news.sentiment,
-                    )}`}
-                  >
-                    {news.sentiment}
-                  </span>
+            <div className="overflow-y-auto flex-1 pr-2">
+              {newsSummaryData.map((news) => (
+                <div
+                  key={news.id}
+                  className="p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 mb-3"
+                >
+                  <div className="flex space-x-2 mb-1">
+                    <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
+                      {news.category}
+                    </span>
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(news.sentiment)}`}
+                    >
+                      {news.sentiment}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white font-semibold">
+                    {news.stockName} <span className="text-sm text-gray-400">{news.symbol}</span>
+                  </p>
+                  <h3 className="text-base font-bold text-white">{news.title}</h3>
+                  <p className="text-sm text-gray-400">{news.summary}</p>
                 </div>
-                <p className="text-sm text-white font-semibold">
-                  {news.stockName} <span className="text-sm text-gray-400">{news.symbol}</span>
-                </p>
-                <h3 className="text-base font-bold text-white">{news.title}</h3>
-                <p className="text-sm text-gray-400">{news.summary}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            {/* 페이지 최상단 이동 버튼 (뉴스 영역 내부, sticky 컨테이너 하단) */}
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="bg-white/30 hover:bg-white/50 p-3 rounded-full"
+              >
+                <Icons name="chevronDoubleUp" className="w-6 h-6 text-white" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
