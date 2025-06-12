@@ -5,7 +5,10 @@ dotenv.config();
 
 const router = express.Router();
 
-// ✅ 한국투자증권 API 토큰 발급
+let cachedStockList: any[] = []; // 종목리스트 캐시
+let lastFetchedTime = 0; // 캐시 만료 확인용
+
+// ✅ 토큰 발급
 const getAccessToken = async () => {
   const res = await axios.post(
     "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
@@ -14,17 +17,55 @@ const getAccessToken = async () => {
       appkey: process.env.APP_KEY,
       appsecret: process.env.APP_SECRET,
     },
-    {
-      headers: { "content-type": "application/json" },
-    }
+    { headers: { "content-type": "application/json" } }
   );
   return res.data.access_token;
 };
+
+// ✅ 전체 종목리스트 불러오기 (캐싱 적용)
+const getStockList = async () => {
+  const now = Date.now();
+  if (cachedStockList.length > 0 && now - lastFetchedTime < 1000 * 60 * 60) {
+    return cachedStockList;
+  }
+
+  const token = await getAccessToken();
+  const res = await axios.get(
+    "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-dmstc-com-stocklist",
+    {
+      headers: {
+        authorization: `Bearer ${token}`,
+        appkey: process.env.APP_KEY!,
+        appsecret: process.env.APP_SECRET!,
+        tr_id: "FHKST01010400",
+      },
+      params: {
+        fid_cond_mrkt_div_code: "J",
+        fid_input_iscd: "",
+      },
+    }
+  );
+
+  cachedStockList = res.data.output;
+  lastFetchedTime = now;
+  return cachedStockList;
+};
+
+// ✅ 종목리스트 API
+router.get("/api/stock/list", async (req, res) => {
+  try {
+    const list = await getStockList();
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: "종목리스트 불러오기 실패" });
+  }
+});
 
 // ✅ 실시간 주가 조회
 router.get("/api/stock/price", async (req, res) => {
   try {
     const token = await getAccessToken();
+    const { code } = req.query;
 
     const response = await axios.get(
       "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price",
@@ -36,50 +77,15 @@ router.get("/api/stock/price", async (req, res) => {
           tr_id: "FHKST01010100",
         },
         params: {
-          fid_cond_mrkt_div_code: "J", // KOSPI/KOSDAQ
-          fid_input_iscd: "005930",    // 삼성전자 (기본)
-        },
-      }
-    );
-
-    res.json(response.data);
-  } catch (err) {
-    console.error("실시간 주가 조회 실패:", err);
-    res.status(500).json({ error: "실시간 주가 조회 실패" });
-  }
-});
-
-// ✅ 과거 일자별 주가 조회
-router.get("/api/stock/history", async (req, res) => {
-  try {
-    const token = await getAccessToken();
-    const { code = "005930", count = 30 } = req.query;
-
-    const response = await axios.get(
-      "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-      {
-        headers: {
-          authorization: `Bearer ${token}`,
-          appkey: process.env.APP_KEY!,
-          appsecret: process.env.APP_SECRET!,
-          tr_id: "FHKST03010100",
-        },
-        params: {
           fid_cond_mrkt_div_code: "J",
           fid_input_iscd: code,
-          fid_org_adj_prc: "0",
-          fid_period_div_code: "D",
-          fid_date: "", // 최근 일자 기준
-          fid_idx: "0",
-          fid_cnt: count,
         },
       }
     );
 
     res.json(response.data.output);
   } catch (err) {
-    console.error("과거 주가 조회 실패:", err);
-    res.status(500).json({ error: "과거 주가 조회 실패" });
+    res.status(500).json({ error: "실시간 주가 조회 실패" });
   }
 });
 
