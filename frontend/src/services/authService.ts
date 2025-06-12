@@ -1,5 +1,5 @@
 // /frontend/src/services/authService.ts
-import { get, post } from "./apiClient";
+import { post } from "./apiClient";
 
 // 타입 전용(import type) 사용
 export type RegisterData = {
