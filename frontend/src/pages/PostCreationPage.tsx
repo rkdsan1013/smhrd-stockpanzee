@@ -1,4 +1,4 @@
-// src/pages/PostCreationPage.tsx
+// /frontend/src/pages/PostCreationPage.tsx
 import React, { useState } from "react";
 
 const PostCreationPage: React.FC = () => {

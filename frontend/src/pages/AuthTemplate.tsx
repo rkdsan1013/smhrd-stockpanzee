@@ -1,4 +1,4 @@
-// src/pages/AuthTemplate.tsx
+// /frontend/src/pages/AuthTemplate.tsx
 import React from "react";
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import Icons from "../components/Icons";

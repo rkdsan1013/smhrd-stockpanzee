@@ -1,4 +1,4 @@
-// src/components/TermsAgreement.tsx
+// /frontend/src/components/TermsAgreement.tsx
 import React, { useState } from "react";
 import termsContent from "../data/termsContent";
 

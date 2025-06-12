@@ -1,3 +1,4 @@
+// /frontend/src/components/Header.tsx
 import React, { useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icons from "./Icons";
