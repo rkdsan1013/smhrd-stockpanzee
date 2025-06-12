@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
+import socket from "../socket.ts"
 
 // 숫자 단위 포맷 함수
 const formatCurrency = (value: number): string => {
@@ -103,6 +104,35 @@ const Market: React.FC = () => {
       })
       .catch(console.error);
   }, []);
+
+  // 실시간 소켓 주가 수신
+  useEffect(() => {
+    socket.on("princeUpdate",
+      (updatedPrices:{ code: string; price: number }[]) => {
+        setStockData((prevStocks) => prevStocks.map((stock) => {
+          const updated = updatedPrices.find((p) => p.code === stock.symbol);
+          return updated ? { ...stock, currentPrice: updated.price } :stock;
+        })
+      );
+      });
+      return () => {
+        socket.off("priceUpdate");
+      };
+  }, []);
+
+  useEffect(() => {
+    socket.emit("subscribeStocks");
+
+    socket.on("stockPrice", ({ symbol, price }: { symbol: String; price: number }) => {
+      setStockData(prev => prev.map(stock => 
+        stock.symbol === symbol ? { ...stock, currentPrice: price } : stock)
+      );
+    });
+
+    return () => {
+      socket.off("stockPrice");
+    };
+  }, [setStockData]);
 
   // Market 탭 필터링
   const filteredStocks = useMemo(
