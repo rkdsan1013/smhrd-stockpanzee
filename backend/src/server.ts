@@ -7,8 +7,8 @@ import { setupSocket } from "./socket";
 
 dotenv.config();
 
-import authRoutes from "./routes/auth";
-import assetsRoutes from "./routes/assets";
+import authRoutes from "./routes/authRoutes";
+import assetsRoutes from "./routes/assetsRoutes";
 
 const app = express();
 
