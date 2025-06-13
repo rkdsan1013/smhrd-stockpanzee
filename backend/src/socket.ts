@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import { Server as HttpServer } from "http";
 import axios from "axios";
-import { getStockList } from "./korStock";
+import { getStockList, getAccessToken } from "./korStock";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -10,11 +10,6 @@ export function setupSocket(server: HttpServer) {
 
   io.on("connection", (socket) => {
     console.log(`🟢 User connected: ${socket.id}`);
-
-    socket.on("message", (msg) => {
-      console.log(`📩 Received message: ${msg}`);
-      io.emit("message", msg);
-    });
 
     socket.on("disconnect", () => {
       console.log(`🔴 User disconnected: ${socket.id}`);
@@ -39,13 +34,13 @@ export function setupSocket(server: HttpServer) {
             },
             params: {
               fid_cond_mrkt_div_code: "J",
-              fid_input_iscd: stock.shnm,
+              fid_input_iscd: stock.shrn_iscd,  // ✅ 핵심 수정 포인트
             },
           }
         );
 
         io.emit("stockPrice", {
-          symbol: stock.shnm,
+          symbol: stock.shrn_iscd,  // 종목코드 기준으로
           price: res.data.output.stck_prpr,
         });
       }
@@ -53,8 +48,4 @@ export function setupSocket(server: HttpServer) {
       console.error("실시간 가격 emit 실패:", err);
     }
   }, 5000);
-}
-
-function getAccessToken() {
-  throw new Error("Function not implemented.");
 }

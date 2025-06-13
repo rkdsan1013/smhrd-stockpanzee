@@ -1,8 +1,8 @@
-// /backend/src/server.ts
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
+import korStock from "./korStock"
 import { setupSocket } from "./socket";
 
 dotenv.config();
@@ -19,6 +19,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(korStock);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
@@ -30,7 +31,7 @@ app.get("/", (req: Request, res: Response) => {
 const server = http.createServer(app);
 setupSocket(server);
 
-// 에러 핸들러 (네 개 인자 필수)
+// 에러 핸들러
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   const status = err.statusCode ?? 500;

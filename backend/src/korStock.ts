@@ -7,12 +7,12 @@ const router = express.Router();
 
 // 종목리스트 캐시
 let cachedStockList: any[] = [];
-let lastFetchedTime = 0; // 종목 캐시 만료 확인용
+let lastFetchedTime = 0;
 
 // 토큰 캐시 (12시간 유지)
 let cachedToken = "";
 let cachedTokenTime = 0;
-const TOKEN_EXPIRE_MS = 1000 * 60 * 60 * 12;  // 12시간
+const TOKEN_EXPIRE_MS = 1000 * 60 * 60 * 12;
 
 // ✅ 토큰 발급 (12시간 캐시 적용)
 const getAccessToken = async () => {
@@ -65,7 +65,7 @@ const getStockList = async () => {
   return cachedStockList;
 };
 
-// ✅ 종목리스트 API 엔드포인트
+// ✅ 종목리스트 API
 router.get("/api/stock/list", async (req, res) => {
   try {
     const list = await getStockList();
@@ -76,7 +76,7 @@ router.get("/api/stock/list", async (req, res) => {
   }
 });
 
-// ✅ 실시간 주가 조회 엔드포인트 (REST 조회)
+// ✅ 실시간 주가 조회 API (개별 종목 가격조회)
 router.get("/api/stock/price", async (req, res) => {
   try {
     const token = await getAccessToken();
@@ -105,5 +105,5 @@ router.get("/api/stock/price", async (req, res) => {
   }
 });
 
-export { getStockList };  // 소켓에서 사용할 수 있도록 export
+export { getStockList, getAccessToken };
 export default router;

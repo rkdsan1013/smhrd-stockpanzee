@@ -107,23 +107,9 @@ const Market: React.FC = () => {
 
   // 실시간 소켓 주가 수신
   useEffect(() => {
-    socket.on("princeUpdate",
-      (updatedPrices:{ code: string; price: number }[]) => {
-        setStockData((prevStocks) => prevStocks.map((stock) => {
-          const updated = updatedPrices.find((p) => p.code === stock.symbol);
-          return updated ? { ...stock, currentPrice: updated.price } :stock;
-        })
-      );
-      });
-      return () => {
-        socket.off("priceUpdate");
-      };
-  }, []);
-
-  useEffect(() => {
     socket.emit("subscribeStocks");
 
-    socket.on("stockPrice", ({ symbol, price }: { symbol: String; price: number }) => {
+    socket.on("stockPrice", ({ symbol, price }: { symbol: string; price: number }) => {
       setStockData(prev => prev.map(stock => 
         stock.symbol === symbol ? { ...stock, currentPrice: price } : stock)
       );
@@ -132,7 +118,7 @@ const Market: React.FC = () => {
     return () => {
       socket.off("stockPrice");
     };
-  }, [setStockData]);
+  }, []);
 
   // Market 탭 필터링
   const filteredStocks = useMemo(
