@@ -1,54 +1,26 @@
 // /backend/src/models/newsModel.ts
 import pool from "../config/db";
+import { INews } from "../utils/news/cryptoNewsMapper";
 
-/**
- * INews 인터페이스는 API 응답 데이터를 내부 모델로 변환한 후, DB에 저장할 때 사용할 뉴스 데이터 구조입니다.
- */
-export interface INews {
-  externalId: string; // 외부 API의 뉴스 고유 ID
-  title: string;
-  thumbnail: string;
-  content: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+export async function createNews(news: INews): Promise<number> {
+  const sql = `
+    INSERT INTO news (title, content, news_link, thumbnail, published_at, source_title)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+  const [result] = await pool.query(sql, [
+    news.title,
+    news.content,
+    news.news_link,
+    news.thumbnail,
+    news.published_at,
+    news.source_title,
+  ]);
+  const insertId = (result as any).insertId;
+  return insertId;
 }
 
-/**
- * 뉴스 데이터를 데이터베이스에 저장합니다.
- * 동일 externalId가 이미 존재하면 업데이트 처리합니다.
- */
-export const createNews = async (news: INews): Promise<void> => {
-  const sql = `
-    INSERT INTO news (external_id, title, thumbnail, content, created_at, updated_at)
-    VALUES (?, ?, ?, ?, NOW(), NOW())
-    ON DUPLICATE KEY UPDATE title = VALUES(title), thumbnail = VALUES(thumbnail), content = VALUES(content), updated_at = NOW()
-  `;
-  await pool.query(sql, [news.externalId, news.title, news.thumbnail, news.content]);
-};
-
-/**
- * 외부 ID를 통해 뉴스 데이터를 조회합니다.
- */
-export const findNewsByExternalId = async (externalId: string): Promise<INews | null> => {
-  const sql = `
-    SELECT external_id AS externalId, title, thumbnail, content, created_at AS createdAt, updated_at AS updatedAt
-    FROM news
-    WHERE external_id = ?
-    LIMIT 1
-  `;
-  const [rows]: any = await pool.query(sql, [externalId]);
-  return rows && rows.length > 0 ? rows[0] : null;
-};
-
-/**
- * 최신 뉴스 데이터를 모두 조회합니다.
- */
-export const getAllNews = async (): Promise<INews[]> => {
-  const sql = `
-    SELECT external_id AS externalId, title, thumbnail, content, created_at AS createdAt, updated_at AS updatedAt
-    FROM news
-    ORDER BY created_at DESC
-  `;
-  const [rows]: any = await pool.query(sql);
-  return rows;
-};
+export async function findNewsByLink(news_link: string): Promise<boolean> {
+  const sql = `SELECT id FROM news WHERE news_link = ? LIMIT 1`;
+  const [rows] = await pool.query(sql, [news_link]);
+  return (rows as any[]).length > 0;
+}

@@ -1,10 +1,10 @@
 // /backend/src/routes/newsRoutes.ts
 import { Router } from "express";
-import { updateCryptoNews } from "../controllers/newsController";
+import { testNewsProcessing } from "../controllers/newsController";
 
 const router = Router();
 
-// 암호화폐 뉴스 업데이트 엔드포인트 (추후 국내/해외 뉴스 엔드포인트 추가 가능)
-router.get("/update-crypto-news", updateCryptoNews);
+// "/api/news/test-news"에 GET 요청 시 테스트 뉴스 처리 함수가 실행됩니다.
+router.get("/test-news", testNewsProcessing);
 
 export default router;
