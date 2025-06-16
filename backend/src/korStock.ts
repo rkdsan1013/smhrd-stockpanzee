@@ -1,109 +1,70 @@
-import express from "express";
 import axios from "axios";
+import fs from "fs";
+import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 
-const router = express.Router();
+let accessToken = "";
 
-// 종목리스트 캐시
-let cachedStockList: any[] = [];
-let lastFetchedTime = 0;
+// ✅ 토큰 발급 함수 (자동 발급)
+async function getAccessToken() {
+  const url = "https://openapivts.koreainvestment.com:29443/oauth2/tokenP";
 
-// 토큰 캐시 (12시간 유지)
-let cachedToken = "";
-let cachedTokenTime = 0;
-const TOKEN_EXPIRE_MS = 1000 * 60 * 60 * 12;
+  const headers = {
+    "Content-Type": "application/json"
+  };
 
-// ✅ 토큰 발급 (12시간 캐시 적용)
-const getAccessToken = async () => {
-  const now = Date.now();
-  if (cachedToken && now - cachedTokenTime < TOKEN_EXPIRE_MS) {
-    return cachedToken;
+  const body = {
+    grant_type: "client_credentials",
+    appkey: process.env.APP_KEY,
+    appsecret: process.env.APP_SECRET
+  };
+
+  try {
+    const response = await axios.post(url, body, { headers });
+    accessToken = response.data.access_token;
+    console.log("✅ ACCESS_TOKEN 발급 성공");
+  } catch (error) {
+    console.error("❌ ACCESS_TOKEN 발급 실패", error);
+  }
+}
+
+// ✅ JSON 파일에서 종목코드 읽기
+const stockListPath = path.join(__dirname, "../krx_basic_info.json");
+const stockList: { ISU_SRT_CD: string; ISU_ABBRV: string }[] = JSON.parse(fs.readFileSync(stockListPath, "utf-8"));
+
+// ✅ 가격 조회 함수
+export async function emitStockPrices(io: any) {
+  if (!accessToken) {
+    await getAccessToken();
+    if (!accessToken) return;
   }
 
-  const res = await axios.post(
-    "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
-    {
-      grant_type: "client_credentials",
-      appkey: process.env.APP_KEY,
-      appsecret: process.env.APP_SECRET,
-    },
-    { headers: { "content-type": "application/json" } }
-  );
+  for (let i = 0; i < stockList.length; i++) {
+    const stock = stockList[i];
+    const symbol = stock.ISU_SRT_CD;
 
-  cachedToken = res.data.access_token;
-  cachedTokenTime = now;
-  return cachedToken;
-};
+    const url = `https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price`;
+    const headers = {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${accessToken}`,
+      appkey: process.env.APP_KEY!,
+      appsecret: process.env.APP_SECRET!,
+      tr_id: "FHKST01010100"
+    };
 
-// ✅ 전체 종목리스트 불러오기 (1시간 캐시 적용)
-const getStockList = async () => {
-  const now = Date.now();
-  if (cachedStockList.length > 0 && now - lastFetchedTime < 1000 * 60 * 60) {
-    return cachedStockList;
-  }
+    const params = {
+      fid_cond_mrkt_div_code: "J",
+      fid_input_iscd: symbol
+    };
 
-  const token = await getAccessToken();
-  const res = await axios.get(
-    "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-dmstc-com-stocklist",
-    {
-      headers: {
-        authorization: `Bearer ${token}`,
-        appkey: process.env.APP_KEY!,
-        appsecret: process.env.APP_SECRET!,
-        tr_id: "FHKST01010400",
-      },
-      params: {
-        fid_cond_mrkt_div_code: "J",
-        fid_input_iscd: "",
-      },
+    try {
+      const res = await axios.get(url, { headers, params });
+      const price = Number(res.data.output.stck_prpr);
+      io.emit("stockPrice", { symbol, price });
+      console.log(`${symbol} 가격: ${price}`);
+    } catch (err: any) {
+      console.error(`${symbol} 가격 조회 실패:`, err?.response?.data || err.message);
     }
-  );
-
-  cachedStockList = res.data.output;
-  lastFetchedTime = now;
-  return cachedStockList;
-};
-
-// ✅ 종목리스트 API
-router.get("/api/stock/list", async (req, res) => {
-  try {
-    const list = await getStockList();
-    res.json(list);
-  } catch (err) {
-    console.error("❌ 종목리스트 API 실패:", err);
-    res.status(500).json({ error: "종목리스트 불러오기 실패" });
   }
-});
-
-// ✅ 실시간 주가 조회 API (개별 종목 가격조회)
-router.get("/api/stock/price", async (req, res) => {
-  try {
-    const token = await getAccessToken();
-    const { code } = req.query;
-
-    const response = await axios.get(
-      "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price",
-      {
-        headers: {
-          authorization: `Bearer ${token}`,
-          appkey: process.env.APP_KEY!,
-          appsecret: process.env.APP_SECRET!,
-          tr_id: "FHKST01010100",
-        },
-        params: {
-          fid_cond_mrkt_div_code: "J",
-          fid_input_iscd: code,
-        },
-      }
-    );
-
-    res.json(response.data.output);
-  } catch (err) {
-    console.error("❌ 실시간 주가 조회 실패:", err);
-    res.status(500).json({ error: "실시간 주가 조회 실패" });
-  }
-});
-
-export { getStockList, getAccessToken };
-export default router;
+}

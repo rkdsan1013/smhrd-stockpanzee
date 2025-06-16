@@ -1,44 +1,24 @@
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
-import korStock from "./korStock"
 import { setupSocket } from "./socket";
 
 dotenv.config();
 
-import authRoutes from "./routes/auth";
-import assetsRoutes from "./routes/assets";
-
 const app = express();
-
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  }),
-);
-app.use(express.json());
-app.use(korStock);
-
-app.use("/api/auth", authRoutes);
-app.use("/api/assets", assetsRoutes);
-
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello from Express with WebSocket!");
-});
-
 const server = http.createServer(app);
 setupSocket(server);
 
-// 에러 핸들러
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err);
-  const status = err.statusCode ?? 500;
-  res.status(status).json({ message: err.message ?? "서버 오류" });
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
+
+app.get("/", (_, res) => {
+  res.send("Stockpanzee Server Running");
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(process.env.PORT, () => {
+  console.log(`✅ Server running on port ${process.env.PORT}`);
 });

@@ -105,16 +105,16 @@ const Market: React.FC = () => {
       .catch(console.error);
   }, []);
 
-  // 실시간 소켓 주가 수신
+  // 실시간 소켓 주가 수신 (코드 개선)
   useEffect(() => {
-    socket.emit("subscribeStocks");
-
     socket.on("stockPrice", ({ symbol, price }: { symbol: string; price: number }) => {
-      setStockData(prev => prev.map(stock => 
-        stock.symbol === symbol ? { ...stock, currentPrice: price } : stock)
-      );
+      setStockData(prev => {
+        return prev.map(stock =>
+          stock.symbol === symbol ? { ...stock, currentPrice: price } : stock
+        );
+      });
     });
-
+    
     return () => {
       socket.off("stockPrice");
     };
