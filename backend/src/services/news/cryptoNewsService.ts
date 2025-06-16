@@ -22,6 +22,7 @@ export const fetchAndProcessOneNews = async (): Promise<void> => {
     for (const news of testNewsItems) {
       console.log(`---------------------------`);
       console.log(`처리 시작: 뉴스 제목 - ${news.title}`);
+      console.log("게시일:", news.published_at);
       console.log("뉴스 원문:");
       console.log(news.content);
       console.log("GPT를 통한 뉴스 분석 시작...");
