@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { emitStockPrices } from "./korStock";
+//import { emitStockPrices } from "./korStock";
 
 export function setupSocket(server: any) {
   const io = new Server(server, {
@@ -17,5 +17,5 @@ export function setupSocket(server: any) {
   });
 
   // 주기적으로 가격 emit
-  setInterval(() => emitStockPrices(io), 5000);
+  //setInterval(() => emitStockPrices(io), 5000);
 }

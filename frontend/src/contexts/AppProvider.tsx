@@ -1,3 +1,4 @@
+// /frontend/src/contexts/AppProvider.tsx
 import React from "react";
 import type { ReactNode } from "react";
 import AuthProvider from "./AuthProvider";

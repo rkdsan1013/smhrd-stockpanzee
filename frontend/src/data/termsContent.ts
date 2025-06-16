@@ -1,4 +1,4 @@
-// src/components/termsContent.ts
+// /frontend/src/data/termsContent.ts
 const termsContent = `<p class="font-bold mb-2">STOCKPANZEE 이용 약관</p>
 제1조 (목적)
 본 약관은 STOCKPANZEE(이하 "회사")가 제공하는 최악의 서비스를 회원에게 전달하기 위한 것으로, 회사가 단 한푼의 개인정보 보호조치도 취하지 않음을 회원에게 강력히 각인시키고, 앞으로 발생할 모든 불행과 위험을 미리 경고하기 위함입니다.

@@ -1,0 +1,12 @@
+{
+  "n.news.naver.com": "#newsct_article",
+  "mk.co.kr": "#article_body_2011",
+  "hankyung.com": ".art_txt",
+  "chosun.com": "#news_body_id",
+  "yna.co.kr": "#articleWrap",
+  "news.einfomax.co.kr": "#news-view-area",
+  "hansbiz.co.kr": "#article-view-content-div",
+  "irobotnews.com": "#article-view-content-div",
+  "digitaltoday.co.kr": ".td-paragraph",
+  "shinailbo.co.kr": "#article-view-content-div"
+}

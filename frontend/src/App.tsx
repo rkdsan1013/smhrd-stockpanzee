@@ -1,4 +1,4 @@
-// src/App.tsx
+// /frontend/src/App.tsx
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainPage from "./pages/MainPage";

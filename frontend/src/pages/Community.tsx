@@ -1,4 +1,4 @@
-// src/components/Community.tsx
+// /frontend/src/pages/Community.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import Icons from "../components/Icons"; // clock, fire, angleLeft, angleRight, thumbsUp, messageDots 아이콘 지원

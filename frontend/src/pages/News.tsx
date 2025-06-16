@@ -1,3 +1,4 @@
+// /frontend/src/pages/News.tsx
 import React, { useState } from "react";
 
 interface NewsItem {
