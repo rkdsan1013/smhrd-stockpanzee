@@ -53,7 +53,7 @@
 - 국내 : 네이버 오픈 API, 네이버 금융 크롤링
 - 해외 : Finnhub Stock API, Alpha Vantage API, 크롤링
 - 암호화폐 : CoinDesk API, CoinGecko API
-- 차트정보 : TradingView API, 한국투자증권 Open API
+- 차트정보 : TradingView API, 한국투자증권 Open API, Polygon API
 - 커뮤니티 반응 : Reddit API
 
 ---
