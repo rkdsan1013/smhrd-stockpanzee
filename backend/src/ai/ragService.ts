@@ -3,7 +3,14 @@ import { getEmbedding } from "./embeddingService";
 import vectorDB from "./vectorDB";
 import { analyzeNews } from "./gptNewsAnalysis";
 
-export async function generateRagResponse(userQuery: string): Promise<string> {
+export async function generateRagResponse(userQuery: string): Promise<{
+  summary: string;
+  brief_summary: string;
+  news_sentiment: number;
+  news_positive: string[];
+  news_negative: string[];
+  tags: string[];
+}> {
   // 1. 사용자 쿼리 임베딩 생성
   const queryEmbedding = await getEmbedding(userQuery);
 
@@ -15,14 +22,18 @@ export async function generateRagResponse(userQuery: string): Promise<string> {
     .map((item) => `뉴스 ID: ${item.newsId}, 제목: ${item.meta?.title || "제목 없음"}`)
     .join("\n");
 
-  // 4. 사용자 쿼리와 컨텍스트를 포함한 프롬프트 전송
-  const prompt = `사용자 쿼리: ${userQuery}
-아래는 관련 뉴스 정보입니다:
-${contextText}
-이 정보를 바탕으로 상세한 답변을 작성해줘.`;
+  // 4. 사용자 쿼리와 컨텍스트를 포함하여 동일한 말투로 구성
+  const newsTitleForRag = `사용자 쿼리: ${userQuery}`;
+  const newsContentForRag = `아래는 관련 뉴스 정보입니다:\n${contextText}`;
 
-  // RAG 프롬프트를 통해 생성된 답변의 요약을 반환합니다.
-  // 여기서는 분석 함수의 summary 필드를 사용합니다.
-  const analysis = await analyzeNews(userQuery, prompt);
-  return analysis.summary;
+  // analyzeNews 함수는 뉴스 제목과 뉴스 내용을 기반으로 분석 결과를 반환합니다.
+  const analysis = await analyzeNews(newsTitleForRag, newsContentForRag);
+  return {
+    summary: analysis.summary,
+    brief_summary: analysis.brief_summary,
+    news_sentiment: analysis.news_sentiment,
+    news_positive: analysis.news_positive,
+    news_negative: analysis.news_negative,
+    tags: analysis.tags,
+  };
 }

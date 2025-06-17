@@ -1,6 +1,6 @@
 // /backend/src/services/news/cryptoNewsService.ts
 import { mapCryptoNews } from "../../utils/news/cryptoNewsMapper";
-import { analyzeNews } from "../../../src/ai/gptNewsAnalysis"; // 단계에 맞게 경로 확인
+import { analyzeNews } from "../../../src/ai/gptNewsAnalysis"; // 경로는 단계에 맞게 조정
 const CRYPTO_NEWS_API_URL =
   process.env.CRYPTO_NEWS_API_URL || "https://min-api.cryptocompare.com/data/v2/news/?lang=EN";
 
@@ -26,10 +26,14 @@ export const fetchAndProcessOneNews = async (): Promise<void> => {
       console.log("뉴스 원문:");
       console.log(news.content);
       console.log("GPT를 통한 뉴스 분석 시작...");
-      // 수정: 뉴스 제목과 뉴스 본문을 함께 전달하여 분석하도록 호출
+
+      // analyzeNews 함수는 뉴스 제목과 내용을 기반으로
+      // 상세 요약(summary), 간결 요약(brief_summary), 감정 및 태그 관련 정보를 반환합니다.
       const analysis = await analyzeNews(news.title, news.content);
+
       console.log("GPT 뉴스 분석 결과:", analysis);
-      console.log(`처리 완료: 뉴스 제목 번역 - ${analysis.title_ko}`);
+      console.log(`처리 완료: 상세 요약 - ${analysis.summary}`);
+      console.log(`간결 요약: ${analysis.brief_summary}`);
       console.log(`---------------------------`);
     }
     console.log("모든 테스트 뉴스 처리 완료.");
