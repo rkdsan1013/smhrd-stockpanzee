@@ -198,7 +198,7 @@ const CommunityDetail: React.FC = () => {
         className="w-full aspect-video object-contain rounded mb-3"
       />
 
-      <div className="flex items-center space-x-6 text-gray-400 mb-2">
+      <div className="flex items-center space-x-6 text-gray-400 mb-2 justify-end">
         <span className="flex items-center">
           <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
           {post.community_likes}
@@ -211,7 +211,6 @@ const CommunityDetail: React.FC = () => {
           <Icons name="eye" className="w-5 h-5 mr-1" />
           {post.views || 0}
         </span>
-
       </div>
 
       <div className="text-gray-200 mb-8">{post.community_contents}</div>
