@@ -21,4 +21,8 @@ export async function createCommunityPost(post: {
   return await communityModel.createCommunityPost(post);
 }
 
+export async function getCommunityPost(id: number) {
+  return await communityModel.getCommunityPost(id);
+}
+
 // ...추가로 update, delete, getById 등도 여기에 작성!

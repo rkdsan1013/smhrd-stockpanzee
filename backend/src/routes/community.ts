@@ -1,8 +1,7 @@
-// backend/src/routes/communityRoutes.ts
+// backend/src/routes/community.ts
 import { Router } from "express";
 import * as communityController from "../controllers/communityController";
 import multer from "multer";
-
 const upload = multer();
 const router = Router();
 

@@ -21,7 +21,19 @@ export async function getCommunityPosts(req: Request, res: Response, next: NextF
 // 게시글 상세 조회
 export async function getCommunityPost(req: Request, res: Response, next: NextFunction) {
   try {
-    res.json({ message: "커뮤니티 상세" });
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "잘못된 게시글 id" });
+    }
+    const post = await communityService.getCommunityPost(id);
+    if (!post) {
+      return res.status(404).json({ message: "게시글을 찾을 수 없습니다" });
+    }
+    // BLOB 이미지가 있으면 Base64로 인코딩
+    if (post.community_img) {
+      post.community_img = post.community_img.toString("base64");
+    }
+    res.json(post);
   } catch (err) {
     next(err);
   }

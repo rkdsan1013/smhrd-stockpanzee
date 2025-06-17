@@ -243,30 +243,24 @@ useEffect(() => {
       {/* 게시글 그리드 */}
       <div id="posts-top" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-center text-gray-400 py-12">
-            불러오는 중...
-          </div>
+          <div className="col-span-full text-center text-gray-400 py-12">불러오는 중...</div>
         ) : currentPosts.length === 0 ? (
-          <div className="col-span-full text-center text-gray-400 py-12">
-            게시글이 없습니다.
-          </div>
+          <div className="col-span-full text-center text-gray-400 py-12">게시글이 없습니다.</div>
         ) : (
           currentPosts.map((post) => (
-            <div key={post.id} className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
-              {/* ⭐ 이미지 렌더링: 있으면 base64, 없으면 기본 이미지 */}
-              <img
-                src={
-                  post.community_img
+            <Link to={`/communitydetail/${post.id}`} key={post.id} className="block">
+              <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
+                <img
+                  src={post.community_img
                     ? `data:image/jpeg;base64,${post.community_img}`
                     : "/panzee.webp"
-                }
-                alt="썸네일"
-                className="w-full aspect-video object-cover rounded mb-3"
-              />
-
-              <h3 className="text-lg font-bold mb-1 text-white">{post.community_title}</h3>
-              <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
-              <div className="flex items-center justify-between">
+                  }
+                  alt="썸네일"
+                  className="w-full aspect-video object-cover rounded mb-3"
+                />
+                <h3 className="text-lg font-bold mb-1 text-white">{post.community_title}</h3>
+                <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
+                <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-gray-400">{post.category}</div>
                   <div className="text-sm text-gray-400">{post.created_at}</div>
@@ -283,6 +277,7 @@ useEffect(() => {
                 </div>
               </div>
             </div>
+            </Link>
           ))
         )}
       </div>

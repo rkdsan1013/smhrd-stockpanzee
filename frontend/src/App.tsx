@@ -10,6 +10,7 @@ import News from "./pages/News";
 import Market from "./pages/Market";
 import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
+import CommunityDetail from "./pages/CommunityDetail";
 
 const App: React.FC = () => {
   return (
@@ -23,6 +24,7 @@ const App: React.FC = () => {
           <Route path="community" element={<Community />} />
           {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
           <Route path="post" element={<PostCreationPage />} />
+          <Route path="/communitydetail/:id" element={<CommunityDetail />} />
         </Route>
         {/* 인증 관련 페이지 */}
         <Route path="/auth" element={<AuthTemplate />}>

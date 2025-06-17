@@ -27,3 +27,12 @@ export async function createCommunityPost(post: CommunityPost) {
   );
   return result;
 }
+
+// 상세 조회
+export async function getCommunityPost(id: number) {
+  const [rows]: any = await pool.query(
+    `SELECT * FROM community WHERE id = ?`,
+    [id]
+  );
+  return rows[0]; // 하나만 반환
+}
