@@ -179,7 +179,15 @@ const CommunityDetail: React.FC = () => {
 
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
-      <h1 className="text-3xl font-bold mb-4">{post.community_title}</h1>
+    {/* 카테고리+시간 */}
+    <div className="flex items-center text-lg font-semibold text-white mb-2">
+      <span>{post.category}</span>
+      <span className="mx-2 text-gray-500">·</span>
+      <span className="font-normal text-gray-300">{timeAgo(post.created_at)}</span>
+    </div>
+    {/* 제목 */}
+    <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
+    {/* 이미지 등 이하 동일 */}
       <img
         src={
           post.community_img
@@ -203,8 +211,6 @@ const CommunityDetail: React.FC = () => {
           <Icons name="eye" className="w-5 h-5 mr-1" />
           {post.views || 0}
         </span>
-        <span>|</span>
-        <span>{timeAgo(post.created_at)}</span>
       </div>
 
       <div className="text-gray-200 mb-8">{post.community_contents}</div>

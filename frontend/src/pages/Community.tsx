@@ -1,53 +1,48 @@
-//frontend/src/pages/community.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import Icons from "../components/Icons";
+
+const categoryList = ["전체", "국내", "해외", "암호화폐"];
+
+// 시간 표시 함수
+function timeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 60) return `${diff}초 전`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
+}
 
 const Community: React.FC = () => {
   const [selectedSort, setSelectedSort] = useState("latest");
   const [selectedTab, setSelectedTab] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 12;
-
-  // 실제 API 데이터로 posts 상태값 관리 (초기값은 빈 배열)
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 실제 API 연동 (selectedSort, selectedTab, currentPage 활용 가능)
-useEffect(() => {
-  setLoading(true);
-  axios
-    .get(`${import.meta.env.VITE_API_BASE_URL}/community`)
-    .then(res => {
-      // 콘솔로 실제 백엔드 응답 구조 확인!
-      console.log("API 응답:", res.data);
-
-      // 1. 배열 형태면 바로 세팅
-      if (Array.isArray(res.data)) {
-        setPosts(res.data);
-      }
-      // 2. 객체에 posts라는 배열로 들어온 경우
-      else if (Array.isArray(res.data.posts)) {
-        setPosts(res.data.posts);
-      }
-      // 3. 아예 비었으면 빈 배열
-      else {
+  // 실제 API 연동
+  useEffect(() => {
+    setLoading(true);
+    axios
+      .get(`${import.meta.env.VITE_API_BASE_URL}/community`)
+      .then(res => {
+        if (Array.isArray(res.data)) setPosts(res.data);
+        else if (Array.isArray(res.data.posts)) setPosts(res.data.posts);
+        else setPosts([]);
+        setLoading(false);
+      })
+      .catch(err => {
+        alert("게시글 불러오기 실패: " + (err.response?.data?.message || err.message));
         setPosts([]);
-      }
-      setLoading(false);
-    })
-    .catch(err => {
-      alert("게시글 불러오기 실패: " + (err.response?.data?.message || err.message));
-      setPosts([]);
-      setLoading(false);
-    });
-}, [selectedSort, selectedTab, currentPage]);
+        setLoading(false);
+      });
+  }, [selectedSort, selectedTab, currentPage]);
 
-
-
-
-  // 정렬/필터/페이지네이션 (백엔드에서 직접 처리해주는 게 더 효율적임)
+  // 정렬/필터/페이지네이션
   let sortedPosts = posts;
   if (selectedSort === "latest") {
     sortedPosts = posts.slice().sort(
@@ -70,6 +65,7 @@ useEffect(() => {
     currentPage * postsPerPage,
   );
 
+  // 페이지네이션 표시
   const getDisplayPages = (totalPages: number, currentPage: number): (number | string)[] => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -92,7 +88,7 @@ useEffect(() => {
   };
   const displayedPages = getDisplayPages(totalPages, currentPage);
 
-  // 스크롤 관리 (그대로 유지)
+  // 스크롤 관리
   const initialMountRef = useRef(true);
   const pageNavigationRef = useRef(false);
   useEffect(() => {
@@ -150,9 +146,9 @@ useEffect(() => {
             <Icons name="fire" className="w-5 h-5" />
           </button>
         </div>
-        {/* 카테고리 */}
-        <div className="flex bg-gray-800 p-1 rounded-full space-x-2">
-          {["전체", "국내", "해외", "암호화폐"].map((tab) => (
+        {/* 카테고리 탭 (md 이상) */}
+        <div className="hidden md:flex bg-gray-800 p-1 rounded-full space-x-2">
+          {categoryList.map((tab) => (
             <button
               key={tab}
               onClick={() => {
@@ -180,66 +176,67 @@ useEffect(() => {
       </div>
 
       {/* 모바일 컨트롤 */}
-      <div className="flex md:hidden flex-col mb-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
-            <button
-              onClick={() => {
-                setSelectedSort("latest");
-                setCurrentPage(1);
-              }}
-              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
-                selectedSort === "latest"
-                  ? "bg-white/30 text-blue-500"
-                  : "bg-transparent hover:bg-white/30"
-              }`}
-            >
-              <Icons name="clock" className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => {
-                setSelectedSort("popular");
-                setCurrentPage(1);
-              }}
-              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
-                selectedSort === "popular"
-                  ? "bg-white/30 text-blue-500"
-                  : "bg-transparent hover:bg-white/30"
-              }`}
-            >
-              <Icons name="fire" className="w-5 h-5" />
-            </button>
-          </div>
-          <div>
-            <Link to="/post">
-              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
-                글쓰기
-              </button>
-            </Link>
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <div className="flex bg-gray-800 p-1 rounded-full space-x-2">
-            {["전체", "국내", "해외", "암호화폐"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setSelectedTab(tab);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-2 transition-colors duration-200 text-white rounded-full ${
-                  selectedTab === tab
-                    ? "bg-white/30 text-blue-500"
-                    : "bg-transparent hover:bg-white/30"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+<div className="flex md:hidden flex-col mb-6 space-y-4">
+  <div className="flex items-center justify-between w-full">
+    {/* 최신/인기 */}
+    <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
+      <button
+        onClick={() => {
+          setSelectedSort("latest");
+          setCurrentPage(1);
+        }}
+        className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
+          selectedSort === "latest"
+            ? "bg-white/30 text-blue-500"
+            : "bg-transparent hover:bg-white/30"
+        }`}
+      >
+        <Icons name="clock" className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => {
+          setSelectedSort("popular");
+          setCurrentPage(1);
+        }}
+        className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
+          selectedSort === "popular"
+            ? "bg-white/30 text-blue-500"
+            : "bg-transparent hover:bg-white/30"
+        }`}
+      >
+        <Icons name="fire" className="w-5 h-5" />
+      </button>
+    </div>
 
+    {/* 카테고리 드롭다운 - 중앙정렬 */}
+    <div className="flex-1 flex justify-center">
+      <select
+        value={selectedTab}
+        onChange={(e) => {
+          setSelectedTab(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="w-32 px-4 py-2 rounded-full bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        {categoryList.map((tab) => (
+          <option key={tab} value={tab}>
+            {tab}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* 글쓰기 */}
+    <div>
+      <Link to="/post">
+        <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
+          글쓰기
+        </button>
+      </Link>
+          </div>
+        </div>
+
+      </div>
       {/* 게시글 그리드 */}
       <div id="posts-top" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading ? (
@@ -250,6 +247,7 @@ useEffect(() => {
           currentPosts.map((post) => (
             <Link to={`/communitydetail/${post.id}`} key={post.id} className="block">
               <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
+                {/* 썸네일 */}
                 <img
                   src={post.community_img
                     ? `data:image/jpeg;base64,${post.community_img}`
@@ -258,30 +256,40 @@ useEffect(() => {
                   alt="썸네일"
                   className="w-full aspect-video object-cover rounded mb-3"
                 />
-                <h3 className="text-lg font-bold mb-1 text-white">{post.community_title}</h3>
+                {/* 제목 */}
+                <h3 className="text-lg font-bold mb-1 text-white line-clamp-2">
+                  {post.community_title}
+                </h3>
+                {/* 본문요약 */}
                 <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
-                <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-gray-400">{post.category}</div>
-                  <div className="text-sm text-gray-400">{post.created_at}</div>
+                {/* 카테고리 | 닉네임 */}
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-base text-white font-bold">{post.category}</span>
+                  <span className="text-sm text-gray-400">{post.nickname || post.name || "익명"}</span>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <span className="flex items-center text-sm text-gray-400">
-                    <Icons name="thumbsUp" className="w-6 h-6 mr-1" />
-                    {post.community_likes}
-                  </span>
-                  <span className="flex items-center text-sm text-gray-400">
-                    <Icons name="messageDots" className="w-6 h-6 mr-1" />
-                    0
-                  </span>
+                {/* 시간 | 좋아요 | 댓글수 | 조회수 */}
+                <div className="flex justify-between items-center text-sm text-gray-400">
+                  <span>{timeAgo(post.created_at)}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center">
+                      <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
+                      {post.community_likes}
+                    </span>
+                    <span className="flex items-center">
+                      <Icons name="messageDots" className="w-5 h-5 mr-1" />
+                      {post.comment_count ?? 0}
+                    </span>
+                    <span className="flex items-center">
+                      <Icons name="eye" className="w-5 h-5 mr-1" />
+                      {post.views ?? 0}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
             </Link>
           ))
         )}
       </div>
-
 
       {/* 페이지네이션 */}
       <div className="flex justify-center mt-6 space-x-3">
