@@ -8,7 +8,7 @@ interface MulterRequest extends Request {
 
 // 게시글 목록 조회
 export async function getCommunityPosts(req: Request, res: Response, next: NextFunction) {
-  try {
+  try {    
     const posts = await communityService.getCommunityPosts();
     res.json(posts); // 배열로 반환
     // 또는 res.json({ posts });  → 프론트 구조에 따라 맞춤

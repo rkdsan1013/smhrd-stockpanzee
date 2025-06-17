@@ -252,29 +252,41 @@ useEffect(() => {
           </div>
         ) : (
           currentPosts.map((post) => (
-  <div key={post.id} className="p-4 ...">
-    <h3 className="text-lg font-bold mb-1 text-white">{post.community_title}</h3>
-    <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="text-sm text-gray-400">{post.category}</div>
-        <div className="text-sm text-gray-400">{post.created_at}</div>
-      </div>
-      <div className="flex items-center space-x-4">
-        <span className="flex items-center text-sm text-gray-400">
-          <Icons name="thumbsUp" className="w-6 h-6 mr-1" />
-          {post.community_likes}
-        </span>
-        <span className="flex items-center text-sm text-gray-400">
-          <Icons name="messageDots" className="w-6 h-6 mr-1" />
-          0
-        </span>
-      </div>
-    </div>
-  </div>
+            <div key={post.id} className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
+              {/* ⭐ 이미지 렌더링: 있으면 base64, 없으면 기본 이미지 */}
+              <img
+                src={
+                  post.community_img
+                    ? `data:image/jpeg;base64,${post.community_img}`
+                    : "/panzee.webp"
+                }
+                alt="썸네일"
+                className="w-full aspect-video object-cover rounded mb-3"
+              />
+
+              <h3 className="text-lg font-bold mb-1 text-white">{post.community_title}</h3>
+              <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-400">{post.category}</div>
+                  <div className="text-sm text-gray-400">{post.created_at}</div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="flex items-center text-sm text-gray-400">
+                    <Icons name="thumbsUp" className="w-6 h-6 mr-1" />
+                    {post.community_likes}
+                  </span>
+                  <span className="flex items-center text-sm text-gray-400">
+                    <Icons name="messageDots" className="w-6 h-6 mr-1" />
+                    0
+                  </span>
+                </div>
+              </div>
+            </div>
           ))
         )}
       </div>
+
 
       {/* 페이지네이션 */}
       <div className="flex justify-center mt-6 space-x-3">
