@@ -11,6 +11,7 @@ dotenv.config();
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
 import newsRoutes from "./routes/newsRoutes"; // 뉴스 라우트 추가
+import redditRoutes from "./routes/redditRoutes";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
 app.use("/api/news", newsRoutes);
+app.use("/api/reddit", redditRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
