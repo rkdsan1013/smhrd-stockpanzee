@@ -198,19 +198,26 @@ const CommunityDetail: React.FC = () => {
         className="w-full aspect-video object-contain rounded mb-3"
       />
 
-      <div className="flex items-center space-x-6 text-gray-400 mb-2 justify-end">
-        <span className="flex items-center">
-          <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
-          {post.community_likes}
-        </span>
-        <span className="flex items-center">
-          <Icons name="messageDots" className="w-5 h-5 mr-1" />
-          {comments.length}
-        </span>
-        <span className="flex items-center">
-          <Icons name="eye" className="w-5 h-5 mr-1" />
-          {post.views || 0}
-        </span>
+        <div className="flex items-center mb-2">
+        {/* 왼쪽: 닉네임 */}
+        <div className="text-base text-white font-semibold">
+          {post.nickname || post.name || "익명"}
+        </div>
+        {/* 오른쪽: 좋아요/댓글수/조회수 */}
+        <div className="flex items-center space-x-6 text-gray-400 ml-auto">
+          <span className="flex items-center">
+            <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
+            {post.community_likes}
+          </span>
+          <span className="flex items-center">
+            <Icons name="messageDots" className="w-5 h-5 mr-1" />
+            {comments.length}
+          </span>
+          <span className="flex items-center">
+            <Icons name="eye" className="w-5 h-5 mr-1" />
+            {post.views || 0}
+          </span>
+        </div>
       </div>
 
       <div className="text-gray-200 mb-8">{post.community_contents}</div>
