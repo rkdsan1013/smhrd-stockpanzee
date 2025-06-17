@@ -1,9 +1,15 @@
 export interface NaverNewsApiItem {
   title: string;
-  description: string;
   link: string;
+  originallink: string;
+  description: string;
   pubDate: string;
-  originallink?: string;
+  thumbnail?: string;
+}
+
+export interface CrawledNews {
+  title: string;
+  content: string;
 }
 
 export interface IKrxNews {
@@ -16,16 +22,27 @@ export interface IKrxNews {
 }
 
 export const mapKrxNews = (
-  rawData: NaverNewsApiItem[], 
-  thumbnails: (string | null)[], 
-  contents: string[]
+  rawData: NaverNewsApiItem[],
+  crawledResults: CrawledNews[]
 ): IKrxNews[] => {
-  return rawData.map((news, index) => ({
-    title: news.title.replace(/<[^>]*>/g, ""),
-    content: contents[index] || news.description.replace(/<[^>]*>/g, ""),
-    news_link: news.link,
-    thumbnail: thumbnails[index] || null,
-    published_at: new Date(news.pubDate),
-    source_title: news.originallink || "네이버뉴스",
-  }));
+  return rawData.map((news, index) => {
+    const crawled = crawledResults[index];
+    return {
+      title: crawled.title,
+      content: crawled.content,
+      news_link: news.link,
+      thumbnail: news.thumbnail || null,
+      published_at: new Date(news.pubDate),
+      source_title: extractSourceTitle(news.originallink || news.link)
+    };
+  });
+};
+
+const extractSourceTitle = (url: string): string => {
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    return hostname;
+  } catch {
+    return "unknown";
+  }
 };
