@@ -23,6 +23,9 @@ export interface IKrxNews {
 
 export const mapKrxNews = (
   rawData: NaverNewsApiItem[],
+  thumbnails: (string | null)[],
+  contents: string[],
+  titles: string[],
   crawledResults: CrawledNews[]
 ): IKrxNews[] => {
   return rawData.map((news, index) => {
@@ -31,12 +34,13 @@ export const mapKrxNews = (
       title: crawled.title,
       content: crawled.content,
       news_link: news.link,
-      thumbnail: news.thumbnail || null,
+      thumbnail: thumbnails[index] || null,  // 🔧 썸네일 제대로 할당
       published_at: new Date(news.pubDate),
       source_title: extractSourceTitle(news.originallink || news.link)
     };
   });
 };
+
 
 const extractSourceTitle = (url: string): string => {
   try {
