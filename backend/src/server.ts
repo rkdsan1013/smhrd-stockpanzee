@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
 import { setupSocket } from "./socket";
+import { startPolygonPriceStream } from "./services/polygonPriceStream"; // ✅ 추가
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ app.get("/", (req: Request, res: Response) => {
 const server = http.createServer(app);
 setupSocket(server);
 
-// 에러 핸들링 미들웨어 (인자가 네 개 있어야 합니다)
+// 에러 핸들링 미들웨어
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   const status = err.statusCode ?? 500;
@@ -43,4 +44,5 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startPolygonPriceStream(); // ✅ WebSocket 실행
 });

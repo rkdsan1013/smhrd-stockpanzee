@@ -80,28 +80,34 @@ const Market: React.FC = () => {
 
   // API에서 자산 로드 후 category 계산
   useEffect(() => {
-    fetchAssets()
-      .then((assets: Asset[]) => {
-        const list: StockItem[] = assets.map((a) => {
-          let category: StockItem["category"];
-          if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
-          else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
-          else if (a.market === "Binance") category = "암호화폐";
-          else category = "국내";
-          return {
-            id: a.id,
-            name: a.name,
-            symbol: a.symbol,
-            currentPrice: 0,
-            priceChange: 0,
-            marketCap: 0,
-            logo: "/panzee.webp",
-            category,
-          };
-        });
-        setStockData(list);
-      })
-      .catch(console.error);
+    const load = () => {
+      fetchAssets()
+        .then((assets: Asset[]) => {
+          const list: StockItem[] = assets.map((a) => {
+            let category: StockItem["category"];
+            if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
+            else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
+            else if (a.market === "Binance") category = "암호화폐";
+            else category = "국내";
+            return {
+              id: a.id,
+              name: a.name,
+              symbol: a.symbol,
+              currentPrice: a.currentPrice,
+              priceChange: a.priceChange,
+              marketCap: a.marketCap,
+              logo: "/panzee.webp",
+              category,
+            };
+          });
+          setStockData(list);
+        })
+        .catch(console.error);
+    };
+
+    load(); // 최초 실행
+    const interval = setInterval(load, 5000); // 5초마다 새로고침
+    return () => clearInterval(interval);
   }, []);
 
   // Market 탭 필터링
