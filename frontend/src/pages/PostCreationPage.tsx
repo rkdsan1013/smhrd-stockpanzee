@@ -1,5 +1,7 @@
 // /frontend/src/pages/PostCreationPage.tsx
 import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const PostCreationPage: React.FC = () => {
   const [title, setTitle] = useState("");
@@ -7,18 +9,19 @@ const PostCreationPage: React.FC = () => {
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);
 
+  const navigate = useNavigate();
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setImage(e.target.files[0]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 여기에 실제 API 요청 등 글 작성 로직을 구현하세요.
-    console.log({ title, category, content, image });
-    alert("포스트가 생성되었습니다!");
   };
+
+  // ...아래는 기존 렌더링 그대로...
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
