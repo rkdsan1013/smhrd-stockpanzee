@@ -5,6 +5,7 @@ dotenv.config();
 
 export interface AnalysisResult {
   summary: string;
+  title_ko: string;
   sentiment: number;
   tags: string[];
   positive: string[];
@@ -37,16 +38,18 @@ interface ChatCompletionResponse {
   };
 }
 
-export async function analyzeNews(newsContent: string): Promise<AnalysisResult> {
-  const prompt = `뉴스 내용: ${newsContent}
+export async function analyzeNews(newsTitle: string, newsContent: string): Promise<AnalysisResult> {
+  const prompt = `뉴스 제목: ${newsTitle}
+뉴스 내용: ${newsContent}
 
 아래 JSON 형식만 반환하십시오. 추가 설명이나 주석은 포함하지 마십시오.
 형식:
-{"summary": "...", "sentiment": n, "tags": ["티커1", "티커2", ...], "positive": ["긍정적 요소 1", "긍정적 요소 2", ...], "negative": ["부정적 요소 1", "부정적 요소 2", ...]}
+{"summary": "...", "title_ko": "...", "sentiment": n, "tags": ["티커1", "티커2", ...], "positive": ["긍정적 요소 1", "긍정적 요소 2", ...], "negative": ["부정적 요소 1", "부정적 요소 2", ...]}
 
 - sentiment: 1 = 매우부정, 2 = 부정, 3 = 중립, 4 = 긍정, 5 = 매우긍정.
 - tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA).
 - summary: 반드시 한글로 번역하여 작성.
+- title_ko: 뉴스 제목의 한글 번역본.
 `;
 
   const messages: ChatMessage[] = [
@@ -69,7 +72,7 @@ export async function analyzeNews(newsContent: string): Promise<AnalysisResult> 
       {
         model: "gpt-4.1-mini",
         messages: messages,
-        max_tokens: 1000,
+        max_tokens: 2000,
         temperature: 0,
         n: 1,
       },

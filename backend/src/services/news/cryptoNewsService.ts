@@ -26,9 +26,10 @@ export const fetchAndProcessOneNews = async (): Promise<void> => {
       console.log("뉴스 원문:");
       console.log(news.content);
       console.log("GPT를 통한 뉴스 분석 시작...");
-      const analysis = await analyzeNews(news.content);
+      // 수정: 뉴스 제목과 뉴스 본문을 함께 전달하여 분석하도록 호출
+      const analysis = await analyzeNews(news.title, news.content);
       console.log("GPT 뉴스 분석 결과:", analysis);
-      console.log(`처리 완료: 뉴스 제목 - ${news.title}`);
+      console.log(`처리 완료: 뉴스 제목 번역 - ${analysis.title_ko}`);
       console.log(`---------------------------`);
     }
     console.log("모든 테스트 뉴스 처리 완료.");

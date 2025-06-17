@@ -19,6 +19,6 @@ export async function createNewsAnalysis(analysis: NewsAnalysis): Promise<void> 
     analysis.summary,
     analysis.sentiment,
     analysis.tags,
-    analysis.market, // 무조건 "crypto"로 전달
+    analysis.market,
   ]);
 }
