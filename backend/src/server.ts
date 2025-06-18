@@ -3,15 +3,16 @@ import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import http from "http";
 import cors from "cors";
-import { setupSocket } from "./socket";
-import { startPolygonPriceStream } from "./services/polygonPriceStream"; // ✅ 추가
 
-dotenv.config();
+import { setupSocket } from "./socket";
+import { startPolygonPriceStream, updatePreviousCloses } from "./services/polygonPriceStream";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
-import newsRoutes from "./routes/newsRoutes"; // 뉴스 라우트 추가
+import newsRoutes from "./routes/newsRoutes";
 import redditRoutes from "./routes/redditRoutes";
+
+dotenv.config();
 
 const app = express();
 
@@ -34,7 +35,9 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 const server = http.createServer(app);
-setupSocket(server);
+
+// Socket.IO 셋업 — 반드시 반환 값을 받아둡니다.
+const io = setupSocket(server);
 
 // 에러 핸들링 미들웨어
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -46,5 +49,6 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  startPolygonPriceStream(); // ✅ WebSocket 실행
+  // Polygon 스트림에는 반드시 io 인스턴스를 넘겨주세요.
+  startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 });

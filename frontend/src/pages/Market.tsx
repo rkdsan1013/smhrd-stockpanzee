@@ -83,6 +83,9 @@ const Market: React.FC = () => {
     const load = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
+          console.log("▶️ fetched assets:", assets);
+          console.log("▶️ sample asset JSON:", JSON.stringify(assets[0], null, 2));
+
           const list: StockItem[] = assets.map((a) => {
             let category: StockItem["category"];
             if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
