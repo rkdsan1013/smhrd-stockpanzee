@@ -5,7 +5,7 @@ import http from "http";
 import cors from "cors";
 
 import { setupSocket } from "./socket";
-import { startPolygonPriceStream, updatePreviousCloses } from "./services/polygonPriceStream";
+import { startPolygonPriceStream } from "./services/polygonPriceStream";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";

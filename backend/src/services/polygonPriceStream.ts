@@ -50,6 +50,7 @@ export async function updatePreviousCloses(): Promise<void> {
       const close = r.c;
       const open = r.o;
       const change = open ? Number((((close - open) / open) * 100).toFixed(2)) : 0;
+      const existingCap = assets.find((a) => a.id === id)!.market_cap ?? 0;
       await upsertAssetInfo(id, close, change, 0);
     }),
   );
@@ -107,6 +108,7 @@ export async function startPolygonPriceStream(io: IOServer) {
         const asset = assets.find((a) => a.id === aid)!;
         const dbP = asset.current_price ?? pd.price;
         const change = dbP ? Number((((pd.price - dbP) / dbP) * 100).toFixed(2)) : 0;
+        const existingCap = asset.market_cap ?? 0;
         await upsertAssetInfo(aid, pd.price, change, 0);
       }
       setTimeout(connect, reconnect);

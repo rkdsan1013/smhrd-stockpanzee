@@ -34,6 +34,5 @@ export const UPSERT_ASSET_INFO = `
   ON DUPLICATE KEY UPDATE
     current_price = VALUES(current_price),
     price_change  = VALUES(price_change),
-    market_cap    = VALUES(market_cap),
     last_updated  = NOW()
 `;
