@@ -174,6 +174,35 @@ const CommunityDetail: React.FC = () => {
       .then(() => fetchComments());
   };
 
+  const [isLiked, setIsLiked] = useState(false);
+const [likeCount, setLikeCount] = useState(0);
+
+useEffect(() => {
+  // ... post set 시
+  setIsLiked(post?.isLiked || false);
+  setLikeCount(post?.community_likes || 0);
+}, [post]);
+
+const handleLikeToggle = async () => {
+  if (!post) return;
+  try {
+    if (isLiked) {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, { withCredentials: true });
+      setIsLiked(false);
+      setLikeCount(likeCount - 1);
+    } else {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, {}, { withCredentials: true });
+      setIsLiked(true);
+      setLikeCount(likeCount + 1);
+    }
+  } catch (err) {
+    alert("로그인 후 사용 가능합니다.");
+  }
+};
+
+
+
+
   if (loading || !post)
     return <div className="text-center py-16">불러오는 중...</div>;
 
@@ -205,10 +234,16 @@ const CommunityDetail: React.FC = () => {
         </div>
         {/* 오른쪽: 좋아요/댓글수/조회수 */}
         <div className="flex items-center space-x-6 text-gray-400 ml-auto">
-          <span className="flex items-center">
+           <button
+            onClick={handleLikeToggle}
+            className={`flex items-center transition-colors ${isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"}`}
+            title={isLiked ? "좋아요 취소" : "좋아요"}
+            type="button"
+          >
             <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
-            {post.community_likes}
-          </span>
+            {likeCount}
+          </button>
+
           <span className="flex items-center">
             <Icons name="messageDots" className="w-5 h-5 mr-1" />
             {comments.length}

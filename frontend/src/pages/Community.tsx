@@ -1,3 +1,4 @@
+// /frontend/src/pages/Community.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
