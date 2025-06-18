@@ -1,26 +1,22 @@
 // /backend/src/models/newsModel.ts
-import pool from "../config/db";
-import { INews } from "../utils/news/cryptoNewsMapper";
-
-export async function createNews(news: INews): Promise<number> {
-  const sql = `
-    INSERT INTO news (title, content, news_link, thumbnail, published_at, source_title)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const [result] = await pool.query(sql, [
-    news.title,
-    news.content,
-    news.news_link,
-    news.thumbnail,
-    news.published_at,
-    news.source_title,
-  ]);
-  const insertId = (result as any).insertId;
-  return insertId;
+export interface INews {
+  news_category: "domestic" | "international" | "crypto";
+  title: string;
+  title_ko?: string;
+  content: string;
+  thumbnail: string;
+  news_link: string;
+  publisher: string;
+  published_at: Date;
 }
 
-export async function findNewsByLink(news_link: string): Promise<boolean> {
-  const sql = `SELECT id FROM news WHERE news_link = ? LIMIT 1`;
-  const [rows] = await pool.query(sql, [news_link]);
-  return (rows as any[]).length > 0;
+export interface NewsAnalysis {
+  news_id: number;
+  news_sentiment: number; // 1 ~ 5 (1: 매우 부정, 5: 매우 긍정)
+  news_positive: string; // JSON 문자열로 저장 (예: '["긍정포인트1", "긍정포인트2"]')
+  news_negative: string; // JSON 문자열로 저장
+  community_sentiment?: number;
+  summary: string;
+  brief_summary: string;
+  tags: string; // JSON 문자열 (예: '["BTC", "ETH"]')
 }
