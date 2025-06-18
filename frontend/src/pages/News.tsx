@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 
-// 뉴스 카테고리를 한글로 매핑
+// 뉴스 카테고리 매핑: "domestic", "international", "crypto" → "국내", "해외", "암호화폐"
 const getCategoryLabel = (category: "domestic" | "international" | "crypto"): string => {
   switch (category) {
     case "domestic":
@@ -17,7 +17,7 @@ const getCategoryLabel = (category: "domestic" | "international" | "crypto"): st
   }
 };
 
-// 감성 평점을 숫자로 변환한 후 라벨 매핑 (news_sentiment 사용)
+// 감성 평점 라벨 매핑 (news_sentiment 사용)
 const getSentimentLabel = (value: number | string | null): string => {
   const numericValue = Number(value) || 3;
   switch (numericValue) {
@@ -39,13 +39,13 @@ const getSentimentLabel = (value: number | string | null): string => {
 // 감성 평점에 따른 배지 스타일
 const getSentimentBadgeStyles = (value: number | string | null): string => {
   const numericValue = Number(value) || 3;
-  if (numericValue <= 2) return "bg-red-700 text-white";
-  if (numericValue === 3) return "bg-gray-700 text-white";
-  if (numericValue >= 4) return "bg-green-700 text-white";
-  return "bg-gray-700 text-white";
+  if (numericValue <= 2) return "bg-red-600 text-white";
+  if (numericValue === 3) return "bg-gray-600 text-white";
+  if (numericValue >= 4) return "bg-green-600 text-white";
+  return "bg-gray-600 text-white";
 };
 
-// 필터 탭 옵션 (내부 키는 API의 값, 화면에는 한글 라벨로 매핑)
+// 필터 탭 옵션: 내부 키는 API의 값, 화면에는 한글 라벨로 표시
 const tabs: { key: "all" | "domestic" | "international" | "crypto"; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
@@ -81,22 +81,28 @@ const News: React.FC = () => {
       ? newsItems
       : newsItems.filter((item) => item.category === selectedNewsTab);
 
-  if (loading) return <div className="p-6 text-white">Loading news...</div>;
-  if (error) return <div className="p-6 text-red-400">Error: {error}</div>;
+  if (loading) {
+    return <div className="p-6 text-white text-center">Loading news...</div>;
+  }
+  if (error) {
+    return <div className="p-6 text-red-400 text-center">Error: {error}</div>;
+  }
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen">
+    <div className="container mx-auto px-4 py-8">
+      {/* 페이지 헤더 */}
+      <h1 className="text-3xl font-bold text-white mb-6 text-center">최신 뉴스</h1>
       {/* 뉴스 필터 탭 */}
-      <div className="flex justify-end mb-4">
-        <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
+      <div className="mb-8 flex justify-center">
+        <div className="bg-gray-800 px-4 py-2 rounded-full flex space-x-3">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setSelectedNewsTab(tab.key)}
-              className={`px-4 py-2 transition-colors duration-200 text-white rounded-full ${
+              className={`px-4 py-2 rounded-full transition-colors duration-300 text-sm font-medium focus:outline-none ${
                 selectedNewsTab === tab.key
-                  ? "bg-white/30 text-blue-500"
-                  : "bg-transparent hover:bg-white/30"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:bg-blue-500 hover:text-white"
               }`}
             >
               {tab.label}
@@ -104,11 +110,10 @@ const News: React.FC = () => {
           ))}
         </div>
       </div>
-
       {/* 뉴스 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {filteredNews.map((item) => {
-          // tags 필드 처리: 배열이면 그대로 사용, 문자열이면 파싱해서 사용
+          // 태그 처리: 만약 이미 배열이면 그대로 사용, 문자열이면 JSON.parse 시도
           let tagsArray: string[] = [];
           if (Array.isArray(item.tags)) {
             tagsArray = item.tags;
@@ -126,47 +131,50 @@ const News: React.FC = () => {
           return (
             <div
               key={item.id}
-              className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md"
+              className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105"
             >
-              {/* 이미지 영역 (16:9 비율) */}
-              <div className="relative w-full aspect-video">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover rounded-md"
-                />
+              {/* 이미지 영역 */}
+              <div className="relative h-48">
+                <img src={item.image} alt={item.title} className="object-cover w-full h-full" />
               </div>
-              {/* 카테고리 및 감성 뱃지 */}
-              <div className="mt-2 flex space-x-2">
-                <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
-                  {getCategoryLabel(item.category)}
-                </span>
-                <span
-                  className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(item.sentiment)}`}
-                >
-                  {getSentimentLabel(item.sentiment)}
-                </span>
-              </div>
-              {/* 관련 종목 태그 */}
-              {tagsArray.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {tagsArray.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-blue-700 text-white"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+              {/* 카드 본문 */}
+              <div className="p-4">
+                {/* 카테고리 및 감성 배지 */}
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
+                    {getCategoryLabel(item.category)}
+                  </span>
+                  <span
+                    className={`px-3 py-1 text-xs font-semibold rounded-full ${getSentimentBadgeStyles(item.sentiment)}`}
+                  >
+                    {getSentimentLabel(item.sentiment)}
+                  </span>
                 </div>
-              )}
-              {/* 뉴스 제목 및 간결 요약 */}
-              <h3 className="mt-1 text-base font-bold text-white">{item.title_ko || item.title}</h3>
-              <p className="mt-1 text-sm text-gray-400">{item.brief_summary}</p>
-              {/* 추가 정보: 발행일 */}
-              <p className="mt-1 text-xs text-gray-500">
-                발행일: {new Date(item.published_at).toLocaleString()}
-              </p>
+                {/* 관련 종목 태그 */}
+                {tagsArray.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {tagsArray.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* 뉴스 제목 */}
+                <h3 className="text-lg font-bold text-white mb-2">{item.title_ko || item.title}</h3>
+                {/* 간결 요약 */}
+                <p className="text-sm text-gray-300 mb-3">{item.brief_summary}</p>
+                {/* 퍼블리셔 및 발행일 영역 (세로 배치) */}
+                <div className="mt-4 space-y-1">
+                  <div className="text-xs text-gray-400">{item.publisher}</div>
+                  <div className="text-xs text-gray-400">
+                    {new Date(item.published_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })}

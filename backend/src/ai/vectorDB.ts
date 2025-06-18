@@ -24,12 +24,14 @@ class VectorDB {
   constructor(dimension: number, maxElements: number) {
     this.dimension = dimension;
     this.maxElements = maxElements;
-    this.indexFilePath = path.join(__dirname, "hnsw_index.bin");
+    // 인덱스 파일을 "ai/data/hnsw_index.bin"에 저장
+    this.indexFilePath = path.join(__dirname, "data", "hnsw_index.bin");
 
-    // HierarchicalNSW 생성자를 사용하여 인덱스 인스턴스를 생성합니다.
+    // HierarchicalNSW 인스턴스 생성 (내부거리: cosine)
     this.index = new HierarchicalNSW("cosine", this.dimension);
 
-    this.loadIndex()
+    this.ensureDataFolder()
+      .then(() => this.loadIndex())
       .then(() => {
         console.log("HNSW 인덱스 로드 완료");
       })
@@ -38,6 +40,16 @@ class VectorDB {
         console.log("새로운 인덱스 생성 중...");
         this.index.initIndex(this.maxElements);
       });
+  }
+
+  private async ensureDataFolder(): Promise<void> {
+    const dataFolder = path.join(__dirname, "data");
+    try {
+      await fs.mkdir(dataFolder, { recursive: true });
+    } catch (error) {
+      console.error("데이터 폴더 생성 실패:", error);
+      throw error;
+    }
   }
 
   async loadIndex(): Promise<void> {
@@ -67,7 +79,6 @@ class VectorDB {
 
   findSimilar(queryVector: number[], k: number = 2, threshold = 0.75): VectorItem[] {
     const result = this.index.searchKnn(queryVector, k);
-    // 결과가 없거나 예상 구조(labels, distances 속성)가 없으면 빈 배열 반환
     if (!result || !result.labels || !result.distances) {
       return [];
     }

@@ -14,7 +14,7 @@ export async function generateRagResponse(userQuery: string): Promise<{
   // 1. 사용자 쿼리 임베딩 생성
   const queryEmbedding = await getEmbedding(userQuery);
 
-  // 2. 벡터 DB에서 유사 뉴스 검색 (임계값 0.75 이상, 최대 2개)
+  // 2. 벡터 DB에서 유사 뉴스 검색 (임계값 0.75, 최대 2개)
   const similarItems = vectorDB.findSimilar(queryEmbedding, 2, 0.75);
 
   // 3. 검색된 뉴스 메타 정보를 기반으로 컨텍스트 텍스트 생성
@@ -22,13 +22,12 @@ export async function generateRagResponse(userQuery: string): Promise<{
     .map((item) => `뉴스 ID: ${item.newsId}, 제목: ${item.meta?.title || "제목 없음"}`)
     .join("\n");
 
-  // 4. 사용자 쿼리와 컨텍스트를 포함하여 동일한 말투로 구성
+  // 4. 사용자 쿼리와 컨텍스트를 포함하여 프롬프트 구성
   const newsTitleForRag = `사용자 쿼리: ${userQuery}`;
   const newsContentForRag = `아래는 관련 뉴스 정보입니다:\n${contextText}`;
 
-  // 게시일 정보가 없는 경우 빈 문자열 전달
+  // 게시일 정보가 없으므로 빈 문자열 전달
   const analysis = await analyzeNews(newsTitleForRag, newsContentForRag, "");
-
   return {
     summary: analysis.summary,
     brief_summary: analysis.brief_summary,

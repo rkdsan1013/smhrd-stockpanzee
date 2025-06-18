@@ -42,7 +42,7 @@ interface ChatCompletionResponse {
 export async function analyzeNews(
   newsTitle: string,
   newsContent: string,
-  publishedDate: string, // 추가 인자: 게시일 (문자열)
+  publishedDate: string,
 ): Promise<AnalysisResult> {
   const prompt = `뉴스 제목: ${newsTitle}
 게시일: ${publishedDate}
@@ -50,7 +50,7 @@ export async function analyzeNews(
 
 아래 JSON 형식만 반환하십시오. 추가 설명이나 주석은 포함하지 마십시오.
 형식:
-{"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["긍정적 요소 1", "긍정적 요소 2", ...], "news_negative": ["부정적 요소 1", "부정적 요소 2", ...], "tags": ["티커1", "티커2", ...]}
+{"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["..."], "news_negative": ["..."], "tags": ["..."]}
 
 - news_sentiment: 1 = 매우부정, 2 = 부정, 3 = 중립, 4 = 긍정, 5 = 매우긍정.
 - tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA).

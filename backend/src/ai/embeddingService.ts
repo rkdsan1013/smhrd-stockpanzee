@@ -46,6 +46,9 @@ export async function getEmbedding(text: string): Promise<number[]> {
   }
 }
 
+/**
+ * 텍스트 임베딩을 생성하고, 해당 벡터를 VectorDB에 추가한 후 저장(디스크 기록)한다.
+ */
 export async function embedAndStore(
   newsId: number,
   text: string,
@@ -57,4 +60,6 @@ export async function embedAndStore(
     vector,
     meta,
   });
+  // 변경된 인덱스를 디스크의 "ai/data/hnsw_index.bin"에 저장
+  await vectorDB.saveIndex();
 }

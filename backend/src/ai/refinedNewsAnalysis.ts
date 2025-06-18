@@ -8,18 +8,16 @@ export async function getRefinedNewsAnalysis(
   newsContent: string,
   initialAnalysis: AnalysisResult,
 ): Promise<AnalysisResult> {
-  // 1. 새 뉴스의 임베딩 벡터 생성 (제목과 본문 결합)
+  // 1. 뉴스 제목과 본문을 결합하여 임베딩 벡터 생성
   const combinedText = `${newsTitle} ${newsContent}`;
   const queryVector = await getEmbedding(combinedText);
 
-  // 2. 벡터 DB에서 유사 뉴스 검색 (상위 2개)
+  // 2. 벡터 DB에서 유사 뉴스 검색 (최대 2개, 임계값 0.75)
   const similarItems = vectorDB.findSimilar(queryVector, 2, 0.75);
 
   // 3. 유사 뉴스들의 정보를 추출하여 컨텍스트 텍스트 구성
   const contextParts = similarItems
-    .map((item, idx) => {
-      return `유사 뉴스 ${idx + 1} - 제목: ${item.meta?.title || "제목 없음"}`;
-    })
+    .map((item, idx) => `유사 뉴스 ${idx + 1} - 제목: ${item.meta?.title || "제목 없음"}`)
     .join("\n");
 
   // 4. 초기 분석 결과와 유사 뉴스 정보를 결합하여 최종 GPT 프롬프트 구성
@@ -40,12 +38,11 @@ ${contextParts}
 형식:
 {"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["..."], "news_negative": ["..."], "tags": ["..."]}
 `;
-
   console.log("====== 최종 분석 프롬프트 ======");
   console.log(prompt);
   console.log("====== 프롬프트 끝 ======");
 
-  // 5. 최종 분석 요청: 게시일 정보가 없으므로 빈 문자열("")을 세 번째 인자로 전달합니다.
+  // 5. 최종 분석 요청 (게시일 정보 없음 → 빈 문자열)
   const refinedAnalysis = await analyzeNews("최종 분석 요청", prompt, "");
   return refinedAnalysis;
 }
