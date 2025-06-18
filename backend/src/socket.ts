@@ -22,5 +22,5 @@ export function setupSocket(server: any) {
   });
 
   // ✅ 실시간 주가 주기 실행
-  setInterval(() => emitStockPrices(io), 30000); // 30초마다
+  setInterval(() => emitStockPrices(io), 180000); // 30초마다
 }
