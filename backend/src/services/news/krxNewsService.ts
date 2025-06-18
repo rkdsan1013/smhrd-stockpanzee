@@ -52,6 +52,15 @@ export const fetchAndProcessOneKrxNews = async (): Promise<IKrxNews[]> => {
     });
 
     console.log(`중복 제거 후 뉴스 개수: ${newsItems.length}`);
+
+    newsItems.forEach((item, index) => {
+      console.log(`\n${index + 1}. [${item.published_at.toISOString()}] ${item.title}`);
+      console.log(`🔗 링크: ${item.news_link}`);
+      console.log(`🖼️ 썸네일: ${item.thumbnail}`);
+      console.log(`📰 내용 요약:\n${item.content.slice(0, 200)}...`);
+      console.log("-".repeat(100));
+    });
+    
     return newsItems;
 
   } catch (error) {
