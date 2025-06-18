@@ -1,23 +1,10 @@
 // /backend/src/services/news/cryptoNewsService.ts
-// /backend/src/services/news/cryptoNewsService.ts
 import { mapCryptoNews } from "../../utils/news/cryptoNewsMapper";
 import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
 import { getRefinedNewsAnalysis } from "../../../src/ai/refinedNewsAnalysis";
-import { embedAndStore } from "../../../src/ai/embeddingService";
-import { createNewsWithAnalysis, findNewsByLink } from "../../../src/models/newsTransactions";
+import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
 import { INews } from "../../../src/models/newsModel";
 import { findCryptoAssets } from "../../../src/models/assetModel";
-
-// AnalysisResult는 getRefinedNewsAnalysis()에서 반환하는 타입 (news_id 미포함)
-interface AnalysisResult {
-  news_sentiment: number;
-  news_positive: any;
-  news_negative: any;
-  community_sentiment?: number;
-  summary: string;
-  brief_summary: string;
-  tags: string | string[]; // 문자열(JSON) 또는 배열일 수 있음
-}
 
 const CRYPTO_NEWS_API_URL =
   process.env.CRYPTO_NEWS_API_URL || "https://min-api.cryptocompare.com/data/v2/news/?lang=EN";
@@ -33,6 +20,7 @@ export const fetchAndProcessNews = async (): Promise<void> => {
     const newsItems: INews[] = mapCryptoNews(rawData);
     console.log(`수집된 뉴스 전체 개수: ${newsItems.length}`);
 
+    // 각 뉴스 항목에 대해 처리
     for (const news of newsItems) {
       console.log("---------------------------");
       console.log(`처리 시작: 뉴스 제목 - ${news.title}`);
@@ -40,60 +28,66 @@ export const fetchAndProcessNews = async (): Promise<void> => {
       console.log("뉴스 원문:");
       console.log(news.content);
 
-      // 중복 뉴스 체크
+      // 중복 뉴스 체크: DB에 동일 뉴스 링크가 있다면 스킵
       const exists = await findNewsByLink(news.news_link);
       if (exists) {
         console.log(`뉴스 링크 ${news.news_link} 이미 DB에 존재하므로 스킵합니다.`);
         continue;
       }
 
-      // preparedNews: news_category를 "crypto"로 고정
-      const preparedNews: INews = { ...news, news_category: "crypto" };
+      // 누락된 필드 보완: news_category는 "crypto"로 고정 (publisher는 매퍼의 값을 그대로 사용)
+      const preparedNews: INews = {
+        ...news,
+        news_category: "crypto",
+      };
 
+      // 게시일이 Date 타입이면 ISO 문자열로 변환
       const publishedDateStr =
-        preparedNews.published_at instanceof Date
-          ? preparedNews.published_at.toISOString()
-          : preparedNews.published_at;
+        news.published_at instanceof Date ? news.published_at.toISOString() : news.published_at;
 
       // 1. 초기 GPT 분석 실행 (게시일 포함)
-      const initialAnalysis = await analyzeNews(
-        preparedNews.title,
-        preparedNews.content,
-        publishedDateStr,
-      );
+      const initialAnalysis = await analyzeNews(news.title, news.content, publishedDateStr);
       console.log("초기 GPT 뉴스 분석 결과:", initialAnalysis);
 
-      // 2. refined 분석 실행 (RAG 기반)
-      // *** 주의: getRefinedNewsAnalysis 내부에서는 유사 뉴스 검색 임계값을 0.1로 사용하도록 수정했다고 가정합니다.
-      const refinedAnalysis: AnalysisResult = await getRefinedNewsAnalysis(
-        preparedNews.title,
-        preparedNews.content,
+      // 2. RAG 기반 refined 분석 실행
+      const refinedAnalysis = await getRefinedNewsAnalysis(
+        news.title,
+        news.content,
         initialAnalysis,
       );
       console.log("최종(Refined) 뉴스 분석 결과:", refinedAnalysis);
 
-      // 3. 태그 처리: refinedAnalysis.tags가 문자열인 경우 JSON 파싱, 배열이면 그대로 사용
-      let tagsArray: string[] = [];
-      if (Array.isArray(refinedAnalysis.tags)) {
-        tagsArray = refinedAnalysis.tags;
-      } else if (typeof refinedAnalysis.tags === "string") {
-        try {
-          tagsArray = JSON.parse(refinedAnalysis.tags);
-        } catch (e) {
-          tagsArray = [];
-        }
-      }
-
-      // 4. Binance 시장 자산 조회 및 태그 필터링
+      // 3. Binance 시장 자산 조회 및 태그 필터링
       const cryptoAssets = await findCryptoAssets();
       const cryptoSymbols = new Set(cryptoAssets.map((asset) => asset.symbol.toUpperCase()));
-      const filteredTags = tagsArray.filter((tag) => cryptoSymbols.has(tag.toUpperCase()));
-      console.log("필터링된 태그:", filteredTags);
+      const filteredTags = refinedAnalysis.tags.filter((tag: string) =>
+        cryptoSymbols.has(tag.toUpperCase()),
+      );
 
-      // 5. DB 저장 로직 및 임베딩 저장 로직은 테스트를 위한 목적으로 생략하고, 진행 과정을 로그에 출력합니다.
-      console.log("DB 저장 로직 생략 - 테스트 모드입니다.");
-      console.log("임베딩 저장 로직 생략 - 테스트 모드입니다.");
+      // 4. 뉴스 분석 데이터를 구성
+      //    각 값은 interface NewsAnalysis에 맞게 JSON 문자열로 변환하여 저장합니다.
+      const analysisData = {
+        news_sentiment: refinedAnalysis.news_sentiment,
+        news_positive: JSON.stringify(refinedAnalysis.news_positive),
+        news_negative: JSON.stringify(refinedAnalysis.news_negative),
+        // community_sentiment를 fallback(null) 없이 직접 할당하여 타입을 맞춥니다.
+        community_sentiment: refinedAnalysis.community_sentiment,
+        summary: refinedAnalysis.summary,
+        brief_summary: refinedAnalysis.brief_summary,
+        tags: JSON.stringify(filteredTags),
+      };
 
+      // 5. 뉴스 정보와 분석 데이터를 단일 트랜잭션으로 저장
+      //    GPT 분석 결과로 받은 한글 번역 제목은 initialAnalysis.title_ko를 사용합니다.
+      const newsId = await createNewsWithAnalysis(
+        preparedNews,
+        analysisData,
+        initialAnalysis.title_ko,
+      );
+      console.log(`뉴스 DB 및 분석 결과 저장 완료. 뉴스 ID: ${newsId}`);
+      console.log(`처리 완료: 한글 번역 제목 - ${initialAnalysis.title_ko}`);
+      console.log(`상세 요약: ${refinedAnalysis.summary}`);
+      console.log(`간결 요약: ${refinedAnalysis.brief_summary}`);
       console.log("---------------------------");
     }
     console.log("모든 뉴스 처리 완료.");
