@@ -12,11 +12,11 @@ export interface INews {
 
 export interface NewsAnalysis {
   news_id: number;
-  news_sentiment: number;
-  news_positive: string; // JSON 데이터를 문자열 형태로 저장 (예: JSON.stringify(데이터))
-  news_negative: string; // JSON 데이터를 문자열 형태로 저장
-  community_sentiment?: number; // 선택적 필드
-  summary: string; // 뉴스의 자세한 요약 (한글 번역)
-  brief_summary: string; // 뉴스 내용의 핵심을 한 줄로 간단하게 요약
-  tags: string; // JSON 데이터를 문자열 형태로 저장 (예: JSON.stringify(데이터))
+  news_sentiment: number; // 1 ~ 5 (1: 매우 부정, 5: 매우 긍정)
+  news_positive: string; // JSON 문자열로 저장 (예: '["긍정포인트1", "긍정포인트2"]')
+  news_negative: string; // JSON 문자열로 저장
+  community_sentiment?: number;
+  summary: string;
+  brief_summary: string;
+  tags: string; // JSON 문자열 (예: '["BTC", "ETH"]')
 }

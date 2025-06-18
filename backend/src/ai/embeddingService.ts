@@ -29,7 +29,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
       EMBEDDING_API_URL,
       {
         input: text,
-        model: "text-embedding-ada-002",
+        model: "text-embedding-3-small",
       },
       {
         headers: {
@@ -52,7 +52,7 @@ export async function embedAndStore(
   meta: { title?: string; publishedAt?: Date } = {},
 ): Promise<void> {
   const vector = await getEmbedding(text);
-  await vectorDB.addItem({
+  vectorDB.addItem({
     newsId,
     vector,
     meta,

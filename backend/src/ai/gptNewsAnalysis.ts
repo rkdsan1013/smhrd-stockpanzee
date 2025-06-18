@@ -4,12 +4,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export interface AnalysisResult {
-  summary: string; // 뉴스의 자세한 요약 (한글 번역)
-  brief_summary: string; // 뉴스 내용의 핵심을 한 줄로 간결하게 요약
+  summary: string; // 뉴스 전체 내용을 자세하게 요약 (한글 번역)
+  brief_summary: string; // 뉴스 내용의 핵심을 한 줄로 요약
+  title_ko: string; // 뉴스 제목의 한글 번역본
   news_sentiment: number; // 감정 점수 (1=매우부정, 2=부정, 3=중립, 4=긍정, 5=매우긍정)
   news_positive: string[]; // 긍정적 요소 목록
   news_negative: string[]; // 부정적 요소 목록
-  tags: string[]; // 종목 티커 목록 (예: BTC, ETH, AAPL, TSLA)
+  tags: string[]; // 종목 티커 목록
 }
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
@@ -38,18 +39,24 @@ interface ChatCompletionResponse {
   };
 }
 
-export async function analyzeNews(newsTitle: string, newsContent: string): Promise<AnalysisResult> {
+export async function analyzeNews(
+  newsTitle: string,
+  newsContent: string,
+  publishedDate: string, // 추가 인자: 게시일 (문자열)
+): Promise<AnalysisResult> {
   const prompt = `뉴스 제목: ${newsTitle}
+게시일: ${publishedDate}
 뉴스 내용: ${newsContent}
 
 아래 JSON 형식만 반환하십시오. 추가 설명이나 주석은 포함하지 마십시오.
 형식:
-{"summary": "...", "brief_summary": "...", "news_sentiment": n, "news_positive": ["긍정적 요소 1", "긍정적 요소 2", ...], "news_negative": ["부정적 요소 1", "부정적 요소 2", ...], "tags": ["티커1", "티커2", ...]}
+{"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["긍정적 요소 1", "긍정적 요소 2", ...], "news_negative": ["부정적 요소 1", "부정적 요소 2", ...], "tags": ["티커1", "티커2", ...]}
 
 - news_sentiment: 1 = 매우부정, 2 = 부정, 3 = 중립, 4 = 긍정, 5 = 매우긍정.
-- tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA, 005930, 000660).
+- tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA).
 - summary: 뉴스의 전체 내용을 자세하게 요약하십시오. 반드시 한글로 번역하여 작성.
 - brief_summary: 뉴스 내용의 핵심을 한 줄로 간결하게 요약하십시오.
+- title_ko: 뉴스 제목의 한글 번역본.
 `;
 
   const messages: ChatMessage[] = [
@@ -83,7 +90,6 @@ export async function analyzeNews(newsTitle: string, newsContent: string): Promi
         },
       },
     );
-
     const resultText = response.data.choices[0].message.content.trim();
     console.log("====== GPT API 원본 응답 ======");
     console.log(resultText);

@@ -1,110 +1,105 @@
 // /frontend/src/pages/News.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import type { NewsItem } from "../services/newsService";
+import { fetchNews } from "../services/newsService";
 
-interface NewsItem {
-  id: number;
-  stockName: string;
-  priceChange: number;
-  title: string;
-  image: string;
-  category: "국내" | "해외" | "암호화폐";
-  sentiment: "매우 부정" | "부정" | "중립" | "긍정" | "매우긍정";
-  summary: string;
-}
+// 뉴스 카테고리를 한글로 매핑
+const getCategoryLabel = (category: "domestic" | "international" | "crypto"): string => {
+  switch (category) {
+    case "domestic":
+      return "국내";
+    case "international":
+      return "해외";
+    case "crypto":
+      return "암호화폐";
+    default:
+      return category;
+  }
+};
 
-const newsItems: NewsItem[] = [
-  {
-    id: 1,
-    stockName: "삼성전자",
-    priceChange: 2.45,
-    title: "삼성전자, 신제품 발표로 주가 급등",
-    image: "/panzee.webp",
-    category: "국내",
-    sentiment: "긍정",
-    summary: "AI 요약: 삼성전자가 신제품 발표를 통해 투자자들의 기대감을 높였습니다.",
-  },
-  {
-    id: 2,
-    stockName: "현대차",
-    priceChange: -1.23,
-    title: "현대차, 실적 부진에 주가 하락",
-    image: "/panzee.webp",
-    category: "국내",
-    sentiment: "부정",
-    summary: "AI 요약: 현대차의 최근 실적 부진으로 인해 주가가 하락하고 있습니다.",
-  },
-  {
-    id: 3,
-    stockName: "LG전자",
-    priceChange: 0.85,
-    title: "LG전자, 혁신 기술 선보여 주가 상승",
-    image: "/panzee.webp",
-    category: "해외",
-    sentiment: "중립",
-    summary: "AI 요약: LG전자가 혁신 기술을 공개했으나, 시장 반응은 중립적입니다.",
-  },
-  {
-    id: 4,
-    stockName: "카카오",
-    priceChange: -2.1,
-    title: "카카오, 경쟁 심화로 주가 하락세",
-    image: "/panzee.webp",
-    category: "해외",
-    sentiment: "매우 부정",
-    summary: "AI 요약: 카카오의 주가가 경쟁 심화로 인해 크게 하락하고 있습니다.",
-  },
-  {
-    id: 5,
-    stockName: "비트코인",
-    priceChange: 3.76,
-    title: "비트코인 가격 상승, 암호시장 활황",
-    image: "/panzee.webp",
-    category: "암호화폐",
-    sentiment: "매우긍정",
-    summary: "AI 요약: 비트코인의 강력한 상승세가 암호화폐 시장에 긍정적인 신호로 작용 중입니다.",
-  },
-  {
-    id: 6,
-    stockName: "이더리움",
-    priceChange: -1.5,
-    title: "이더리움, 시장 불안정 반영해 하락",
-    image: "/panzee.webp",
-    category: "암호화폐",
-    sentiment: "부정",
-    summary: "AI 요약: 이더리움은 최근 시장 불안정성으로 인해 주가가 하락하고 있습니다.",
-  },
-];
+// 감성 평점을 숫자로 변환한 후 라벨 매핑 (news_sentiment 사용)
+const getSentimentLabel = (value: number | string | null): string => {
+  const numericValue = Number(value) || 3;
+  switch (numericValue) {
+    case 1:
+      return "매우 부정";
+    case 2:
+      return "부정";
+    case 3:
+      return "중립";
+    case 4:
+      return "긍정";
+    case 5:
+      return "매우 긍정";
+    default:
+      return "중립";
+  }
+};
 
-const getSentimentBadgeStyles = (sentiment: NewsItem["sentiment"]) => {
-  if (sentiment === "긍정" || sentiment === "매우긍정") return "bg-green-700 text-white";
-  if (sentiment === "부정" || sentiment === "매우 부정") return "bg-red-700 text-white";
+// 감성 평점에 따른 배지 스타일
+const getSentimentBadgeStyles = (value: number | string | null): string => {
+  const numericValue = Number(value) || 3;
+  if (numericValue <= 2) return "bg-red-700 text-white";
+  if (numericValue === 3) return "bg-gray-700 text-white";
+  if (numericValue >= 4) return "bg-green-700 text-white";
   return "bg-gray-700 text-white";
 };
 
+// 필터 탭 옵션 (내부 키는 API의 값, 화면에는 한글 라벨로 매핑)
+const tabs: { key: "all" | "domestic" | "international" | "crypto"; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "domestic", label: "국내" },
+  { key: "international", label: "해외" },
+  { key: "crypto", label: "암호화폐" },
+];
+
 const News: React.FC = () => {
-  const [selectedNewsTab, setSelectedNewsTab] = useState("전체");
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [selectedNewsTab, setSelectedNewsTab] = useState<
+    "all" | "domestic" | "international" | "crypto"
+  >("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadNews = async () => {
+    try {
+      const data = await fetchNews();
+      setNewsItems(data);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNews();
+  }, []);
 
   const filteredNews =
-    selectedNewsTab === "전체"
+    selectedNewsTab === "all"
       ? newsItems
       : newsItems.filter((item) => item.category === selectedNewsTab);
+
+  if (loading) return <div className="p-6 text-white">Loading news...</div>;
+  if (error) return <div className="p-6 text-red-400">Error: {error}</div>;
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
       {/* 뉴스 필터 탭 */}
       <div className="flex justify-end mb-4">
         <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
-          {["전체", "국내", "해외", "암호화폐"].map((tab) => (
+          {tabs.map((tab) => (
             <button
-              key={tab}
-              onClick={() => setSelectedNewsTab(tab)}
+              key={tab.key}
+              onClick={() => setSelectedNewsTab(tab.key)}
               className={`px-4 py-2 transition-colors duration-200 text-white rounded-full ${
-                selectedNewsTab === tab
+                selectedNewsTab === tab.key
                   ? "bg-white/30 text-blue-500"
                   : "bg-transparent hover:bg-white/30"
               }`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -112,50 +107,69 @@ const News: React.FC = () => {
 
       {/* 뉴스 카드 그리드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredNews.map((item) => (
-          <div
-            key={item.id}
-            className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md"
-          >
-            {/* 이미지 영역 (16:9 비율) */}
-            <div className="relative w-full aspect-video">
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-full object-cover rounded-md"
-              />
+        {filteredNews.map((item) => {
+          // tags 필드 처리: 배열이면 그대로 사용, 문자열이면 파싱해서 사용
+          let tagsArray: string[] = [];
+          if (Array.isArray(item.tags)) {
+            tagsArray = item.tags;
+          } else if (item.tags && typeof item.tags === "string" && item.tags.trim() !== "") {
+            try {
+              const parsed = JSON.parse(item.tags);
+              if (Array.isArray(parsed)) {
+                tagsArray = parsed;
+              }
+            } catch (e) {
+              tagsArray = [];
+            }
+          }
+
+          return (
+            <div
+              key={item.id}
+              className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md"
+            >
+              {/* 이미지 영역 (16:9 비율) */}
+              <div className="relative w-full aspect-video">
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-full object-cover rounded-md"
+                />
+              </div>
+              {/* 카테고리 및 감성 뱃지 */}
+              <div className="mt-2 flex space-x-2">
+                <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
+                  {getCategoryLabel(item.category)}
+                </span>
+                <span
+                  className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(item.sentiment)}`}
+                >
+                  {getSentimentLabel(item.sentiment)}
+                </span>
+              </div>
+              {/* 관련 종목 태그 */}
+              {tagsArray.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {tagsArray.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-blue-700 text-white"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* 뉴스 제목 및 간결 요약 */}
+              <h3 className="mt-1 text-base font-bold text-white">{item.title_ko || item.title}</h3>
+              <p className="mt-1 text-sm text-gray-400">{item.brief_summary}</p>
+              {/* 추가 정보: 발행일 */}
+              <p className="mt-1 text-xs text-gray-500">
+                발행일: {new Date(item.published_at).toLocaleString()}
+              </p>
             </div>
-            {/* 통합 정보 행: 시장 및 감성 배지 */}
-            <div className="mt-2 flex space-x-2">
-              <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
-                {item.category}
-              </span>
-              <span
-                className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(
-                  item.sentiment,
-                )}`}
-              >
-                {item.sentiment}
-              </span>
-            </div>
-            {/* 종목명 및 주가 변화 */}
-            <div className="mt-2">
-              <span
-                className={`text-sm font-semibold ${
-                  item.priceChange >= 0 ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {item.stockName}{" "}
-                {item.priceChange >= 0
-                  ? `+${item.priceChange.toFixed(2)}%`
-                  : `${item.priceChange.toFixed(2)}%`}
-              </span>
-            </div>
-            {/* 뉴스 제목 및 AI 요약 */}
-            <h3 className="mt-1 text-base font-bold text-white">{item.title}</h3>
-            <p className="mt-1 text-sm text-gray-400">{item.summary}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
