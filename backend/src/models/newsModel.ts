@@ -9,7 +9,6 @@ export interface INews {
   publisher: string;
   published_at: Date;
 }
-
 export interface NewsAnalysis {
   news_id: number;
   news_sentiment: number; // 1 ~ 5 (1: 매우 부정, 5: 매우 긍정)

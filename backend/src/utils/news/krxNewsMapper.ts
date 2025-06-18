@@ -12,13 +12,16 @@ export interface CrawledNews {
   content: string;
 }
 
-export interface IKrxNews {
+export interface INews {
+  // models/newsModel.ts에 정의된 인터페이스와 동일한 형태로 반환합니다.
+  news_category: "domestic" | "international" | "crypto";
   title: string;
+  title_ko?: string;
   content: string;
+  thumbnail: string;
   news_link: string;
-  thumbnail: string | null;
+  publisher: string;
   published_at: Date;
-  source_title: string;
 }
 
 export const mapKrxNews = (
@@ -27,16 +30,17 @@ export const mapKrxNews = (
   contents: string[],
   titles: string[],
   crawledResults: CrawledNews[]
-): IKrxNews[] => {
+): INews[] => {
   return rawData.map((news, index) => {
     const crawled = crawledResults[index];
     return {
+      news_category: "domestic",
       title: crawled.title,
       content: crawled.content,
       news_link: news.link,
-      thumbnail: thumbnails[index] || null,  // 🔧 썸네일 제대로 할당
+      thumbnail: thumbnails[index] || "", // INews에선 string 필수라 null 대신 빈 문자열 처리
       published_at: new Date(news.pubDate),
-      source_title: extractSourceTitle(news.originallink || news.link)
+      publisher: extractSourceTitle(news.originallink || news.link), // ✅ 추가된 부분
     };
   });
 };
