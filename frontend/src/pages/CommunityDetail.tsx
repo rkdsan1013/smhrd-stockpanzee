@@ -12,6 +12,8 @@ interface Reply {
   createdAt: string;
   content: string;
   likes: number;
+  imgUrl?: string;
+  isLiked?: boolean;
 }
 interface Comment {
   id: number;
@@ -19,7 +21,9 @@ interface Comment {
   createdAt: string;
   content: string;
   likes: number;
+  imgUrl?: string;
   replies: Reply[];
+  isLiked?: boolean;
 }
 
 // 시간 표시 함수
@@ -33,37 +37,127 @@ function timeAgo(dateString: string) {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
-// 대댓글 입력폼
-const ReplyInput: React.FC<{ onSubmit: (content: string) => void; onCancel: () => void }> = ({
-  onSubmit,
-  onCancel,
-}) => {
+// 댓글 입력폼
+const CommentInput: React.FC<{
+  onSubmit: (content: string, img: File | null) => void;
+}> = ({ onSubmit }) => {
   const [value, setValue] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    if (f) {
+      const reader = new FileReader();
+      reader.onload = e => setPreview(e.target?.result as string);
+      reader.readAsDataURL(f);
+    } else {
+      setPreview(null);
+    }
+  };
+
   return (
-    <div className="flex gap-2 mt-2 ml-4">
-      <input
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={e => {
+        e.preventDefault();
+        if (value.trim()) {
+          onSubmit(value, file);
+          setValue("");
+          setFile(null);
+          setPreview(null);
+        }
+      }}
+    >
+      <textarea
+        className="flex-1 p-3 rounded bg-gray-800 border border-gray-700 text-white"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        rows={3}
+        placeholder="도움 및 힘이 되는 코멘트를 남기세요."
+      />
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="text-sm"
+        />
+        {preview && (
+          <img src={preview} alt="미리보기" className="h-14 rounded border ml-2" />
+        )}
+        <button
+          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          type="submit"
+        >
+          포스트
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// 대댓글 입력폼
+const ReplyInput: React.FC<{
+  onSubmit: (content: string, img: File | null) => void;
+  onCancel: () => void;
+}> = ({ onSubmit, onCancel }) => {
+  const [value, setValue] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    if (f) {
+      const reader = new FileReader();
+      reader.onload = e => setPreview(e.target?.result as string);
+      reader.readAsDataURL(f);
+    } else {
+      setPreview(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 mt-2 ml-4">
+      <textarea
         className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
         value={value}
         onChange={e => setValue(e.target.value)}
+        rows={2}
         placeholder="대댓글을 입력하세요"
       />
-      <button
-        className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold"
-        onClick={() => {
-          if (value.trim()) {
-            onSubmit(value);
-            setValue("");
-          }
-        }}
-      >
-        등록
-      </button>
-      <button
-        className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
-        onClick={onCancel}
-      >
-        취소
-      </button>
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="text-sm"
+        />
+        {preview && (
+          <img src={preview} alt="미리보기" className="h-12 rounded" />
+        )}
+        <button
+          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          onClick={() => {
+            if (value.trim()) {
+              onSubmit(value, file);
+              setValue("");
+              setFile(null);
+              setPreview(null);
+            }
+          }}
+        >
+          등록
+        </button>
+        <button
+          className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
+          onClick={onCancel}
+        >
+          취소
+        </button>
+      </div>
     </div>
   );
 };
@@ -71,17 +165,23 @@ const ReplyInput: React.FC<{ onSubmit: (content: string) => void; onCancel: () =
 // 댓글+대댓글 렌더링
 const CommentItem: React.FC<{
   comment: Comment;
-  onReply: (commentId: number, replyContent: string) => void;
-}> = ({ comment, onReply }) => {
+  onReply: (commentId: number, content: string, img: File | null) => void;
+  onLike: (commentId: number, isLiked: boolean) => void;
+  onReplyLike: (replyId: number, isLiked: boolean) => void;
+}> = ({ comment, onReply, onLike, onReplyLike }) => {
   const [showReply, setShowReply] = useState(false);
+
   return (
-    <div className="p-3">
+    <div className="p-3 bg-gray-900 rounded">
       <div className="flex justify-between items-center text-sm text-gray-400 mb-1">
         <div>
           {comment.nickname} <span className="ml-2">{timeAgo(comment.createdAt)}</span>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center text-gray-500 hover:text-pink-400">
+          <button
+            className={`flex items-center ${comment.isLiked ? "text-pink-400 font-bold" : "text-gray-500 hover:text-pink-400"}`}
+            onClick={() => onLike(comment.id, !!comment.isLiked)}
+          >
             <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
             {comment.likes}
           </button>
@@ -93,12 +193,15 @@ const CommentItem: React.FC<{
           </button>
         </div>
       </div>
-      <div className="text-white">{comment.content}</div>
+      <div className="text-white whitespace-pre-wrap">{comment.content}</div>
+      {comment.imgUrl && (
+        <img src={comment.imgUrl} alt="comment" className="mt-2 max-h-40 rounded" />
+      )}
       {/* 대댓글 입력 */}
       {showReply && (
         <ReplyInput
-          onSubmit={content => {
-            onReply(comment.id, content);
+          onSubmit={(content, img) => {
+            onReply(comment.id, content, img);
             setShowReply(false);
           }}
           onCancel={() => setShowReply(false)}
@@ -107,17 +210,23 @@ const CommentItem: React.FC<{
       {/* 대댓글 목록 */}
       <div className="mt-2 space-y-2 ml-6">
         {comment.replies.map(reply => (
-          <div key={reply.id} className="text-sm p-2 rounded border border-gray-700 bg-gray-900">
+          <div key={reply.id} className="text-sm p-2 rounded border border-gray-700 bg-gray-950">
             <div className="flex justify-between text-gray-400 mb-0.5">
               <div>
                 {reply.nickname} <span className="ml-2">{timeAgo(reply.createdAt)}</span>
               </div>
-              <button className="flex items-center text-gray-500 hover:text-pink-400">
+              <button
+                className={`flex items-center ${reply.isLiked ? "text-pink-400 font-bold" : "text-gray-500 hover:text-pink-400"}`}
+                onClick={() => onReplyLike(reply.id, !!reply.isLiked)}
+              >
                 <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
                 {reply.likes}
               </button>
             </div>
-            <div className="text-white">{reply.content}</div>
+            <div className="text-white whitespace-pre-wrap">{reply.content}</div>
+            {reply.imgUrl && (
+              <img src={reply.imgUrl} alt="reply-img" className="mt-1 max-h-32 rounded" />
+            )}
           </div>
         ))}
       </div>
@@ -129,7 +238,6 @@ const CommunityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
 
   // 댓글/대댓글 목록 불러오기
@@ -153,125 +261,144 @@ const CommunityDetail: React.FC = () => {
   }, [id]);
 
   // 댓글 등록
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+  const handleCommentSubmit = (content: string, img: File | null) => {
+    const formData = new FormData();
+    formData.append("content", content);
+    if (img) formData.append("image", img);
     axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, { content: newComment })
-      .then(() => {
-        setNewComment("");
-        fetchComments();
-      });
-  };
-
-  // 대댓글 등록
-  const handleReply = (commentId: number, replyContent: string) => {
-    axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, {
-        content: replyContent,
-        parent_id: commentId,
+      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       })
       .then(() => fetchComments());
   };
 
-  const [isLiked, setIsLiked] = useState(false);
-const [likeCount, setLikeCount] = useState(0);
+  // 대댓글 등록
+  const handleReply = (commentId: number, content: string, img: File | null) => {
+    const formData = new FormData();
+    formData.append("content", content);
+    formData.append("parent_id", commentId.toString());
+    if (img) formData.append("image", img);
+    axios
+      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then(() => fetchComments());
+  };
 
-useEffect(() => {
-  // ... post set 시
-  setIsLiked(post?.isLiked || false);
-  setLikeCount(post?.community_likes || 0);
-}, [post]);
-
-const handleLikeToggle = async () => {
-  if (!post) return;
-  try {
+  // 댓글 좋아요
+  const handleCommentLike = (commentId: number, isLiked: boolean) => {
+    const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${commentId}/like`;
     if (isLiked) {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, { withCredentials: true });
-      setIsLiked(false);
-      setLikeCount(likeCount - 1);
+      axios.delete(url).then(() => fetchComments());
     } else {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, {}, { withCredentials: true });
-      setIsLiked(true);
-      setLikeCount(likeCount + 1);
+      axios.post(url).then(() => fetchComments());
     }
-  } catch (err) {
-    alert("로그인 후 사용 가능합니다.");
-  }
-};
+  };
 
-const [showMenu, setShowMenu] = useState(false);
+  // 대댓글 좋아요
+  const handleReplyLike = (replyId: number, isLiked: boolean) => {
+    const url = `${import.meta.env.VITE_API_BASE_URL}/community/replies/${replyId}/like`;
+    if (isLiked) {
+      axios.delete(url).then(() => fetchComments());
+    } else {
+      axios.post(url).then(() => fetchComments());
+    }
+  };
 
-useEffect(() => {
-  if (!showMenu) return;
-  const closeMenu = () => setShowMenu(false);
-  window.addEventListener("click", closeMenu);
-  return () => window.removeEventListener("click", closeMenu);
-}, [showMenu]);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
+  useEffect(() => {
+    setIsLiked(post?.isLiked || false);
+    setLikeCount(post?.community_likes || 0);
+  }, [post]);
+
+  const handleLikeToggle = async () => {
+    if (!post) return;
+    try {
+      if (isLiked) {
+        await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, { withCredentials: true });
+        setIsLiked(false);
+        setLikeCount(likeCount - 1);
+      } else {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`, {}, { withCredentials: true });
+        setIsLiked(true);
+        setLikeCount(likeCount + 1);
+      }
+    } catch (err) {
+      alert("로그인 후 사용 가능합니다.");
+    }
+  };
+
+  const [showMenu, setShowMenu] = useState(false);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const closeMenu = () => setShowMenu(false);
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, [showMenu]);
 
   if (loading || !post)
     return <div className="text-center py-16">불러오는 중...</div>;
 
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
-    {/* 카테고리+시간 */}
-    <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
-      <span>{post.category}</span>
-      <span className="mx-2 text-gray-500">·</span>
-      <span className="font-normal text-gray-300">{timeAgo(post.created_at)}</span>
-      
-      {/* 오른쪽 끝 ...더보기 메뉴 (로그인 없이 항상 보임) */}
-      <div className="ml-auto relative">
-        <button
-          className="ml-2 p-1 hover:bg-gray-700 rounded-full"
-          onClick={e => {
-            e.stopPropagation();
-            setShowMenu(v => !v);
-          }}
-          type="button"
-        >
-          {/* ... 아이콘 */}
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="5" cy="12" r="1.5" />
-            <circle cx="12" cy="12" r="1.5" />
-            <circle cx="19" cy="12" r="1.5" />
-          </svg>
-        </button>
-        {/* 메뉴 네모박스 */}
-        {showMenu && (
-          <div
-            className="absolute right-0 mt-2 w-28 bg-gray-900 border border-gray-700 rounded shadow-lg z-20"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
-              onClick={() => {
-                setShowMenu(false);
-                // 수정 함수 자리
-                alert("수정 기능은 준비 중입니다.");
-              }}
-            >
-              수정
-            </button>
-            <button
-              className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700"
-              onClick={() => {
-                setShowMenu(false);
-                // 삭제 함수 자리
-                alert("삭제 기능은 준비 중입니다.");
-              }}
-            >
-              삭제
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+      {/* 카테고리+시간 */}
+      <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
+        <span>{post.category}</span>
+        <span className="mx-2 text-gray-500">·</span>
+        <span className="font-normal text-gray-300">{timeAgo(post.created_at)}</span>
 
-    {/* 제목 */}
-    <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
-    {/* 이미지 등 이하 동일 */}
+        {/* 오른쪽 끝 ...더보기 메뉴 (로그인 없이 항상 보임) */}
+        <div className="ml-auto relative">
+          <button
+            className="ml-2 p-1 hover:bg-gray-700 rounded-full"
+            onClick={e => {
+              e.stopPropagation();
+              setShowMenu(v => !v);
+            }}
+            type="button"
+          >
+            {/* ... 아이콘 */}
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="19" cy="12" r="1.5" />
+            </svg>
+          </button>
+          {/* 메뉴 네모박스 */}
+          {showMenu && (
+            <div
+              className="absolute right-0 mt-2 w-28 bg-gray-900 border border-gray-700 rounded shadow-lg z-20"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
+                onClick={() => {
+                  setShowMenu(false);
+                  alert("수정 기능은 준비 중입니다.");
+                }}
+              >
+                수정
+              </button>
+              <button
+                className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700"
+                onClick={() => {
+                  setShowMenu(false);
+                  alert("삭제 기능은 준비 중입니다.");
+                }}
+              >
+                삭제
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 제목 */}
+      <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
+      {/* 이미지 등 이하 동일 */}
       <img
         src={
           post.community_img
@@ -282,14 +409,14 @@ useEffect(() => {
         className="w-full aspect-video object-contain rounded mb-3"
       />
 
-        <div className="flex items-center mb-2">
+      <div className="flex items-center mb-2">
         {/* 왼쪽: 닉네임 */}
         <div className="text-base text-white font-semibold">
           {post.nickname || post.name || "익명"}
         </div>
         {/* 오른쪽: 좋아요/댓글수/조회수 */}
         <div className="flex items-center space-x-6 text-gray-400 ml-auto">
-           <button
+          <button
             onClick={handleLikeToggle}
             className={`flex items-center transition-colors ${isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"}`}
             title={isLiked ? "좋아요 취소" : "좋아요"}
@@ -316,27 +443,19 @@ useEffect(() => {
       {/* 댓글 입력 */}
       <div className="mb-6">
         <div className="text-lg font-bold mb-2">{comments.length} 코멘트</div>
-        <form onSubmit={handleCommentSubmit} className="flex gap-3">
-          <input
-            className="flex-1 p-3 rounded bg-gray-800 border border-gray-700 text-white"
-            value={newComment}
-            onChange={e => setNewComment(e.target.value)}
-            placeholder="도움 및 힘이 되는 코멘트를 남기세요."
-          />
-          <button
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold"
-            type="submit"
-          >
-            포스트
-          </button>
-        </form>
+        <CommentInput onSubmit={handleCommentSubmit} />
       </div>
 
       {/* 댓글 목록 */}
       <div className="space-y-4">
-        {comments.map((c, idx) => (
-          <React.Fragment key={c.id}>
-            <CommentItem comment={c} onReply={handleReply} />
+        {comments.map((comment, idx) => (
+          <React.Fragment key={comment.id}>
+            <CommentItem
+              comment={comment}
+              onReply={handleReply}
+              onLike={handleCommentLike}
+              onReplyLike={handleReplyLike}
+            />
             {idx < comments.length - 1 && (
               <hr className="border-black opacity-80 my-2" />
             )}

@@ -1,3 +1,4 @@
+// /backend/src/controllers/communityController.ts
 import { Request, Response, NextFunction } from "express";
 import * as communityService from "../services/communityService";
 
@@ -187,3 +188,89 @@ export const unlikeCommunityPost = async (
     next(err);
   }
 };
+// 댓글 트리 가져오기
+export const getComments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const comm_id = Number(req.params.id);
+    const user_uuid = (req as any).user?.uuid;
+    const comments = await communityService.getComments(comm_id, user_uuid);
+    res.json(comments);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 댓글/대댓글 등록
+export const createComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { content, parent_id, uuid } = req.body;
+    const comm_id = Number(req.params.id);
+    if (!content) {
+      res.status(400).json({ message: "내용 누락" });
+      return;
+    }
+    const img = (req as MulterRequest).file?.buffer ?? null;
+    // uuid는 로그인시 req.user에서 가져오는 게 보통이지만, 미로그인 대응 시 프론트에서 받아도 됨
+    const uuidBuffer = Buffer.from(uuid?.replace(/-/g, ""), "hex");
+    const result = await communityService.createComment({
+      comm_id,
+      uuid: uuidBuffer,
+      comm_contents: content,
+      comm_img: img,
+      parent_id: parent_id ? Number(parent_id) : null,
+    });
+    res.status(201).json({ id: result.insertId });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 댓글 좋아요
+export const likeComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const commentId = Number(req.params.id);
+    const user_uuid = (req as any).user?.uuid;
+    if (!user_uuid) {
+      res.status(401).json({ message: "로그인 필요" });
+      return;
+    }
+    await communityService.likeComment(commentId, Buffer.from(user_uuid, "hex"));
+    res.json({ message: "댓글 좋아요 완료" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const unlikeComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const commentId = Number(req.params.id);
+    const user_uuid = (req as any).user?.uuid;
+    if (!user_uuid) {
+      res.status(401).json({ message: "로그인 필요" });
+      return;
+    }
+    await communityService.unlikeComment(commentId, Buffer.from(user_uuid, "hex"));
+    res.json({ message: "댓글 좋아요 취소" });
+  } catch (err) {
+    next(err);
+  }
+};
+// 대댓글 좋아요 (댓글과 구조는 똑같이 동작)
+export const likeReply = likeComment;
+export const unlikeReply = unlikeComment;
