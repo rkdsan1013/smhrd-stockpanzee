@@ -1,48 +1,53 @@
+// /backend/src/ai/vectorDB.ts
 import { promises as fs } from "fs";
 import path from "path";
 import * as msgpack from "msgpack-lite";
 import { NewsVector } from "../services/news/storeNewsVector";
 
-// 벡터 DB 데이터 파일은 ai/data/vectorDB.bin 에 저장됩니다.
+/* 데이터 파일 :  /backend/src/ai/data/vectorDB.bin */
 const VECTOR_DB_PATH = path.resolve(__dirname, "data/vectorDB.bin");
 
+/* ─ Types ──────────────────────────────────────────────── */
+export interface ScoredVector {
+  newsVector: NewsVector;
+  score: number; // 코사인 유사도 0~1
+}
 interface VectorDB {
   vectors: NewsVector[];
 }
 
+/* ─ 내부 I/O ────────────────────────────────────────────── */
 async function loadDB(): Promise<VectorDB> {
   try {
     const data = await fs.readFile(VECTOR_DB_PATH);
-    const decoded = msgpack.decode(data);
-    return decoded as VectorDB;
-  } catch (error) {
+    return msgpack.decode(data) as VectorDB;
+  } catch {
     return { vectors: [] };
   }
 }
-
-async function saveDB(db: VectorDB): Promise<void> {
-  const encoded = msgpack.encode(db);
-  await fs.writeFile(VECTOR_DB_PATH, encoded);
+async function saveDB(db: VectorDB) {
+  await fs.writeFile(VECTOR_DB_PATH, msgpack.encode(db));
 }
 
-export async function upsertNewsVectorLocal(newsVector: NewsVector): Promise<void> {
+/* ─ Public API ─────────────────────────────────────────── */
+export async function upsertNewsVectorLocal(v: NewsVector) {
   const db = await loadDB();
-  const index = db.vectors.findIndex((v) => v.id === newsVector.id);
-  if (index !== -1) {
-    db.vectors[index] = newsVector;
-  } else {
-    db.vectors.push(newsVector);
-  }
+  const idx = db.vectors.findIndex((x) => x.id === v.id);
+  idx === -1 ? db.vectors.push(v) : (db.vectors[idx] = v);
   await saveDB(db);
 }
 
+/**
+ * queryVector 와 가장 유사한 뉴스 벡터를 score 포함해 반환
+ */
 export async function searchNewsVectorsLocal(
   queryVector: number[],
-  topK: number = 3,
-): Promise<NewsVector[]> {
+  topK = 3,
+): Promise<ScoredVector[]> {
   const db = await loadDB();
-  function cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) throw new Error("Vector dimensions do not match");
+
+  /* 코사인 유사도 */
+  const cos = (a: number[], b: number[]) => {
     let dot = 0,
       normA = 0,
       normB = 0;
@@ -54,11 +59,12 @@ export async function searchNewsVectorsLocal(
     normA = Math.sqrt(normA);
     normB = Math.sqrt(normB);
     return normA && normB ? dot / (normA * normB) : 0;
-  }
-  const scored = db.vectors.map((vec) => ({
-    newsVector: vec,
-    score: cosineSimilarity(queryVector, vec.values),
+  };
+
+  const scored = db.vectors.map<ScoredVector>((v) => ({
+    newsVector: v,
+    score: cos(queryVector, v.values),
   }));
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK).map((item) => item.newsVector);
+  return scored.slice(0, topK);
 }

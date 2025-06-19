@@ -1,47 +1,54 @@
+// /backend/src/ai/ragChatbotService.ts
 import { getEmbedding } from "./embeddingService";
-import { searchNewsVectorsLocal } from "./vectorDB";
-import { getChatbotResponse } from "./gptChatbot"; // 기존 GPT 챗봇 호출 함수
+import { searchNewsVectorsLocal, ScoredVector } from "./vectorDB";
+import { getChatbotResponse } from "./gptChatbot";
 
-/**
- * 사용자의 질문에 대해, 임베딩을 활용하여 로컬 벡터 DB에서 유사한 뉴스를 검색하고,
- * 검색된 뉴스 컨텍스트 및 오늘의 날짜 정보를 포함한 프롬프트를 구성하여 GPT 기반 챗봇 응답을 생성합니다.
- *
- * @param userQuery - 사용자 질문
- * @returns GPT 기반 챗봇 응답 문자열
- */
+const SIMILARITY_THRESHOLD = 0.25; // 높을수록 엄격
+
 export async function generateRagChatbotResponse(userQuery: string): Promise<string> {
-  // 1. 사용자 질문 임베딩 계산
-  const queryEmbedding = await getEmbedding(userQuery);
+  /* 1. 쿼리 임베딩 */
+  const queryVec = await getEmbedding(userQuery);
 
-  // 2. 로컬 벡터 DB에서 유사 뉴스 검색 (상위 3건)
-  const similarNews = await searchNewsVectorsLocal(queryEmbedding, 3);
+  /* 2. 벡터 DB 검색 (점수 포함) */
+  const raw: ScoredVector[] = await searchNewsVectorsLocal(queryVec, 10);
 
-  // 3. 검색된 뉴스 정보를 컨텍스트 문자열로 구성 (게시일은 읽기 쉬운 형식으로 변환)
+  /* 3. 임계값 필터 */
+  const hits = raw.filter((r) => r.score >= SIMILARITY_THRESHOLD).slice(0, 3);
+
+  /* 4. 컨텍스트: 헤더는 항상 포함 */
   let context = "유사 뉴스 컨텍스트:\n";
-  similarNews.forEach((newsVector) => {
-    const publishedDate = new Date(newsVector.metadata.published_at);
-    const publishedDateFormatted = publishedDate.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+  if (hits.length) {
+    hits.forEach(({ newsVector }) => {
+      const pub = new Date(newsVector.metadata.published_at).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      context += `제목: ${newsVector.metadata.title_ko}\n`;
+      context += `게시일: ${pub}\n`;
+      context += `요약: ${newsVector.metadata.summary}\n\n`;
     });
-    context += `제목: ${newsVector.metadata.title_ko}\n게시일: ${publishedDateFormatted}\n요약: ${newsVector.metadata.summary}\n\n`;
-  });
+  } else {
+    context += "(관련 컨텍스트 없음)\n\n"; // ← GPT가 반드시 감지
+  }
 
-  // 4. 오늘 날짜를 포맷팅 ("YYYY년 M월 D일")
-  const today = new Date();
-  const todayStr = today.toLocaleDateString("ko-KR", {
+  /* 5. 오늘 날짜 */
+  const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  // 5. 프롬프트 최종 구성: 뉴스 컨텍스트, 오늘 날짜, 사용자 질문 포함
-  const combinedPrompt = `${context}\n오늘 날짜: ${todayStr}\n사용자 질문: ${userQuery}\n위 컨텍스트를 참고하여 상세하고 정확한 답변을 제공해주세요.`;
+  /* 6. 최종 프롬프트 */
+  const prompt =
+    `${context}` +
+    `규칙: 컨텍스트가 질문과 관련성이 낮거나 없으면 "자료가 부족합니다."라고만 한국어로 답하십시오.\n\n` +
+    `오늘 날짜: ${today}\n` +
+    `사용자 질문: ${userQuery}\n` +
+    `관련성이 높다면 간결하고 직설적으로 답하십시오.`;
 
-  console.log("RAG 프롬프트:", combinedPrompt);
+  console.log("RAG PROMPT ===\n", prompt);
 
-  // 6. GPT 챗봇 API 호출하여 최종 응답 생성
-  const answer = await getChatbotResponse(combinedPrompt);
-  return answer;
+  /* 7. GPT 호출 */
+  return getChatbotResponse(prompt);
 }

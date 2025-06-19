@@ -1,3 +1,4 @@
+// /backend/src/services/news/storeNewsVector.ts
 import { upsertNewsVectorLocal } from "../../ai/vectorDB";
 
 export interface NewsVector {

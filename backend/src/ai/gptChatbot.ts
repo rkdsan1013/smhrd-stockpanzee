@@ -10,13 +10,11 @@ export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
-
 export interface ChatCompletionChoice {
   index: number;
   message: ChatMessage;
   finish_reason: string;
 }
-
 export interface ChatCompletionResponse {
   id: string;
   object: string;
@@ -29,48 +27,40 @@ export interface ChatCompletionResponse {
   };
 }
 
-/**
- * 팬지봇 응답을 생성하기 위해 GPT‑4.1‑mini 모델에 질문을 전달합니다.
- *
- * @param question 팬지봇에게 전달할 사용자 질문
- * @returns GPT API가 생성한 응답 텍스트
- */
-export async function getChatbotResponse(question: string): Promise<string> {
-  // 현재 날짜를 동적으로 생성 (예: "2025년 6월 19일")
-  const today = new Date();
-  const formattedDate = today.toLocaleDateString("ko-KR", {
+/*──────────────────────────────────────────────────────────*/
+
+export async function getChatbotResponse(prompt: string): Promise<string> {
+  const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  // 시스템 프롬프트:
-  // 팬지봇은 금융 전문가로서 사용자 질문에 대해 핵심 정보만 간략하고 직설적으로 답변해야 합니다.
-  // 오늘 날짜 정보는 "오늘 날짜: [현재 날짜]"로 제공하며,
-  // 금융, 주식, 투자 관련 질문에 대해서만 답변을 제공하고, 그렇지 않은 경우는 "금융, 주식, 투자 관련 질문을 해주세요."라고 응답합니다.
+  /*― system prompt 강화 ―*/
   const systemPrompt =
-    "당신은 팬지봇입니다. " +
-    "당신은 금융 전문가로서 사용자 질문에 대해 핵심 정보만 간략하고 직설적으로 답변해야 합니다. " +
-    "불필요한 추가 설명이나 부가적인 의견은 제공하지 마세요. " +
-    "오늘 날짜: " +
-    formattedDate +
-    " " +
-    "금융, 주식, 투자 관련 질문에 대해서만 답변을 제공하며, 만약 질문이 우리 서비스와 관련 없는 내용이라면 '금융, 주식, 투자 관련 질문을 해주세요.'라고 응답하세요.";
+    `당신은 팬지봇입니다.\n` +
+    `역할: 국내외 금융·주식·투자 정보를 간결하고 직설적으로 제공하는 전문가.\n` +
+    `오늘 날짜: ${today}\n\n` +
+    `규칙:\n` +
+    `1) 질문이 금융·주식·투자·경제·암호화폐 등과 분명히 관련 있으면 반드시 답합니다.\n` +
+    `2) 관련성이 매우 낮으면 “금융, 주식, 투자 관련 질문을 해주세요.”라고만 답합니다.\n` +
+    `3) 필요 이상의 장황한 설명은 넣지 않고 핵심만 전달합니다.\n` +
+    `4) 확실하지 않은 정보는 추측하지 말고 “자료가 부족합니다.”라고 답합니다.\n` +
+    `5) RAG 컨텍스트에 문자열 “(관련 컨텍스트 없음)”이 포함될 경우, 질문 주제와 무관하게 **반드시** “자료가 부족합니다.” 한 문장만 출력합니다.\n`;
 
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt },
-    { role: "user", content: question },
+    { role: "user", content: prompt },
   ];
 
   try {
-    const response = await axios.post<ChatCompletionResponse>(
+    const res = await axios.post<ChatCompletionResponse>(
       CHAT_COMPLETIONS_URL,
       {
         model: "gpt-4.1-mini",
         messages,
-        max_tokens: 2000,
+        max_tokens: 1500,
         temperature: 0,
-        n: 1,
       },
       {
         headers: {
@@ -79,10 +69,9 @@ export async function getChatbotResponse(question: string): Promise<string> {
         },
       },
     );
-    const answer = response.data.choices[0].message.content.trim();
-    return answer;
-  } catch (error) {
-    console.error("GPT API 호출 실패", error);
-    throw error;
+    return res.data.choices[0].message.content.trim();
+  } catch (err) {
+    console.error("GPT API 호출 실패", err);
+    throw err;
   }
 }

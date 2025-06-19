@@ -1,3 +1,4 @@
+// /backend/src/services/news/cryptoNewsService.ts
 import { mapCryptoNews } from "../../utils/news/cryptoNewsMapper";
 import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
 import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
