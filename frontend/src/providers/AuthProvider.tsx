@@ -1,4 +1,4 @@
-// /frontend/src/contexts/AuthProvider.tsx
+// /frontend/src/providers/AuthProvider.tsx
 import React, { createContext, useState } from "react";
 
 interface AuthContextProps {
