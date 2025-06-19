@@ -1,8 +1,10 @@
 # smhrd-stockpanzee
 
-![image](https://github.com/user-attachments/assets/32fa8dc2-860a-48af-aa48-13059568776b)
+![image](https://github.com/user-attachments/assets/0c33dd71-d7a5-4d0b-8d5f-e70fc1c6aba3)
 
-# RAG, LLM 기반 투자 정보 요약 서비스
+
+
+# RAG, LLM 기반 투자 정보 제공 서비스
 
  **실시간 뉴스 수집 · AI 요약 · 감정 분석 · 커뮤니티 여론 반영까지 한 번에!**
 
@@ -18,6 +20,7 @@
 - **관심 종목 기반 실시간 알림**
 - **주가 차트 및 기업 정보 시각화**
 - **커뮤니티 여론 분석 (Reddit)**
+- **RAG 기반 챗봇 서비스**
 
 ---
 
@@ -31,6 +34,7 @@
 | 관심 종목 알림 | 키워드/종목 기반 맞춤형 알림 설정 |
 | 커뮤니티 여론 분석 | Reddit 기반 투자 심리 추정 |
 | 원문 링크 및 기업 정보 제공 | 뉴스 원문, 시가총액, 재무정보 등 부가 데이터 제공 |
+| 챗봇 서비스 제공 | RAG 기반 사용자 질문에 대한 투자정보제공 | 
 
 ---
 
@@ -39,22 +43,24 @@
 | 구분                   | 기술 스택                                                                                             |
 |------------------------|--------------------------------------------------------------------------------------------------------|
 | **사용 언어**            | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)        |
-| **라이브러리 / 프레임워크** | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white) ![Express.js](https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-000000?)|
+| **라이브러리 / 프레임워크** | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white) ![Express.js](https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-000000?style=flat) |
 | **인증 / 보안**          | ![JWT](https://img.shields.io/badge/JWT-000000?logo=JSON%20web%20tokens&logoColor=white)             |
 | **개발 도구**            | ![VSCode](https://img.shields.io/badge/VSCode-007ACC?logo=visual-studio-code&logoColor=white)       |
 | **서버 환경**            | ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white) ![WebSocket](https://img.shields.io/badge/WebSocket-010101?logo=websocket&logoColor=white) |
-| **데이터베이스**         | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)                      |
+| **데이터베이스**         | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white) ![FAISS](https://img.shields.io/badge/FAISS-050505?logo=logoColor=white)                      |
 | **협업 도구**            | ![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white) ![Notion](https://img.shields.io/badge/Notion-000000?logo=notion&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white) ![Hancom](https://img.shields.io/badge/Hancom_Docs-0078D4?logo=microsoftword&logoColor=white) |
 | **배포 / 인프라**        | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Naver Cloud](https://img.shields.io/badge/Naver_Cloud_Platform-03C75A?logo=naver&logoColor=white) |
 
 
 
+
 ### 외부 API (데이터 수집)
 - 국내 : 네이버 오픈 API, 네이버 금융 크롤링
-- 해외 : Finnhub Stock API, Alpha Vantage API, 크롤링
+- 해외 : Finnhub Stock API, Alpha Vantage API, Polygon API, 크롤링
 - 암호화폐 : CoinDesk API, CoinGecko API
-- 차트정보 : TradingView API, 한국투자증권 Open API, Polygon API
+- 차트정보 : TradingView API, 한국투자증권 Open API
 - 커뮤니티 반응 : Reddit API
+- LLM 모델 : OpenAI API - Model: GPT-4.1mini
 
 ---
 
@@ -62,13 +68,20 @@
 
 ### 사전 준비
 - `.env` 파일에 API 키, DB 정보 등을 등록
-- Docker 설치 필요
 
 ### 로컬 실행
+VSCode로 실행시
 ```bash
-git clone https://github.com/your-org/investment-rag-service.git
-cd investment-rag-service
-docker-compose up --build
+npm install
+cd backend/
+npm install
+cd ../
+cd frontend/
+npm install
+npm run dev
+cd ../
+cd backend/
+npm run dev
 ```
 ---
 ```
@@ -93,8 +106,9 @@ docker-compose up --build
 ```
 기대 효과
 투자 정보 격차 해소 및 투자자 보호
-초보자도 쉽게 이해 가능한 UI/UX
+간편한 UI/UX
 커스터마이징된 실시간 투자 알림 제공
+RAG기반 투자정보 챗봇 서비스 제공
 프리미엄 정보 구독 서비스로 수익화 가능
 ```
 ---
