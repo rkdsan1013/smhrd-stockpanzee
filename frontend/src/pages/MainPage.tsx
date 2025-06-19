@@ -3,7 +3,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import ChatbotButton from "../components/ChatbotButton";
+import ChatbotButton from "../components/Chatbot";
 
 const MainPage: React.FC = () => {
   return (

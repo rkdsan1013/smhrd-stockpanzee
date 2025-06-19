@@ -9,7 +9,8 @@ dotenv.config();
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
-import newsRoutes from "./routes/newsRoutes"; // 뉴스 라우트 추가
+import newsRoutes from "./routes/newsRoutes"; // 뉴스 라우트
+import chatbotRoutes from "./routes/chatbotRoutes"; // 팬지봇 라우트 추가
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
 app.use("/api/news", newsRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
