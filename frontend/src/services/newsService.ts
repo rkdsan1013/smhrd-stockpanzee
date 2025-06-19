@@ -7,12 +7,12 @@ export interface NewsItem {
   title_ko: string;
   image: string;
   category: "domestic" | "international" | "crypto";
-  sentiment: number; // news_sentiment 값: 1 (매우 부정) ~ 5 (매우 긍정)
-  community_sentiment?: number; // 백엔드에서 함께 불러오지만 표시에는 사용하지 않음.
+  sentiment: number; // 1 (매우 부정) ~ 5 (매우 긍정)
   summary: string;
   brief_summary: string;
-  tags: string; // JSON 문자열 (필요 시 파싱)
+  tags: string; // JSON 문자열; 필요 시 파싱하여 사용
   published_at: string;
+  publisher: string; // 퍼블리셔 필드 추가
 }
 
 export const fetchNews = async (): Promise<NewsItem[]> => {
