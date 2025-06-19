@@ -68,13 +68,20 @@
 
 ### 사전 준비
 - `.env` 파일에 API 키, DB 정보 등을 등록
-- Docker 설치 필요
 
 ### 로컬 실행
+VSCode로 실행시
 ```bash
-git clone https://github.com/your-org/investment-rag-service.git
-cd investment-rag-service
-docker-compose up --build
+npm install
+cd backend/
+npm install
+cd ../
+cd frontend/
+npm install
+npm run dev
+cd ../
+cd backend/
+npm run dev
 ```
 ---
 ```
@@ -101,7 +108,7 @@ docker-compose up --build
 투자 정보 격차 해소 및 투자자 보호
 간편한 UI/UX
 커스터마이징된 실시간 투자 알림 제공
-RAG기반 투자정보제공
+RAG기반 투자정보 챗봇 서비스 제공
 프리미엄 정보 구독 서비스로 수익화 가능
 ```
 ---
