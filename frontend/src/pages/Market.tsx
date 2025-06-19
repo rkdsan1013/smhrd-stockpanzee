@@ -1,5 +1,6 @@
 // /frontend/src/pages/Market.tsx
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
@@ -66,6 +67,7 @@ const getSentimentBadgeStyles = (
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
+  const navigate = useNavigate();
   // 탭, 정렬, 즐겨찾기 상태
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
@@ -254,7 +256,8 @@ const Market: React.FC = () => {
                 key={stock.id}
                 className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
                   idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
-                } hover:bg-gray-800`}
+                } hover:bg-gray-800 cursor-pointer`} // ← cursor-pointer
+                onClick={() => navigate(`/asset/${stock.symbol}`, { state: { asset: stock } })} // ← 이동 핸들러
               >
                 <button
                   onClick={() => toggleFavorite(stock.id)}

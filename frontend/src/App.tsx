@@ -8,6 +8,7 @@ import RegisterForm from "./components/RegisterForm";
 import Home from "./pages/Home";
 import News from "./pages/News";
 import Market from "./pages/Market";
+import AssetDetail from "./pages/AssetDetail";
 import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
 
@@ -20,6 +21,7 @@ const App: React.FC = () => {
           <Route index element={<Home />} />
           <Route path="news" element={<News />} />
           <Route path="market" element={<Market />} />
+          <Route path="asset/:symbol" element={<AssetDetail />} />
           <Route path="community" element={<Community />} />
           {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
           <Route path="post" element={<PostCreationPage />} />
