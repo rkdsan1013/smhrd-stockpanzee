@@ -1,6 +1,8 @@
 # smhrd-stockpanzee
 
-![image](https://github.com/user-attachments/assets/32fa8dc2-860a-48af-aa48-13059568776b)
+![image](https://github.com/user-attachments/assets/0c33dd71-d7a5-4d0b-8d5f-e70fc1c6aba3)
+
+
 
 # RAG, LLM 기반 투자 정보 요약 서비스
 
@@ -18,6 +20,7 @@
 - **관심 종목 기반 실시간 알림**
 - **주가 차트 및 기업 정보 시각화**
 - **커뮤니티 여론 분석 (Reddit)**
+- **RAG 기반 챗봇 서비스**
 
 ---
 
@@ -31,6 +34,7 @@
 | 관심 종목 알림 | 키워드/종목 기반 맞춤형 알림 설정 |
 | 커뮤니티 여론 분석 | Reddit 기반 투자 심리 추정 |
 | 원문 링크 및 기업 정보 제공 | 뉴스 원문, 시가총액, 재무정보 등 부가 데이터 제공 |
+| 챗봇 서비스 제공 | RAG 기반 사용자 질문에 대한 투자정보제공 | 
 
 ---
 
@@ -55,6 +59,7 @@
 - 암호화폐 : CoinDesk API, CoinGecko API
 - 차트정보 : TradingView API, 한국투자증권 Open API, Polygon API
 - 커뮤니티 반응 : Reddit API
+- LLM 모델 : OpenAI GPT-4.1mini
 
 ---
 
@@ -93,8 +98,9 @@ docker-compose up --build
 ```
 기대 효과
 투자 정보 격차 해소 및 투자자 보호
-초보자도 쉽게 이해 가능한 UI/UX
+간편한 UI/UX
 커스터마이징된 실시간 투자 알림 제공
+RAG기반 투자정보제공
 프리미엄 정보 구독 서비스로 수익화 가능
 ```
 ---
