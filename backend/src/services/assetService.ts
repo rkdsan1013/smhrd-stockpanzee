@@ -38,3 +38,11 @@ export async function listAssets(): Promise<AssetWithPrice[]> {
     };
   });
 }
+
+/**
+ * 단일 자산 조회 (ID 기준)
+ */
+export async function getAssetById(id: number): Promise<AssetWithPrice | null> {
+  const all = await listAssets();
+  return all.find((a) => a.id === id) ?? null;
+}

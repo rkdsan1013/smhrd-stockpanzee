@@ -19,32 +19,38 @@ export function loadTradingViewScript(): Promise<void> {
 
 /**
  * DB에서 가져온 symbol과 market 정보를 TradingView가 이해하는 형식으로 변환합니다.
- * 예) ("005930.KQ", "KOSPI") => "KRX:005930"
+ * 암호화폐의 경우 symbol 전체를 사용하고, 주식(KRX)만 '.' 기준으로 분리합니다.
  */
 export function getTradingViewSymbol(symbol: string, market: string): string {
-  const base = symbol.split(".")[0].toUpperCase();
-  switch (market.toUpperCase()) {
+  const exch = market.toUpperCase();
+  const base = symbol.toUpperCase();
+
+  switch (exch) {
     case "KRX":
     case "KOSPI":
     case "KOSDAQ":
-      return `KRX:${base}`;
+      // 국내 주식: 005930.KQ → KRX:005930
+      return `KRX:${base.split(".")[0]}`;
+
     case "NASDAQ":
     case "NYSE":
-      return base;
+      // 미국 주식: AAPL → NASDAQ:AAPL
+      return `${exch}:${base}`;
+
     case "BINANCE":
-    case "CRYPTO":
-      return `BINANCE:${base}`;
+      // Binance 암호화폐: 기본 USDT 페어로 변환
+      // DB에 BTCUSDT 등 풀페어가 이미 있으면 그대로, 아니면 USDT suffix 추가
+      const pair = base.endsWith("USDT") ? base : `${base}USDT`;
+      return `BINANCE:${pair}`;
+
     default:
-      return base;
+      // 그 외: 그대로 exchange:base
+      return `${exch}:${base}`;
   }
 }
 
 /**
  * 지정된 container에 TradingView 위젯을 렌더링합니다.
- * @param containerId 대상 div의 id
- * @param tvSymbol TradingView 심볼 (예: "KRX:005930", "AAPL", "BINANCE:BTCUSDT")
- * @param width 위젯 가로 크기 (기본 "100%")
- * @param height 위젯 세로 크기 (기본 500)
  */
 export async function renderTradingViewChart(
   containerId: string,

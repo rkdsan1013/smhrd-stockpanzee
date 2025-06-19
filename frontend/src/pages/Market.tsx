@@ -257,7 +257,7 @@ const Market: React.FC = () => {
                 className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
                   idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
                 } hover:bg-gray-800 cursor-pointer`} // ← cursor-pointer
-                onClick={() => navigate(`/asset/${stock.symbol}`, { state: { asset: stock } })} // ← 이동 핸들러
+                onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })} // ← 이동 핸들러
               >
                 <button
                   onClick={() => toggleFavorite(stock.id)}
