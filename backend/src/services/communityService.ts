@@ -25,4 +25,46 @@ export async function getCommunityPost(id: number) {
   return await communityModel.getCommunityPost(id);
 }
 
+
+
 // ...추가로 update, delete, getById 등도 여기에 작성!
+
+
+// 게시글 좋아요
+export async function likeCommunityPost(postId: number, user_uuid: Buffer) {
+  // upsert
+  await pool.query(
+    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
+      VALUES (?, 'post', ?, 1)
+      ON DUPLICATE KEY UPDATE is_liked=1, updated_at=NOW()`,
+    [user_uuid, postId]
+  );
+}
+
+// 게시글 좋아요 취소
+export async function unlikeCommunityPost(postId: number, user_uuid: Buffer) {
+  await pool.query(
+    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
+      VALUES (?, 'post', ?, 0)
+      ON DUPLICATE KEY UPDATE is_liked=0, updated_at=NOW()`,
+    [user_uuid, postId]
+  );
+}
+
+// 게시글 좋아요 수 집계 (post 상세 조회 시 사용)
+export async function getCommunityLikesCount(postId: number) {
+  const [rows]: any = await pool.query(
+    `SELECT COUNT(*) AS count FROM likes WHERE target_type='post' AND target_id=? AND is_liked=1`,
+    [postId]
+  );
+  return rows[0]?.count || 0;
+}
+
+// 현재 유저가 좋아요 했는지 (상세 조회 시 사용)
+export async function isPostLikedByUser(postId: number, user_uuid: Buffer) {
+  const [rows]: any = await pool.query(
+    `SELECT is_liked FROM likes WHERE target_type='post' AND target_id=? AND user_uuid=?`,
+    [postId, user_uuid]
+  );
+  return rows[0]?.is_liked === 1;
+}
