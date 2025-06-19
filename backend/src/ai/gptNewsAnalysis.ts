@@ -1,16 +1,15 @@
-// /backend/src/ai/gptNewsAnalysis.ts
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
 export interface AnalysisResult {
-  summary: string; // 뉴스 전체 내용을 자세하게 요약 (한글 번역)
-  brief_summary: string; // 뉴스 내용의 핵심을 한 줄로 요약
-  title_ko: string; // 뉴스 제목의 한글 번역본
-  news_sentiment: number; // 감정 점수 (1=매우부정, 2=부정, 3=중립, 4=긍정, 5=매우긍정)
-  news_positive: string[]; // 긍정적 요소 목록
-  news_negative: string[]; // 부정적 요소 목록
-  tags: string[]; // 종목 티커 목록
+  summary: string;
+  brief_summary: string;
+  title_ko: string;
+  news_sentiment: number;
+  news_positive: string[];
+  news_negative: string[];
+  tags: string[];
 }
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
