@@ -1,7 +1,7 @@
 // /backend/src/controllers/newsController.ts
 import { Request, Response } from "express";
 import { fetchAndProcessNews } from "../services/news/cryptoNewsService";
-import { fetchAndProcessOneKrxNews} from "../services/news/krxNewsService";
+import { fetchAndProcessSmartKrxNews} from "../services/news/krxNewsService";
 import { getAllNews } from "../models/newsTransactions";
 
 // 뉴스 목록 조회: 뉴스와 뉴스 분석 데이터를 LEFT JOIN하여 반환
@@ -28,7 +28,7 @@ export const testNewsProcessing = async (req: Request, res: Response) => {
 
 export const testNewsProcessing2 = async (req: Request, res: Response) => {
   try {
-    await fetchAndProcessOneKrxNews();
+    await fetchAndProcessSmartKrxNews();
     res.status(200).json({ message: "테스트 뉴스 처리 완료." });
   } catch (error) {
     res.status(500).json({ error: "뉴스 처리 중 오류 발생" });

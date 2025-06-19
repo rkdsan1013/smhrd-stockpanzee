@@ -21,6 +21,16 @@ export function setupSocket(server: any) {
     });
   });
 
-  // ✅ 실시간 주가 주기 실행
-  setInterval(() => emitStockPrices(io), 180000); // 30초마다
+  // ✅ 순차적 시세 조회 루프 시작 (setTimeout 재귀)
+  const startEmitLoop = async () => {
+    while (true) {
+      console.log("🕐 emitStockPrices 시작");
+      await emitStockPrices(io);
+      console.log("✅ emitStockPrices 완료 → 다음 주기 대기");
+
+      await new Promise((resolve) => setTimeout(resolve, 180000)); // 3분 대기
+    }
+  };
+
+  startEmitLoop(); // 최초 실행
 }

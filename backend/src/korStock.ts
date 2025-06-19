@@ -2,6 +2,8 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import pool from "./config/db"; // ✅ DB 연결
+
 dotenv.config();
 
 let accessToken = "";
@@ -19,7 +21,7 @@ interface StockItem {
 const stockListPath = path.join(__dirname, "../krx_basic_info.json");
 const stockList: StockItem[] = JSON.parse(fs.readFileSync(stockListPath, "utf-8"));
 
-// ✅ 실전용 ACCESS_TOKEN 발급
+// ✅ ACCESS TOKEN 발급
 async function getAccessToken() {
   const url = "https://openapi.koreainvestment.com:9443/oauth2/tokenP";
   const headers = { "Content-Type": "application/json" };
@@ -38,7 +40,7 @@ async function getAccessToken() {
   }
 }
 
-// ✅ 주가 + 전일가 + 시총 조회
+// ✅ 단일 종목 시세 조회
 async function fetchFullPriceInfo(symbol: string): Promise<{
   symbol: string;
   price: number | null;
@@ -62,13 +64,9 @@ async function fetchFullPriceInfo(symbol: string): Promise<{
     const res = await axios.get<{ output: any }>(url, { headers, params });
     const output = res.data.output;
 
-    const rawPrice = output?.stck_prpr;
-    const rawDiff = output?.prdy_vrss;
-    const rawShares = output?.lstn_stcn;
-
-    const price = Number(rawPrice);
-    const diff = Number(rawDiff);
-    const shares = Number(rawShares);
+    const price = Number(output?.stck_prpr);
+    const diff = Number(output?.prdy_vrss);
+    const shares = Number(output?.lstn_stcn);
 
     const prevPrice = !isNaN(price) && !isNaN(diff) ? price - diff : null;
     const marketCap = !isNaN(price) && !isNaN(shares) ? price * shares : null;
@@ -80,12 +78,54 @@ async function fetchFullPriceInfo(symbol: string): Promise<{
   }
 }
 
-// ✅ 딜레이 함수
+// ✅ DB 저장
+async function saveToAssetInfo({
+  symbol,
+  name,
+  price,
+  diff,
+  marketCap,
+}: {
+  symbol: string;
+  name: string;
+  price: number;
+  diff: number;
+  marketCap: number;
+}) {
+  try {
+    const [rows]: any = await pool.query("SELECT id FROM assets WHERE symbol = ?", [symbol]);
+    if (!rows.length) {
+      console.warn(`⚠️ ${symbol} (${name}) → 자산 정보 없음`);
+      return;
+    }
+
+    const assetId = rows[0].id;
+
+    await pool.execute(
+      `INSERT INTO asset_info 
+        (asset_id, current_price, price_change, market_cap, last_updated, symbol) 
+       VALUES (?, ?, ?, ?, NOW(), ?)
+       ON DUPLICATE KEY UPDATE
+         current_price = VALUES(current_price),
+         price_change = VALUES(price_change),
+         market_cap = VALUES(market_cap),
+         last_updated = NOW()`,
+      [assetId, price, diff, marketCap, symbol]
+    );
+
+    return true;
+  } catch (err) {
+    console.error(`❌ DB 저장 실패: ${symbol}`, err);
+    return false;
+  }
+}
+
+// ✅ 슬립 함수
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ 50개씩 나눠서 실전 시세 조회
+// ✅ 전체 실행
 export async function emitStockPrices(io: any) {
   console.log("🟡 emitStockPrices 실행됨");
 
@@ -98,21 +138,27 @@ export async function emitStockPrices(io: any) {
     }
   }
 
-  const kospiStocks = stockList.filter(stock => stock.market === "KOSPI");
+  const targetStocks = stockList.filter(stock =>
+    stock.market === "KOSPI" || stock.market === "KOSDAQ"
+  );
   const chunkSize = 30;
+  let successCount = 0;
+  let failCount = 0;
+  let successLogShown = false;
+  let failLogShown = false;
 
-  for (let i = 0; i < kospiStocks.length; i += chunkSize) {
-    const chunk = kospiStocks.slice(i, i + chunkSize);
+  for (let i = 0; i < targetStocks.length; i += chunkSize) {
+    const chunk = targetStocks.slice(i, i + chunkSize);
 
     const results = await Promise.all(
       chunk.map(stock => fetchFullPriceInfo(stock.symbol))
     );
 
-    results.forEach(({ symbol, price, prevPrice, marketCap }) => {
+    for (const { symbol, price, prevPrice, marketCap } of results) {
       const stock = chunk.find(s => s.symbol === symbol);
       const name = stock?.name || "알 수 없음";
 
-      if (price !== null && prevPrice !== null) {
+      if (price !== null && prevPrice !== null && marketCap !== null) {
         const diff = price - prevPrice;
         const rate = ((diff / prevPrice) * 100).toFixed(2);
         const arrow = diff > 0 ? "🔺" : diff < 0 ? "🔻" : "⏸️";
@@ -127,17 +173,36 @@ export async function emitStockPrices(io: any) {
           marketCap,
         });
 
-        console.log(
-          `${arrow} ${name} (${symbol}) 현재가: ${price} | 전일대비: ${diff} (${rate}%) | 시가총액: ${marketCap}`
-        );
-      } else {
-        console.warn(`⚠️ ${name} (${symbol}) 가격 조회 실패`);
-      }
-    });
+        const saved = await saveToAssetInfo({ symbol, name, price, diff, marketCap });
 
-    // ✅ 과부하 방지 딜레이
-    if (i + chunkSize < kospiStocks.length) {
-      await sleep(2000); // ← 💡 30개 요청 후엔 1.5초 쉬기
+        if (saved) {
+          successCount++;
+          if (!successLogShown) {
+            console.log(
+              `${arrow} ${name} (${symbol}) 현재가: ${price} | 전일대비: ${diff} (${rate}%) | 시총: ${marketCap}`
+            );
+            successLogShown = true;
+          }
+        } else {
+          failCount++;
+          if (!failLogShown) {
+            console.warn(`⚠️ ${name} (${symbol}) DB 저장 실패`);
+            failLogShown = true;
+          }
+        }
+      } else {
+        failCount++;
+        if (!failLogShown) {
+          console.warn(`⚠️ ${name} (${symbol}) 가격 조회 실패`);
+          failLogShown = true;
+        }
+      }
+    }
+
+    if (i + chunkSize < targetStocks.length) {
+      await sleep(2000); // 💤 과부하 방지
     }
   }
+
+  console.log(`✅ 완료: 성공 ${successCount}개 / 실패 ${failCount}개`);
 }
