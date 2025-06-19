@@ -55,11 +55,11 @@
 
 ### 외부 API (데이터 수집)
 - 국내 : 네이버 오픈 API, 네이버 금융 크롤링
-- 해외 : Finnhub Stock API, Alpha Vantage API, 크롤링
+- 해외 : Finnhub Stock API, Alpha Vantage API, Polygon API, 크롤링
 - 암호화폐 : CoinDesk API, CoinGecko API
-- 차트정보 : TradingView API, 한국투자증권 Open API, Polygon API
+- 차트정보 : TradingView API, 한국투자증권 Open API
 - 커뮤니티 반응 : Reddit API
-- LLM 모델 : OpenAI GPT-4.1mini
+- LLM 모델 : OpenAI API - Model: GPT-4.1mini
 
 ---
 
