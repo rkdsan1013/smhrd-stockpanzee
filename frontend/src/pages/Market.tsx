@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
+import { useCryptoPrices } from "../hooks/useCryptoPrices";
 
 // 숫자 단위 포맷 함수
 const formatCurrency = (value: number): string => {
@@ -85,14 +86,12 @@ const Market: React.FC = () => {
     const load = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
-          console.log("▶️ fetched assets:", assets);
-          console.log("▶️ sample asset JSON:", JSON.stringify(assets[0], null, 2));
-
           const list: StockItem[] = assets.map((a) => {
             let category: StockItem["category"];
-            if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
-            else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
-            else if (a.market === "Binance") category = "암호화폐";
+            const m = a.market.toUpperCase();
+            if (m === "KOSPI" || m === "KOSDAQ") category = "국내";
+            else if (m === "NASDAQ" || m === "NYSE") category = "해외";
+            else if (m.includes("BINANCE") || m.includes("CRYPTO")) category = "암호화폐";
             else category = "국내";
             return {
               id: a.id,
@@ -160,6 +159,19 @@ const Market: React.FC = () => {
   }, [visibleCount, finalStocks]);
   const visibleStocks = finalStocks.slice(0, visibleCount);
 
+  // 암호화폐 심볼만 추출해서 훅으로 실시간 가격 조회
+  const cryptoSymbols = useMemo(
+    () =>
+      stockData
+        .filter((a) => a.category === "암호화폐")
+        .map((a) => {
+          const base = a.symbol.toUpperCase();
+          return base.endsWith("USDT") ? base : `${base}USDT`;
+        }),
+    [stockData],
+  );
+  const cryptoPrices = useCryptoPrices(cryptoSymbols);
+
   const handleSort = (key: SortKey) =>
     setSortConfig((p) =>
       p.key === key
@@ -170,7 +182,7 @@ const Market: React.FC = () => {
   const toggleFavorite = (id: number) =>
     setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  // 고정 컬럼 레이아웃: 즐겨찾기 40px, 종목 영역(minmax(0,1fr)), 현재가 120px, 변동률 100px, 시가총액 120px
+  // 고정 컬럼 레이아웃
   const gridCols = "grid grid-cols-[40px_minmax(0,1fr)_120px_100px_120px] items-center";
 
   return (
@@ -179,7 +191,7 @@ const Market: React.FC = () => {
         {/* 좌측: 자산 리스트 (md:col-span-9) */}
         <div className="md:col-span-9">
           <div className="flex items-center justify-between mb-4">
-            {/* 원형 전체/즐겨찾기 탭 */}
+            {/* 탭 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "즐겨찾기"] as const).map((tab) => (
                 <button
@@ -199,7 +211,7 @@ const Market: React.FC = () => {
                 </button>
               ))}
             </div>
-            {/* 타원형 마켓 필터 탭 */}
+            {/* 마켓 필터 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
                 <button
@@ -223,8 +235,7 @@ const Market: React.FC = () => {
           >
             <div />
             <div onClick={() => handleSort("name")} className="cursor-pointer hover:underline">
-              종목
-              {sortConfig.key === "name" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+              종목{sortConfig.key === "name" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("currentPrice")}
@@ -251,45 +262,69 @@ const Market: React.FC = () => {
 
           {/* 자산 리스트 */}
           <div className="space-y-2 mt-2">
-            {visibleStocks.map((stock, idx) => (
-              <div
-                key={stock.id}
-                className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
-                  idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
-                } hover:bg-gray-800 cursor-pointer`} // ← cursor-pointer
-                onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })} // ← 이동 핸들러
-              >
-                <button
-                  onClick={() => toggleFavorite(stock.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
-                >
-                  <Icons
-                    name="star"
-                    className={`w-5 h-5 ${favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"}`}
-                  />
-                </button>
-                <div className="min-w-0">
-                  <p className="truncate text-white font-semibold">{stock.name}</p>
-                  <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
-                </div>
-                <div className="text-right text-white">
-                  {stock.currentPrice.toLocaleString()} 원
-                </div>
+            {visibleStocks.map((stock, idx) => {
+              const isCrypto = stock.category === "암호화폐";
+              const keySym = isCrypto
+                ? stock.symbol.toUpperCase().endsWith("USDT")
+                  ? stock.symbol.toUpperCase()
+                  : `${stock.symbol.toUpperCase()}USDT`
+                : "";
+              const ticker = isCrypto ? cryptoPrices[keySym] : null;
+
+              return (
                 <div
-                  className={`text-right font-semibold ${stock.priceChange >= 0 ? "text-green-500" : "text-red-500"}`}
+                  key={stock.id}
+                  className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
+                    idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
+                  } hover:bg-gray-800 cursor-pointer`}
+                  onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })}
                 >
-                  {stock.priceChange >= 0 ? "+" : ""}
-                  {stock.priceChange.toFixed(2)}%
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(stock.id);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
+                  >
+                    <Icons
+                      name="star"
+                      className={`w-5 h-5 ${
+                        favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
+                      }`}
+                    />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="truncate text-white font-semibold">{stock.name}</p>
+                    <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
+                  </div>
+                  <div className="text-right text-white">
+                    {isCrypto
+                      ? `${ticker?.price.toLocaleString()} USDT`
+                      : `${stock.currentPrice.toLocaleString()} 원`}
+                  </div>
+                  <div
+                    className={`text-right font-semibold ${
+                      (isCrypto ? (ticker?.changePercent ?? 0) : stock.priceChange) >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {isCrypto
+                      ? `${(ticker?.changePercent ?? 0).toFixed(2)}%`
+                      : `${stock.priceChange >= 0 ? "+" : ""}${stock.priceChange.toFixed(2)}%`}
+                  </div>
+                  <div className="text-right text-white">
+                    {isCrypto ? "" : formatCurrency(stock.marketCap)}
+                  </div>
                 </div>
-                <div className="text-right text-white">{formatCurrency(stock.marketCap)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* 우측: 뉴스 요약 영역 (md:col-span-3) - 스크롤 버튼은 이 컨테이너 내부에 배치 */}
+        {/* 우측: 뉴스 요약 영역 */}
         <div className="md:col-span-3">
-          <div className="sticky top-20 bg-gray-800 p-4 rounded-lg transition-all duration-500 ease-in-out flex flex-col h-[80vh]">
+          <div className="sticky top-20 bg-gray-800 p-4 rounded-lg flex flex-col h-[80vh] transition-all duration-500 ease-in-out">
             <h2 className="text-xl font-bold text-white mb-4">뉴스 현황</h2>
             <div className="overflow-y-auto flex-1 pr-2">
               {newsSummaryData.map((news) => (
@@ -302,7 +337,9 @@ const Market: React.FC = () => {
                       {news.category}
                     </span>
                     <span
-                      className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(news.sentiment)}`}
+                      className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(
+                        news.sentiment,
+                      )}`}
                     >
                       {news.sentiment}
                     </span>
@@ -315,7 +352,6 @@ const Market: React.FC = () => {
                 </div>
               ))}
             </div>
-            {/* 페이지 최상단 이동 버튼 (뉴스 영역 내부, sticky 컨테이너 하단) */}
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
