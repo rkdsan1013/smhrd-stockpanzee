@@ -170,7 +170,7 @@ const Chatbot: React.FC = () => {
               }`}
             >
               {isLoading ? (
-                // Icons 컴포넌트로 spinner 아이콘 호출 (Icon.tsx의 spinner 정의에 따라)
+                // Icons 컴포넌트로 spinner 아이콘 호출, 크기를 w-6 h-6으로 조정
                 <Icons
                   name="spinner"
                   className="w-6 h-6 text-gray-200 animate-spin fill-blue-600"
@@ -183,16 +183,16 @@ const Chatbot: React.FC = () => {
         </div>
       </div>
 
-      {/* 우하단에 고정된 팬지봇 토글 버튼 */}
+      {/* 우하단에 고정된 팬지봇 토글 버튼 (크기 줄임) */}
       <button
         onClick={toggleChatbot}
-        className="fixed bottom-8 right-8 p-4 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out focus:outline-none"
+        className="fixed bottom-8 right-8 p-3 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out focus:outline-none"
       >
         <div className="transition-all duration-300 ease-in-out">
           {isChatOpen ? (
-            <Icons name="close" className="w-10 h-10 text-white" />
+            <Icons name="close" className="w-8 h-8 text-white" />
           ) : (
-            <Icons name="userHeadset" className="w-10 h-10 text-white" />
+            <Icons name="userHeadset" className="w-8 h-8 text-white" />
           )}
         </div>
       </button>
