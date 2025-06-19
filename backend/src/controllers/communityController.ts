@@ -21,7 +21,8 @@ export const getCommunityPosts = async (
   }
 };
 
-// 게시글 상세 조회
+
+// 게시글 상세 조회 (조회수 1 증가)
 export const getCommunityPost = async (
   req: Request,
   res: Response,
@@ -34,16 +35,23 @@ export const getCommunityPost = async (
       return;
     }
 
+    // ★ 1. 조회수 1 증가 (DB에서 +1)
+    await communityService.incrementCommunityViews(id);
+
+    // ★ 2. 최신 데이터 select (반드시 await)
     const post = await communityService.getCommunityPost(id);
+
     if (!post) {
       res.status(404).json({ message: "게시글을 찾을 수 없습니다" });
       return;
     }
 
+    // 이미지 BLOB → base64 변환
     if (post.community_img) {
       post.community_img = post.community_img.toString("base64");
     }
 
+    // 로그인된 사용자라면 좋아요 체크
     const user_uuid = (req as any).user?.uuid;
     let isLiked = false;
     if (user_uuid) {
@@ -52,9 +60,15 @@ export const getCommunityPost = async (
         Buffer.from(user_uuid, "hex")
       );
     }
-
+    // 좋아요 개수
     const community_likes = await communityService.getCommunityLikesCount(id);
-    res.json({ ...post, community_likes, isLiked });
+
+    // 모든 정보 통합해서 응답
+    res.json({
+      ...post,
+      community_likes,
+      isLiked
+    });
   } catch (err) {
     next(err);
   }
@@ -140,6 +154,9 @@ export const deleteCommunityPost = async (
     next(err);
   }
 };
+
+
+
 
 // 게시글 좋아요
 export const likeCommunityPost = async (

@@ -282,7 +282,7 @@ const Community: React.FC = () => {
                     </span>
                     <span className="flex items-center">
                       <Icons name="eye" className="w-5 h-5 mr-1" />
-                      {post.views ?? 0}
+                      {post.community_views ?? 0}
                     </span>
                   </div>
                 </div>

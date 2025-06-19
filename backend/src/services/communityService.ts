@@ -21,10 +21,23 @@ export async function createCommunityPost(post: {
   return await communityModel.createCommunityPost(post);
 }
 
-export async function getCommunityPost(id: number) {
-  return await communityModel.getCommunityPost(id);
+export async function incrementCommunityViews(postId: number) {
+  console.log("[조회수 증가 호출] id=", postId);
+  await pool.query(
+    `UPDATE community SET community_views = community_views + 1 WHERE id = ?`,
+    [postId]
+  );
+  console.log("[조회수 증가 완료] id=", postId);
 }
 
+
+export async function getCommunityPost(id: number) {
+  // 무조건 최신값 SELECT
+  const [rows]: any = await pool.query(
+    `SELECT * FROM community WHERE id = ?`, [id]
+  );
+  return rows[0];
+}
 
 
 // ...추가로 update, delete, getById 등도 여기에 작성!
