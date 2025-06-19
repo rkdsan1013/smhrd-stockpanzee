@@ -24,3 +24,10 @@ export async function findCryptoAssets(): Promise<Asset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
   return rows as Asset[];
 }
+
+export const findDomesticAssets = async (): Promise<{ name: string; symbol: string }[]> => {
+  const [rows] = await pool.query(`
+    SELECT name, symbol FROM assets WHERE category = 'domestic'
+  `);
+  return rows as any[];
+};
