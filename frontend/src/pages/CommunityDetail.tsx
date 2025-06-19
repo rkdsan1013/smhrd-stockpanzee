@@ -200,7 +200,14 @@ const handleLikeToggle = async () => {
   }
 };
 
+const [showMenu, setShowMenu] = useState(false);
 
+useEffect(() => {
+  if (!showMenu) return;
+  const closeMenu = () => setShowMenu(false);
+  window.addEventListener("click", closeMenu);
+  return () => window.removeEventListener("click", closeMenu);
+}, [showMenu]);
 
 
   if (loading || !post)
@@ -209,11 +216,59 @@ const handleLikeToggle = async () => {
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
     {/* 카테고리+시간 */}
-    <div className="flex items-center text-lg font-semibold text-white mb-2">
+    <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
       <span>{post.category}</span>
       <span className="mx-2 text-gray-500">·</span>
       <span className="font-normal text-gray-300">{timeAgo(post.created_at)}</span>
+      
+      {/* 오른쪽 끝 ...더보기 메뉴 (로그인 없이 항상 보임) */}
+      <div className="ml-auto relative">
+        <button
+          className="ml-2 p-1 hover:bg-gray-700 rounded-full"
+          onClick={e => {
+            e.stopPropagation();
+            setShowMenu(v => !v);
+          }}
+          type="button"
+        >
+          {/* ... 아이콘 */}
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="5" cy="12" r="1.5" />
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="19" cy="12" r="1.5" />
+          </svg>
+        </button>
+        {/* 메뉴 네모박스 */}
+        {showMenu && (
+          <div
+            className="absolute right-0 mt-2 w-28 bg-gray-900 border border-gray-700 rounded shadow-lg z-20"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
+              onClick={() => {
+                setShowMenu(false);
+                // 수정 함수 자리
+                alert("수정 기능은 준비 중입니다.");
+              }}
+            >
+              수정
+            </button>
+            <button
+              className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700"
+              onClick={() => {
+                setShowMenu(false);
+                // 삭제 함수 자리
+                alert("삭제 기능은 준비 중입니다.");
+              }}
+            >
+              삭제
+            </button>
+          </div>
+        )}
+      </div>
     </div>
+
     {/* 제목 */}
     <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
     {/* 이미지 등 이하 동일 */}
