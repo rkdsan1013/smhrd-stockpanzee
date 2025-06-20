@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
-import { useCryptoPrices } from "../hooks/useCryptoPrices";
 
 // 숫자 단위 포맷 함수
 const formatCurrency = (value: number): string => {
@@ -35,6 +34,7 @@ interface NewsSummaryItem {
   sentiment: "매우 부정" | "부정" | "중립" | "긍정" | "매우긍정";
 }
 
+// (기존에 있던) 뉴스 요약 더미 데이터
 const newsSummaryData: NewsSummaryItem[] = [
   {
     id: 1,
@@ -54,12 +54,11 @@ const newsSummaryData: NewsSummaryItem[] = [
     category: "국내",
     sentiment: "부정",
   },
-  // …추가 데이터…
+  // …기타 데이터…
 ];
 
-const getSentimentBadgeStyles = (
-  sentiment: StockItem["category"] | NewsSummaryItem["sentiment"],
-) => {
+// (기존에 있던) 감정 배지 스타일 함수
+const getSentimentBadgeStyles = (sentiment: NewsSummaryItem["sentiment"]) => {
   if (sentiment === "긍정" || sentiment === "매우긍정") return "bg-green-700 text-white";
   if (sentiment === "부정" || sentiment === "매우 부정") return "bg-red-700 text-white";
   return "bg-gray-700 text-white";
@@ -69,7 +68,6 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
-  // 탭, 정렬, 즐겨찾기 상태
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
     "전체",
@@ -81,7 +79,7 @@ const Market: React.FC = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
   const [stockData, setStockData] = useState<StockItem[]>([]);
 
-  // API에서 자산 로드 후 category 계산
+  // 1) 백엔드 DB에서 5초마다 갱신된 데이터 로드
   useEffect(() => {
     const load = () => {
       fetchAssets()
@@ -91,8 +89,8 @@ const Market: React.FC = () => {
             const m = a.market.toUpperCase();
             if (m === "KOSPI" || m === "KOSDAQ") category = "국내";
             else if (m === "NASDAQ" || m === "NYSE") category = "해외";
-            else if (m.includes("BINANCE") || m.includes("CRYPTO")) category = "암호화폐";
-            else category = "국내";
+            else category = "암호화폐";
+
             return {
               id: a.id,
               name: a.name,
@@ -109,12 +107,12 @@ const Market: React.FC = () => {
         .catch(console.error);
     };
 
-    load(); // 최초 실행
-    const interval = setInterval(load, 5000); // 5초마다 새로고침
+    load(); // 최초 로드
+    const interval = setInterval(load, 5000); // 5초마다 갱신
     return () => clearInterval(interval);
   }, []);
 
-  // Market 탭 필터링
+  // 2) 탭 필터링
   const filteredStocks = useMemo(
     () =>
       selectedMarketTab === "전체"
@@ -123,67 +121,55 @@ const Market: React.FC = () => {
     [stockData, selectedMarketTab],
   );
 
-  // 정렬
+  // 3) 정렬
   const sortedStocks = useMemo(() => {
     const { key, direction } = sortConfig;
     const dir = direction === "asc" ? 1 : -1;
     const arr = [...filteredStocks];
-    if (key === "name") arr.sort((a, b) => a.name.localeCompare(b.name) * dir);
-    else arr.sort((a, b) => (a[key] - b[key]) * dir);
+    if (key === "name") {
+      arr.sort((a, b) => a.name.localeCompare(b.name) * dir);
+    } else {
+      arr.sort((a, b) => ((a as any)[key] - (b as any)[key]) * dir);
+    }
     return arr;
   }, [filteredStocks, sortConfig]);
 
-  // 즐겨찾기 모드 적용
+  // 4) 즐겨찾기 모드
   const finalStocks = useMemo(
     () =>
       viewMode === "전체" ? sortedStocks : sortedStocks.filter((s) => favorites.includes(s.id)),
     [sortedStocks, viewMode, favorites],
   );
 
-  // 무한 스크롤: 초기 10개, 스크롤 하단에서 200px 남으면 10개씩 추가
+  // 5) 무한 스크롤
   const [visibleCount, setVisibleCount] = useState(10);
+  useEffect(() => setVisibleCount(10), [selectedMarketTab, sortConfig, viewMode]);
   useEffect(() => {
-    setVisibleCount(10);
-  }, [selectedMarketTab, sortConfig, viewMode]);
-  useEffect(() => {
-    const THRESHOLD = 200;
     const onScroll = () => {
-      const scrollBottom = window.innerHeight + window.scrollY;
-      const pageHeight = document.documentElement.scrollHeight;
-      if (scrollBottom >= pageHeight - THRESHOLD && visibleCount < finalStocks.length) {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200) {
         setVisibleCount((v) => Math.min(v + 10, finalStocks.length));
       }
     };
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
-  }, [visibleCount, finalStocks]);
+  }, [finalStocks.length]);
+
   const visibleStocks = finalStocks.slice(0, visibleCount);
 
-  // 암호화폐 심볼만 추출해서 훅으로 실시간 가격 조회
-  const cryptoSymbols = useMemo(
-    () =>
-      stockData
-        .filter((a) => a.category === "암호화폐")
-        .map((a) => {
-          const base = a.symbol.toUpperCase();
-          return base.endsWith("USDT") ? base : `${base}USDT`;
-        }),
-    [stockData],
-  );
-  const cryptoPrices = useCryptoPrices(cryptoSymbols);
-
+  // 6) 정렬/즐겨찾기 핸들러
   const handleSort = (key: SortKey) =>
-    setSortConfig((p) =>
-      p.key === key
-        ? { key, direction: p.direction === "asc" ? "desc" : "asc" }
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
         : { key, direction: "desc" },
     );
-
   const toggleFavorite = (id: number) =>
-    setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  // 고정 컬럼 레이아웃
   const gridCols = "grid grid-cols-[40px_minmax(0,1fr)_120px_100px_120px] items-center";
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 여기서부터 return(...) 바로 직전까지의 코드입니다.
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
@@ -262,63 +248,52 @@ const Market: React.FC = () => {
 
           {/* 자산 리스트 */}
           <div className="space-y-2 mt-2">
-            {visibleStocks.map((stock, idx) => {
-              const isCrypto = stock.category === "암호화폐";
-              const keySym = isCrypto
-                ? stock.symbol.toUpperCase().endsWith("USDT")
-                  ? stock.symbol.toUpperCase()
-                  : `${stock.symbol.toUpperCase()}USDT`
-                : "";
-              const ticker = isCrypto ? cryptoPrices[keySym] : null;
-
-              return (
-                <div
-                  key={stock.id}
-                  className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
-                    idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
-                  } hover:bg-gray-800 cursor-pointer`}
-                  onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })}
+            {visibleStocks.map((stock, idx) => (
+              <div
+                key={stock.id}
+                className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
+                  idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
+                } hover:bg-gray-800 cursor-pointer`}
+                onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(stock.id);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(stock.id);
-                    }}
-                    className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
-                  >
-                    <Icons
-                      name="star"
-                      className={`w-5 h-5 ${
-                        favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
-                      }`}
-                    />
-                  </button>
-                  <div className="min-w-0">
-                    <p className="truncate text-white font-semibold">{stock.name}</p>
-                    <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
-                  </div>
-                  <div className="text-right text-white">
-                    {isCrypto
-                      ? `${ticker?.price.toLocaleString()} USDT`
-                      : `${stock.currentPrice.toLocaleString()} 원`}
-                  </div>
-                  <div
-                    className={`text-right font-semibold ${
-                      (isCrypto ? (ticker?.changePercent ?? 0) : stock.priceChange) >= 0
-                        ? "text-green-500"
-                        : "text-red-500"
+                  <Icons
+                    name="star"
+                    className={`w-5 h-5 ${
+                      favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
                     }`}
-                  >
-                    {isCrypto
-                      ? `${(ticker?.changePercent ?? 0).toFixed(2)}%`
-                      : `${stock.priceChange >= 0 ? "+" : ""}${stock.priceChange.toFixed(2)}%`}
-                  </div>
-                  <div className="text-right text-white">
-                    {isCrypto ? "" : formatCurrency(stock.marketCap)}
-                  </div>
+                  />
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate text-white font-semibold">{stock.name}</p>
+                  <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
                 </div>
-              );
-            })}
+                {/* 현재가 */}
+                <div className="text-right text-white">
+                  {stock.currentPrice.toLocaleString()}{" "}
+                  {stock.category === "암호화폐" ? "USDT" : "원"}
+                </div>
+                {/* 변동률 */}
+                <div
+                  className={`text-right font-semibold ${
+                    stock.priceChange >= 0 ? "text-green-500" : "text-red-500"
+                  }`}
+                >
+                  {stock.priceChange >= 0 ? "+" : ""}
+                  {stock.priceChange.toFixed(2)}%
+                </div>
+                {/* 시가총액 */}
+                <div className="text-right text-white">
+                  {stock.category === "암호화폐" ? "" : formatCurrency(stock.marketCap)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

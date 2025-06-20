@@ -1,3 +1,5 @@
+// /backend/src/models/assetQueries.ts
+
 export const SELECT_ALL_ASSETS = `
   SELECT
     a.id,
@@ -31,6 +33,22 @@ export const UPSERT_ASSET = `
 export const UPSERT_ASSET_INFO = `
   INSERT INTO asset_info (asset_id, current_price, price_change, market_cap, last_updated)
   VALUES (?, ?, ?, ?, NOW())
+  ON DUPLICATE KEY UPDATE
+    current_price = VALUES(current_price),
+    price_change  = VALUES(price_change),
+    market_cap    = VALUES(market_cap),
+    last_updated  = NOW()
+`;
+
+export const GET_ASSET_BY_SYMBOL_AND_MARKET = `
+  SELECT id, symbol, name, market
+  FROM assets
+  WHERE symbol = ? AND market = ?;
+`;
+
+export const UPSERT_CRYPTO_INFO = `
+  INSERT INTO asset_info (asset_id, current_price, price_change)
+  VALUES (?, ?, ?)
   ON DUPLICATE KEY UPDATE
     current_price = VALUES(current_price),
     price_change  = VALUES(price_change),

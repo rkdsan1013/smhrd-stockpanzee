@@ -1,10 +1,14 @@
+// /backend/src/models/assetModel.ts
+
 import type { RowDataPacket } from "mysql2/promise";
 import pool from "../config/db";
-import { SELECT_ALL_ASSETS, UPSERT_ASSET_INFO } from "./assetQueries";
+import {
+  SELECT_ALL_ASSETS,
+  UPSERT_ASSET_INFO,
+  GET_ASSET_BY_SYMBOL_AND_MARKET,
+  UPSERT_CRYPTO_INFO,
+} from "./assetQueries";
 
-/**
- * Asset + AssetInfo join 결과 타입
- */
 export interface Asset extends RowDataPacket {
   id: number;
   symbol: string;
@@ -17,13 +21,13 @@ export interface Asset extends RowDataPacket {
   updated_at: Date;
 }
 
-/** 전체 자산 조회 */
+/** 전체 자산 + info */
 export async function findAllAssets(): Promise<Asset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_ALL_ASSETS);
   return rows as Asset[];
 }
 
-/** asset_info upsert */
+/** 일반 자산 price·change·cap upsert */
 export async function upsertAssetInfo(
   assetId: number,
   currentPrice: number,
@@ -31,4 +35,26 @@ export async function upsertAssetInfo(
   marketCap: number,
 ): Promise<void> {
   await pool.execute(UPSERT_ASSET_INFO, [assetId, currentPrice, priceChange, marketCap]);
+}
+
+/** 암호화폐 전용 price·change upsert */
+export async function upsertCryptoInfo(
+  assetId: number,
+  currentPrice: number,
+  priceChange: number,
+): Promise<void> {
+  await pool.execute(UPSERT_CRYPTO_INFO, [assetId, currentPrice, priceChange]);
+}
+
+/** symbol+market 으로 자산 조회 */
+export async function getAssetBySymbolAndMarket(
+  symbol: string,
+  market: string,
+): Promise<Pick<Asset, "id" | "symbol" | "name" | "market"> | null> {
+  const [rows] = await pool.query<RowDataPacket[]>(GET_ASSET_BY_SYMBOL_AND_MARKET, [
+    symbol,
+    market,
+  ]);
+  const assets = rows as Asset[];
+  return assets.length > 0 ? assets[0] : null;
 }
