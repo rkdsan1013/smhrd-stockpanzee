@@ -1,11 +1,13 @@
+// ✅ /backend/src/services/news/krxNewsService.ts
+
 import axios from "axios";
 import puppeteer from "puppeteer";
 import cron from "node-cron";
 import * as cheerio from "cheerio";
-
 import { mapKrxNews, NaverNewsApiItem } from "../../utils/news/krxNewsMapper";
-import { createNewsWithTags } from "../../models/newsTransactions";
 import { findAllAssets } from "../../models/assetModel";
+// import { createNewsWithAnalysis } from "../../models/newsTransactions";
+import { analyzeNews } from "../../ai/gptNewsAnalysis";
 
 const CLIENT_ID = process.env.CLIENT_ID!;
 const CLIENT_SECRET = process.env.CLIENT_SECRET!;
@@ -19,7 +21,7 @@ let collectedLinks: Set<string> = new Set();
 
 export const fetchAndProcessSmartKrxNews = async (): Promise<void> => {
   try {
-    console.log("\uD83D\uDCE2 주식 뉴스 수집 시작");
+    console.log("📢 주식 뉴스 수집 시작");
 
     const response = await axios.get<NaverApiResponse>(NAVER_API_URL, {
       params: { query: "주식", display: 20, sort: "date" },
@@ -58,12 +60,37 @@ export const fetchAndProcessSmartKrxNews = async (): Promise<void> => {
       }
       if (tags.length === 0) continue;
 
-      const newsId = await createNewsWithTags(news, tags);
+      const analysis = await analyzeNews(news.title, news.content, news.published_at.toISOString());
+
+      // ✅ 콘솔 로그만 출력
+      console.log("🔍 GPT 분석 결과:", {
+        title_ko: analysis.title_ko,
+        summary: analysis.summary,
+        brief: analysis.brief_summary,
+        sentiment: analysis.news_sentiment,
+        tags,
+        긍정: analysis.news_positive,
+        부정: analysis.news_negative,
+      });
+
+      // ❌ DB 저장 주석 처리
+      /*
+      const newsId = await createNewsWithAnalysis(news, {
+        news_sentiment: analysis.news_sentiment,
+        news_positive: JSON.stringify(analysis.news_positive),
+        news_negative: JSON.stringify(analysis.news_negative),
+        community_sentiment: null,
+        summary: analysis.summary,
+        brief_summary: analysis.brief_summary,
+        tags: JSON.stringify(tags),
+      }, analysis.title_ko);
+
       console.log(`✅ 저장 완료 | ID: ${newsId}`);
+      */
       console.log(`📌 제목: ${news.title}`);
     }
 
-    console.log("\uD83C\uDF89 주식 뉴스 전체 수집 완료");
+    console.log("🎉 주식 뉴스 전체 수집 완료");
   } catch (err) {
     console.error("❌ 뉴스 수집 중 오류 발생:", err);
   }
