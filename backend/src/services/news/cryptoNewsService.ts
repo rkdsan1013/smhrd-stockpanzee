@@ -4,7 +4,8 @@ import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
 import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
 import { findCryptoAssets } from "../../../src/models/assetModel";
 import { getEmbedding } from "../../../src/ai/embeddingService";
-import { upsertNewsVector, NewsVector } from "../../../src/services/news/storeNewsVector";
+// 경로 수정: 현재 파일과 storeNewsVector가 동일 디렉토리 내에 있거나 상대 경로에 맞게 조정
+import { upsertNewsVector, NewsVector } from "./storeNewsVector";
 
 const CRYPTO_NEWS_API_URL =
   process.env.CRYPTO_NEWS_API_URL || "https://min-api.cryptocompare.com/data/v2/news/?lang=EN";
@@ -84,7 +85,7 @@ export const fetchAndProcessNews = async (): Promise<void> => {
         },
       };
       await upsertNewsVector(newsVector);
-      console.log("뉴스 임베딩 및 로컬 벡터 DB 저장 완료.");
+      console.log("뉴스 임베딩 및 벡터 DB 저장 완료.");
     }
     console.log("모든 뉴스 처리 완료.");
   } catch (error: any) {

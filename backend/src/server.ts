@@ -9,8 +9,8 @@ dotenv.config();
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
-import newsRoutes from "./routes/newsRoutes"; // 뉴스 라우트
-import chatbotRoutes from "./routes/chatbotRoutes"; // 팬지봇 라우트 추가
+import newsRoutes from "./routes/newsRoutes";
+import chatbotRoutes from "./routes/chatbotRoutes";
 
 const app = express();
 
@@ -35,7 +35,7 @@ app.get("/", (req: Request, res: Response) => {
 const server = http.createServer(app);
 setupSocket(server);
 
-// 에러 핸들링 미들웨어 (인자가 네 개 있어야 합니다)
+// 에러 핸들링 미들웨어 (매개변수가 4개여야 합니다)
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   const status = err.statusCode ?? 500;

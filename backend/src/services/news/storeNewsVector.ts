@@ -1,20 +1,20 @@
 // /backend/src/services/news/storeNewsVector.ts
-import { upsertNewsVectorLocal } from "../../ai/vectorDB";
+import { upsertNewsVector as pgUpsertNewsVector } from "../../repositories/vectorRepo";
 
 export interface NewsVector {
-  id: string; // 고유 식별자 (예: 뉴스 링크 또는 생성된 뉴스 ID)
-  values: number[];
+  id: string; // 뉴스 구분용, 예: 뉴스 링크
+  values: number[]; // 임베딩 벡터
   metadata: {
     published_at: string;
-    title_ko: string; // 영문 타이틀 제거, 한글 제목만 저장됨
+    title_ko: string;
     summary: string;
     news_link: string;
   };
 }
 
 /**
- * 로컬 벡터 DB에 뉴스 벡터를 업서트합니다.
+ * PGVector DB에 뉴스 벡터를 업서트합니다.
  */
 export async function upsertNewsVector(newsVector: NewsVector): Promise<void> {
-  await upsertNewsVectorLocal(newsVector);
+  await pgUpsertNewsVector(newsVector.id, newsVector.values, newsVector.metadata);
 }

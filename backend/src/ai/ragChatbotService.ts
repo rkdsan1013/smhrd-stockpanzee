@@ -1,21 +1,21 @@
 // /backend/src/ai/ragChatbotService.ts
 import { getEmbedding } from "./embeddingService";
-import { searchNewsVectorsLocal, ScoredVector } from "./vectorDB";
+import { searchSimilarNews, ScoredVector } from "../repositories/vectorRepo";
 import { getChatbotResponse } from "./gptChatbot";
 
-const SIMILARITY_THRESHOLD = 0.25; // 높을수록 엄격
+const SIMILARITY_THRESHOLD = 0.25;
 
 export async function generateRagChatbotResponse(userQuery: string): Promise<string> {
-  /* 1. 쿼리 임베딩 */
+  // 1. 쿼리 임베딩 생성
   const queryVec = await getEmbedding(userQuery);
 
-  /* 2. 벡터 DB 검색 (점수 포함) */
-  const raw: ScoredVector[] = await searchNewsVectorsLocal(queryVec, 10);
+  // 2. pgvector DB에서 검색 (점수 포함)
+  const raw: ScoredVector[] = await searchSimilarNews(queryVec, 10);
 
-  /* 3. 임계값 필터 */
+  // 3. 임계값 필터링 후 상위 3개 선택
   const hits = raw.filter((r) => r.score >= SIMILARITY_THRESHOLD).slice(0, 3);
 
-  /* 4. 컨텍스트: 헤더는 항상 포함 */
+  // 4. 컨텍스트 구성
   let context = "유사 뉴스 컨텍스트:\n";
   if (hits.length) {
     hits.forEach(({ newsVector }) => {
@@ -29,17 +29,17 @@ export async function generateRagChatbotResponse(userQuery: string): Promise<str
       context += `요약: ${newsVector.metadata.summary}\n\n`;
     });
   } else {
-    context += "(관련 컨텍스트 없음)\n\n"; // ← GPT가 반드시 감지
+    context += "(관련 컨텍스트 없음)\n\n";
   }
 
-  /* 5. 오늘 날짜 */
+  // 5. 오늘 날짜
   const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  /* 6. 최종 프롬프트 */
+  // 6. 최종 프롬프트 작성
   const prompt =
     `${context}` +
     `규칙: 컨텍스트가 질문과 관련성이 낮거나 없으면 "자료가 부족합니다."라고만 한국어로 답하십시오.\n\n` +
@@ -49,6 +49,6 @@ export async function generateRagChatbotResponse(userQuery: string): Promise<str
 
   console.log("RAG PROMPT ===\n", prompt);
 
-  /* 7. GPT 호출 */
+  // 7. GPT 호출
   return getChatbotResponse(prompt);
 }
