@@ -4,6 +4,9 @@
     "module": "CommonJS",
     "strict": true,
     "esModuleInterop": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true
-  }
+    // "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts"]
 }

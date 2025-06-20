@@ -13,6 +13,7 @@ import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
 import newsRoutes from "./routes/newsRoutes";
 import redditRoutes from "./routes/redditRoutes";
+import chatbotRoutes from "./routes/chatbotRoutes";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/reddit", redditRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
@@ -37,7 +39,8 @@ app.get("/", (_req: Request, res: Response) => {
 const server = http.createServer(app);
 const io = setupSocket(server);
 
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+// 에러 핸들링 미들웨어 (매개변수가 4개여야 합니다)
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   res.status(err.statusCode ?? 500).json({ message: err.message ?? "서버 오류" });
 });

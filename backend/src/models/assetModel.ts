@@ -6,6 +6,7 @@ import {
   SELECT_ALL_ASSETS,
   UPSERT_ASSET_INFO,
   GET_ASSET_BY_SYMBOL_AND_MARKET,
+  SELECT_CRYPTO_ASSETS,
   UPSERT_CRYPTO_INFO,
 } from "./assetQueries";
 
@@ -57,4 +58,10 @@ export async function getAssetBySymbolAndMarket(
   ]);
   const assets = rows as Asset[];
   return assets.length > 0 ? assets[0] : null;
+}
+
+/** Binance 시장 자산만 조회하는 함수 */
+export async function findCryptoAssets(): Promise<Asset[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
+  return rows as Asset[];
 }

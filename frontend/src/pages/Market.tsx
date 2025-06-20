@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
+import { FixedSizeList as List } from "react-window";
+import type { ListChildComponentProps, FixedSizeList } from "react-window";
 
 // 숫자 단위 포맷 함수
 const formatCurrency = (value: number): string => {
@@ -174,8 +176,8 @@ const Market: React.FC = () => {
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* 좌측: 자산 리스트 (md:col-span-9) */}
-        <div className="md:col-span-9">
+        {/* 좌측: 자산 리스트 영역 (react-window 가상 스크롤 적용, 기본 스크롤바 숨김) */}
+        <div className="md:col-span-9 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             {/* 탭 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
@@ -214,8 +216,7 @@ const Market: React.FC = () => {
               ))}
             </div>
           </div>
-
-          {/* 헤더 (정렬 가능) */}
+          {/* 헤더: 정렬 기능 포함 */}
           <div
             className={`${gridCols} py-2 px-4 bg-gray-800 rounded-lg text-sm font-bold text-white`}
           >
@@ -227,21 +228,21 @@ const Market: React.FC = () => {
               onClick={() => handleSort("currentPrice")}
               className="text-right cursor-pointer hover:underline"
             >
-              현재가
+              현재가{" "}
               {sortConfig.key === "currentPrice" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("priceChange")}
               className="text-right cursor-pointer hover:underline"
             >
-              변동률
+              변동률{" "}
               {sortConfig.key === "priceChange" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("marketCap")}
               className="text-right cursor-pointer hover:underline"
             >
-              시가총액
+              시가총액{" "}
               {sortConfig.key === "marketCap" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
           </div>
