@@ -1,4 +1,5 @@
-// /backend/src/models/newsTransactions.ts
+// ✅ /backend/src/models/newsTransactions.ts
+
 import pool from "../config/db";
 import { INews, NewsAnalysis } from "./newsModel";
 import { INSERT_NEWS, SELECT_NEWS_BY_LINK, INSERT_NEWS_ANALYSIS } from "./newsQueries";
@@ -97,7 +98,6 @@ export async function createNewsWithAnalysis(
   try {
     await connection.beginTransaction();
 
-    // 1. 뉴스 정보 저장
     const [newsResult] = await connection.query(INSERT_NEWS, [
       news.news_category,
       news.title,
@@ -110,10 +110,8 @@ export async function createNewsWithAnalysis(
     ]);
     const newsId = (newsResult as any).insertId;
 
-    // 2. 한글 번역 제목 업데이트
     await connection.query(`UPDATE news SET title_ko = ? WHERE id = ?`, [translatedTitle, newsId]);
 
-    // 3. 뉴스 분석 결과 저장
     await connection.query(INSERT_NEWS_ANALYSIS, [
       newsId,
       analysis.news_sentiment,
@@ -130,6 +128,52 @@ export async function createNewsWithAnalysis(
   } catch (error) {
     await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * 뉴스 + 태그만 저장하는 간단한 트랜잭션 (분석 없이)
+ * 뉴스 저장 후 뉴스 분석 테이블에 태그만 저장합니다.
+ *
+ * @param news - INews 객체
+ * @param tags - string[] 형태의 태그 (예: ["005930", "035720"])
+ * @returns 저장된 뉴스 ID
+ */
+export async function createNewsWithTags(news: INews, tags: string[]): Promise<number> {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [newsResult] = await connection.query(INSERT_NEWS, [
+      news.news_category,
+      news.title,
+      news.title_ko || null,
+      news.content,
+      news.thumbnail,
+      news.news_link,
+      news.publisher,
+      formatDateForDB(news.published_at),
+    ]);
+    const newsId = (newsResult as any).insertId;
+
+    await connection.query(INSERT_NEWS_ANALYSIS, [
+      newsId,
+      3,
+      "[]",
+      "[]",
+      null,
+      "",
+      "",
+      JSON.stringify(tags),
+    ]);
+
+    await connection.commit();
+    return newsId;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
   } finally {
     connection.release();
   }

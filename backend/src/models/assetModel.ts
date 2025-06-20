@@ -27,7 +27,7 @@ export async function findCryptoAssets(): Promise<Asset[]> {
 
 export const findDomesticAssets = async (): Promise<{ name: string; symbol: string }[]> => {
   const [rows] = await pool.query(`
-    SELECT name, symbol FROM assets WHERE category = 'domestic'
+    SELECT name, symbol FROM assets WHERE market IN ('KOSPI', 'KOSDAQ')
   `);
   return rows as any[];
 };
