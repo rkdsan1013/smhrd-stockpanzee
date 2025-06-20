@@ -27,7 +27,7 @@ const Home: React.FC = () => {
   const [selectedNewsTab, setSelectedNewsTab] = useState("전체");
 
   // 추후 API나 다른 방법으로 즐겨찾기 뉴스 데이터를 관리할 수 있도록 별도 상태로 구성
-  const [favoritesNews, setFavoritesNews] = useState<NewsItem[]>([]);
+  const [favoritesNews, _setFavoritesNews] = useState<NewsItem[]>([]);
 
   // 탭 선택에 따라 뉴스 필터링 (전체면 모든 뉴스, 아니면 해당 카테고리)
   const filteredNews =

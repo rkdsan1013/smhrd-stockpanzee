@@ -23,5 +23,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "src/providers/AppProvider.tsx", "src/providers/AuthProvider.tsx"]
 }

@@ -1,49 +1,8 @@
 // /frontend/src/pages/News.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
-
-// 뉴스 카테고리 매핑: "domestic", "international", "crypto" → "국내", "해외", "암호화폐"
-const getCategoryLabel = (category: "domestic" | "international" | "crypto"): string => {
-  switch (category) {
-    case "domestic":
-      return "국내";
-    case "international":
-      return "해외";
-    case "crypto":
-      return "암호화폐";
-    default:
-      return category;
-  }
-};
-
-// 감성 평점 라벨 매핑 (news_sentiment 사용)
-const getSentimentLabel = (value: number | string | null): string => {
-  const numericValue = Number(value) || 3;
-  switch (numericValue) {
-    case 1:
-      return "매우 부정";
-    case 2:
-      return "부정";
-    case 3:
-      return "중립";
-    case 4:
-      return "긍정";
-    case 5:
-      return "매우 긍정";
-    default:
-      return "중립";
-  }
-};
-
-// 감성 평점에 따른 배지 스타일
-const getSentimentBadgeStyles = (value: number | string | null): string => {
-  const numericValue = Number(value) || 3;
-  if (numericValue <= 2) return "bg-red-600 text-white";
-  if (numericValue === 3) return "bg-gray-600 text-white";
-  if (numericValue >= 4) return "bg-green-600 text-white";
-  return "bg-gray-600 text-white";
-};
+import NewsCard from "../components/NewsCard";
 
 // 필터 탭 옵션: 내부 키는 API의 값, 화면에는 한글 라벨로 표시
 const tabs: { key: "all" | "domestic" | "international" | "crypto"; label: string }[] = [
@@ -60,7 +19,11 @@ const News: React.FC = () => {
   >("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 페이지네이션 관련 상태
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 6; // 한 페이지당 표시할 뉴스 개수
 
+  // 뉴스 데이터를 불러옴
   const loadNews = async () => {
     try {
       const data = await fetchNews();
@@ -76,10 +39,42 @@ const News: React.FC = () => {
     loadNews();
   }, []);
 
+  // 필터 탭이 변경될 때 페이지 번호 초기화
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedNewsTab]);
+
+  // 선택된 필터에 따라 뉴스 항목 필터링
   const filteredNews =
     selectedNewsTab === "all"
       ? newsItems
       : newsItems.filter((item) => item.category === selectedNewsTab);
+
+  // 페이지네이션을 반영한 뉴스 항목 제한
+  const visibleNews = filteredNews.slice(0, currentPage * itemsPerPage);
+
+  // 무한 스크롤을 위한 Intersection Observer 적용
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0];
+        if (firstEntry.isIntersecting && visibleNews.length < filteredNews.length) {
+          setCurrentPage((prevPage) => prevPage + 1);
+        }
+      },
+      { threshold: 1 },
+    );
+    const currentLoadMoreRef = loadMoreRef.current;
+    if (currentLoadMoreRef) {
+      observer.observe(currentLoadMoreRef);
+    }
+    return () => {
+      if (currentLoadMoreRef) {
+        observer.unobserve(currentLoadMoreRef);
+      }
+    };
+  }, [visibleNews, filteredNews]);
 
   if (loading) {
     return <div className="p-6 text-white text-center">Loading news...</div>;
@@ -112,73 +107,12 @@ const News: React.FC = () => {
       </div>
       {/* 뉴스 카드 그리드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {filteredNews.map((item) => {
-          // 태그 처리: 만약 이미 배열이면 그대로 사용, 문자열이면 JSON.parse 시도
-          let tagsArray: string[] = [];
-          if (Array.isArray(item.tags)) {
-            tagsArray = item.tags;
-          } else if (item.tags && typeof item.tags === "string" && item.tags.trim() !== "") {
-            try {
-              const parsed = JSON.parse(item.tags);
-              if (Array.isArray(parsed)) {
-                tagsArray = parsed;
-              }
-            } catch (e) {
-              tagsArray = [];
-            }
-          }
-
-          return (
-            <div
-              key={item.id}
-              className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105"
-            >
-              {/* 이미지 영역 */}
-              <div className="relative h-48">
-                <img src={item.image} alt={item.title} className="object-cover w-full h-full" />
-              </div>
-              {/* 카드 본문 */}
-              <div className="p-4">
-                {/* 카테고리 및 감성 배지 */}
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-                    {getCategoryLabel(item.category)}
-                  </span>
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full ${getSentimentBadgeStyles(item.sentiment)}`}
-                  >
-                    {getSentimentLabel(item.sentiment)}
-                  </span>
-                </div>
-                {/* 관련 종목 태그 */}
-                {tagsArray.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {tagsArray.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* 뉴스 제목 */}
-                <h3 className="text-lg font-bold text-white mb-2">{item.title_ko || item.title}</h3>
-                {/* 간결 요약 */}
-                <p className="text-sm text-gray-300 mb-3">{item.brief_summary}</p>
-                {/* 퍼블리셔 및 발행일 영역 (세로 배치) */}
-                <div className="mt-4 space-y-1">
-                  <div className="text-xs text-gray-400">{item.publisher}</div>
-                  <div className="text-xs text-gray-400">
-                    {new Date(item.published_at).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {visibleNews.map((item) => (
+          <NewsCard key={item.id} newsItem={item} />
+        ))}
       </div>
+      {/* 무한 스크롤을 위한 sentinel 요소 */}
+      {visibleNews.length < filteredNews.length && <div ref={loadMoreRef} className="h-4" />}
     </div>
   );
 };

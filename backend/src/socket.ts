@@ -33,4 +33,6 @@ export function setupSocket(server: any) {
   };
 
   startEmitLoop(); // 최초 실행
+
+  return io;
 }

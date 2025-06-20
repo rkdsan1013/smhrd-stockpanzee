@@ -1,5 +1,6 @@
 // /frontend/src/pages/Market.tsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
@@ -25,9 +26,50 @@ interface StockItem {
   category: "국내" | "해외" | "암호화폐";
 }
 
+interface NewsSummaryItem {
+  id: number;
+  title: string;
+  summary: string;
+  stockName: string;
+  symbol: string;
+  category: "국내" | "해외" | "암호화폐";
+  sentiment: "매우 부정" | "부정" | "중립" | "긍정" | "매우긍정";
+}
+
+// (기존에 있던) 뉴스 요약 더미 데이터
+const newsSummaryData: NewsSummaryItem[] = [
+  {
+    id: 1,
+    title: "삼성전자 신제품 발표",
+    summary: "신제품 발표로 주가 상승 기대.",
+    stockName: "삼성전자",
+    symbol: "005930",
+    category: "국내",
+    sentiment: "긍정",
+  },
+  {
+    id: 2,
+    title: "현대차 실적 부진",
+    summary: "실적 부진 우려 속 주가 하락.",
+    stockName: "현대차",
+    symbol: "005380",
+    category: "국내",
+    sentiment: "부정",
+  },
+  // …기타 데이터…
+];
+
+// (기존에 있던) 감정 배지 스타일 함수
+const getSentimentBadgeStyles = (sentiment: NewsSummaryItem["sentiment"]) => {
+  if (sentiment === "긍정" || sentiment === "매우긍정") return "bg-green-700 text-white";
+  if (sentiment === "부정" || sentiment === "매우 부정") return "bg-red-700 text-white";
+  return "bg-gray-700 text-white";
+};
+
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
     "전체",
@@ -39,80 +81,97 @@ const Market: React.FC = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
   const [stockData, setStockData] = useState<StockItem[]>([]);
 
-  // react-window List 참조 (내부 스크롤 제어용)
-  const listRef = useRef<FixedSizeList>(null);
-
-  // API 호출 후 자산 데이터 및 카테고리 설정
+  // 1) 백엔드 DB에서 5초마다 갱신된 데이터 로드
   useEffect(() => {
-    fetchAssets()
-      .then((assets: Asset[]) => {
-        const list: StockItem[] = assets.map((a) => {
-          let category: StockItem["category"];
-          // 금융 용어 "KOSPI", "KOSDAQ"는 cSpell에서 무시하세요.
-          if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
-          else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
-          else if (a.market === "Binance") category = "암호화폐";
-          else category = "국내";
-          return {
-            id: a.id,
-            name: a.name,
-            symbol: a.symbol,
-            currentPrice: 0,
-            priceChange: 0,
-            marketCap: 0,
-            // "panzee"는 프로젝트 고유 단어로 cSpell에서 무시하세요.
-            logo: "/panzee.webp",
-            category,
-          };
-        });
-        setStockData(list);
-      })
-      .catch(console.error);
+    const load = () => {
+      fetchAssets()
+        .then((assets: Asset[]) => {
+          const list: StockItem[] = assets.map((a) => {
+            let category: StockItem["category"];
+            const m = a.market.toUpperCase();
+            if (m === "KOSPI" || m === "KOSDAQ") category = "국내";
+            else if (m === "NASDAQ" || m === "NYSE") category = "해외";
+            else category = "암호화폐";
+
+            return {
+              id: a.id,
+              name: a.name,
+              symbol: a.symbol,
+              currentPrice: a.currentPrice,
+              priceChange: a.priceChange,
+              marketCap: a.marketCap,
+              logo: "/panzee.webp",
+              category,
+            };
+          });
+          setStockData(list);
+        })
+        .catch(console.error);
+    };
+
+    load(); // 최초 로드
+    const interval = setInterval(load, 5000); // 5초마다 갱신
+    return () => clearInterval(interval);
   }, []);
 
-  // 탭(viewMode, selectedMarketTab) 변경 시 List 컴포넌트를 재마운트하여 스크롤 오프셋 초기화
-  useEffect(() => {
-    listRef.current?.scrollToItem(0, "start");
-  }, [viewMode, selectedMarketTab]);
+  // 2) 탭 필터링
+  const filteredStocks = useMemo(
+    () =>
+      selectedMarketTab === "전체"
+        ? stockData
+        : stockData.filter((s) => s.category === selectedMarketTab),
+    [stockData, selectedMarketTab],
+  );
 
-  const filteredStocks = useMemo(() => {
-    return selectedMarketTab === "전체"
-      ? stockData
-      : stockData.filter((s) => s.category === selectedMarketTab);
-  }, [stockData, selectedMarketTab]);
-
+  // 3) 정렬
   const sortedStocks = useMemo(() => {
     const { key, direction } = sortConfig;
     const dir = direction === "asc" ? 1 : -1;
-    return [...filteredStocks].sort((a, b) => {
-      if (key === "name") return a.name.localeCompare(b.name) * dir;
-      return (a[key] - b[key]) * dir;
-    });
+    const arr = [...filteredStocks];
+    if (key === "name") {
+      arr.sort((a, b) => a.name.localeCompare(b.name) * dir);
+    } else {
+      arr.sort((a, b) => ((a as any)[key] - (b as any)[key]) * dir);
+    }
+    return arr;
   }, [filteredStocks, sortConfig]);
 
-  const finalStocks = useMemo(() => {
-    if (viewMode === "전체") {
-      const favoriteStocks = sortedStocks.filter((s) => favorites.includes(s.id));
-      const nonFavoriteStocks = sortedStocks.filter((s) => !favorites.includes(s.id));
-      return [...favoriteStocks, ...nonFavoriteStocks];
-    }
-    return sortedStocks.filter((s) => favorites.includes(s.id));
-  }, [sortedStocks, viewMode, favorites]);
+  // 4) 즐겨찾기 모드
+  const finalStocks = useMemo(
+    () =>
+      viewMode === "전체" ? sortedStocks : sortedStocks.filter((s) => favorites.includes(s.id)),
+    [sortedStocks, viewMode, favorites],
+  );
 
-  const gridCols = "grid grid-cols-[40px_minmax(0,1fr)_120px_100px_120px] items-center";
+  // 5) 무한 스크롤
+  const [visibleCount, setVisibleCount] = useState(10);
+  useEffect(() => setVisibleCount(10), [selectedMarketTab, sortConfig, viewMode]);
+  useEffect(() => {
+    const onScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200) {
+        setVisibleCount((v) => Math.min(v + 10, finalStocks.length));
+      }
+    };
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [finalStocks.length]);
 
-  // handleSort: 객체 리터럴을 바로 반환할 때 괄호로 감싸줌.
-  const handleSort = (key: SortKey) => {
+  const visibleStocks = finalStocks.slice(0, visibleCount);
+
+  // 6) 정렬/즐겨찾기 핸들러
+  const handleSort = (key: SortKey) =>
     setSortConfig((prev) =>
       prev.key === key
         ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
         : { key, direction: "desc" },
     );
-  };
-
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = (id: number) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
+
+  const gridCols = "grid grid-cols-[40px_minmax(0,1fr)_120px_100px_120px] items-center";
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 여기서부터 return(...) 바로 직전까지의 코드입니다.
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen">
@@ -120,7 +179,7 @@ const Market: React.FC = () => {
         {/* 좌측: 자산 리스트 영역 (react-window 가상 스크롤 적용, 기본 스크롤바 숨김) */}
         <div className="md:col-span-9 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            {/* 전체/즐겨찾기 탭 */}
+            {/* 탭 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "즐겨찾기"] as const).map((tab) => (
                 <button
@@ -140,7 +199,7 @@ const Market: React.FC = () => {
                 </button>
               ))}
             </div>
-            {/* 마켓 필터 탭 */}
+            {/* 마켓 필터 */}
             <div className="flex bg-gray-800 p-1 rounded-full border border-gray-600 space-x-2">
               {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
                 <button
@@ -163,7 +222,7 @@ const Market: React.FC = () => {
           >
             <div />
             <div onClick={() => handleSort("name")} className="cursor-pointer hover:underline">
-              종목 {sortConfig.key === "name" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+              종목{sortConfig.key === "name" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
             <div
               onClick={() => handleSort("currentPrice")}
@@ -187,67 +246,95 @@ const Market: React.FC = () => {
               {sortConfig.key === "marketCap" && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
             </div>
           </div>
-          {/* 가상 스크롤 적용: react-window List 사용 (기본 스크롤바 숨김) */}
-          <div
-            className="mt-2 no-scrollbar"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            <List
-              key={`${viewMode}-${selectedMarketTab}`}
-              ref={listRef}
-              height={600} // 리스트 영역 높이
-              itemCount={finalStocks.length}
-              itemSize={80} // 각 항목 높이
-              width="100%"
-              className="no-scrollbar"
-            >
-              {({ index, style }: ListChildComponentProps) => {
-                const stock = finalStocks[index];
-                const rowBg = index % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95";
-                return (
-                  <div
-                    style={style}
-                    key={stock.id}
-                    className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${rowBg} hover:bg-gray-800`}
-                  >
-                    <button
-                      onClick={() => toggleFavorite(stock.id)}
-                      className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
-                    >
-                      <Icons
-                        name="star"
-                        className={`w-5 h-5 ${favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"}`}
-                      />
-                    </button>
-                    <div className="min-w-0">
-                      <p className="truncate text-white font-semibold">{stock.name}</p>
-                      <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
-                    </div>
-                    <div className="text-right text-white">
-                      {stock.currentPrice.toLocaleString()} 원
-                    </div>
-                    <div
-                      className={`text-right font-semibold ${stock.priceChange >= 0 ? "text-green-500" : "text-red-500"}`}
-                    >
-                      {stock.priceChange >= 0 ? "+" : ""}
-                      {stock.priceChange.toFixed(2)}%
-                    </div>
-                    <div className="text-right text-white">{formatCurrency(stock.marketCap)}</div>
-                  </div>
-                );
-              }}
-            </List>
+
+          {/* 자산 리스트 */}
+          <div className="space-y-2 mt-2">
+            {visibleStocks.map((stock, idx) => (
+              <div
+                key={stock.id}
+                className={`${gridCols} p-4 rounded-lg transition-colors duration-200 ${
+                  idx % 2 === 0 ? "bg-gray-900" : "bg-gray-900/95"
+                } hover:bg-gray-800 cursor-pointer`}
+                onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(stock.id);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full focus:outline-none"
+                >
+                  <Icons
+                    name="star"
+                    className={`w-5 h-5 ${
+                      favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
+                    }`}
+                  />
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate text-white font-semibold">{stock.name}</p>
+                  <p className="truncate text-gray-400 text-xs">{stock.symbol}</p>
+                </div>
+                {/* 현재가 */}
+                <div className="text-right text-white">
+                  {stock.currentPrice.toLocaleString()}{" "}
+                  {stock.category === "암호화폐" ? "USDT" : "원"}
+                </div>
+                {/* 변동률 */}
+                <div
+                  className={`text-right font-semibold ${
+                    stock.priceChange >= 0 ? "text-green-500" : "text-red-500"
+                  }`}
+                >
+                  {stock.priceChange >= 0 ? "+" : ""}
+                  {stock.priceChange.toFixed(2)}%
+                </div>
+                {/* 시가총액 */}
+                <div className="text-right text-white">
+                  {stock.category === "암호화폐" ? "" : formatCurrency(stock.marketCap)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        {/* 우측: 뉴스 영역 (sticky 제거) */}
+
+        {/* 우측: 뉴스 요약 영역 */}
         <div className="md:col-span-3">
-          <div className="bg-gray-800 p-4 rounded-lg transition-all duration-500 ease-in-out flex flex-col h-[80vh]">
+          <div className="sticky top-20 bg-gray-800 p-4 rounded-lg flex flex-col h-[80vh] transition-all duration-500 ease-in-out">
             <h2 className="text-xl font-bold text-white mb-4">뉴스 현황</h2>
-            <div
-              className="overflow-y-auto flex-1 pr-2 no-scrollbar"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              <p className="text-sm text-gray-400">뉴스 데이터가 아직 없습니다.</p>
+            <div className="overflow-y-auto flex-1 pr-2">
+              {newsSummaryData.map((news) => (
+                <div
+                  key={news.id}
+                  className="p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 mb-3"
+                >
+                  <div className="flex space-x-2 mb-1">
+                    <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-gray-700 text-white">
+                      {news.category}
+                    </span>
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-bold rounded-full ${getSentimentBadgeStyles(
+                        news.sentiment,
+                      )}`}
+                    >
+                      {news.sentiment}
+                    </span>
+                  </div>
+                  <p className="text-sm text-white font-semibold">
+                    {news.stockName} <span className="text-sm text-gray-400">{news.symbol}</span>
+                  </p>
+                  <h3 className="text-base font-bold text-white">{news.title}</h3>
+                  <p className="text-sm text-gray-400">{news.summary}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="bg-white/30 hover:bg-white/50 p-3 rounded-full"
+              >
+                <Icons name="chevronDoubleUp" className="w-6 h-6 text-white" />
+              </button>
             </div>
           </div>
         </div>

@@ -47,7 +47,8 @@ async function fetchFullPriceInfo(symbol: string): Promise<{
   prevPrice: number | null;
   marketCap: number | null;
 }> {
-  const url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price";
+  const url =
+    "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price";
   const headers = {
     "Content-Type": "application/json",
     authorization: `Bearer ${accessToken}`,
@@ -78,18 +79,18 @@ async function fetchFullPriceInfo(symbol: string): Promise<{
   }
 }
 
-// ✅ DB 저장
+// ✅ DB 저장 - 가격 차이 말고 등락률(rate) 저장
 async function saveToAssetInfo({
   symbol,
   name,
   price,
-  diff,
+  rate,
   marketCap,
 }: {
   symbol: string;
   name: string;
   price: number;
-  diff: number;
+  rate: number; // ✅ 퍼센트 값
   marketCap: number;
 }) {
   try {
@@ -110,7 +111,7 @@ async function saveToAssetInfo({
          price_change = VALUES(price_change),
          market_cap = VALUES(market_cap),
          last_updated = NOW()`,
-      [assetId, price, diff, marketCap, symbol]
+      [assetId, price, rate, marketCap, symbol], // ✅ rate 저장
     );
 
     return true;
@@ -122,7 +123,7 @@ async function saveToAssetInfo({
 
 // ✅ 슬립 함수
 function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ✅ 전체 실행
@@ -138,8 +139,8 @@ export async function emitStockPrices(io: any) {
     }
   }
 
-  const targetStocks = stockList.filter(stock =>
-    stock.market === "KOSPI" || stock.market === "KOSDAQ"
+  const targetStocks = stockList.filter(
+    (stock) => stock.market === "KOSPI" || stock.market === "KOSDAQ",
   );
   const chunkSize = 30;
   let successCount = 0;
@@ -150,17 +151,15 @@ export async function emitStockPrices(io: any) {
   for (let i = 0; i < targetStocks.length; i += chunkSize) {
     const chunk = targetStocks.slice(i, i + chunkSize);
 
-    const results = await Promise.all(
-      chunk.map(stock => fetchFullPriceInfo(stock.symbol))
-    );
+    const results = await Promise.all(chunk.map((stock) => fetchFullPriceInfo(stock.symbol)));
 
     for (const { symbol, price, prevPrice, marketCap } of results) {
-      const stock = chunk.find(s => s.symbol === symbol);
+      const stock = chunk.find((s) => s.symbol === symbol);
       const name = stock?.name || "알 수 없음";
 
       if (price !== null && prevPrice !== null && marketCap !== null) {
         const diff = price - prevPrice;
-        const rate = ((diff / prevPrice) * 100).toFixed(2);
+        const rate = (diff / prevPrice) * 100; // ✅ 퍼센트 계산
         const arrow = diff > 0 ? "🔺" : diff < 0 ? "🔻" : "⏸️";
 
         io.emit("stockPrice", {
@@ -169,17 +168,23 @@ export async function emitStockPrices(io: any) {
           price,
           prevPrice,
           diff,
-          rate,
+          rate: rate.toFixed(2), // 소수점 둘째 자리까지
           marketCap,
         });
 
-        const saved = await saveToAssetInfo({ symbol, name, price, diff, marketCap });
+        const saved = await saveToAssetInfo({
+          symbol,
+          name,
+          price,
+          rate, // ✅ 저장
+          marketCap,
+        });
 
         if (saved) {
           successCount++;
           if (!successLogShown) {
             console.log(
-              `${arrow} ${name} (${symbol}) 현재가: ${price} | 전일대비: ${diff} (${rate}%) | 시총: ${marketCap}`
+              `${arrow} ${name} (${symbol}) 현재가: ${price} | 전일대비: ${rate.toFixed(2)}% | 시총: ${marketCap}`,
             );
             successLogShown = true;
           }

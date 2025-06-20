@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: pgvector-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: stockpw
+      POSTGRES_DB: stockdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-net
+
+  backend:
+    build: ./backend
+    container_name: stock-api
+    command: npm run dev
+    volumes:
+      - ./backend:/app # 로컬 코드를 컨테이너에 마운트
+      - /app/node_modules # 컨테이너 주변 node_modules 사용
+    env_file: ./backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    networks:
+      - app-net
+
+  frontend:
+    build: ./frontend
+    container_name: stock-web
+    command: npm run dev
+    volumes:
+      - ./frontend:/app # 로컬 프론트엔드 코드 마운트
+      - /app/node_modules
+    env_file: ./frontend/.env # 프론트엔드도 env 파일 사용 (예: VITE_API_BASE_URL=http://localhost:5000/api)
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - app-net
+
+volumes:
+  pgdata:
+
+networks:
+  app-net:
