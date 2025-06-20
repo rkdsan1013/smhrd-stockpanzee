@@ -1,4 +1,5 @@
-// /backend/src/models/newsTransactions.ts
+// ✅ /backend/src/models/newsTransactions.ts
+
 import pool from "../config/db";
 import { INews, NewsAnalysis } from "./newsModel";
 import {

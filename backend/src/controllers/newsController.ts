@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { fetchAndProcessOneStockNews } from "../services/news/usstockNewsService";
 import { fetchAndProcessNews } from "../services/news/cryptoNewsService";
+import { fetchAndProcessSmartKrxNews } from "../services/news/krxNewsService";
 import { getAllNews } from "../models/newsTransactions";
 
 // 뉴스 목록 조회: 뉴스와 뉴스 분석 데이터를 LEFT JOIN하여 반환
@@ -26,12 +27,22 @@ export const testNewsProcessing = async (req: Request, res: Response) => {
   }
 };
 
-// 미국 뉴스
+// 테스트 뉴스 처리 2: 국내 스마트 KRX 뉴스 수집/분석/저장
+export const testNewsProcessing2 = async (req: Request, res: Response) => {
+  try {
+    await fetchAndProcessSmartKrxNews();
+    res.status(200).json({ message: "테스트 뉴스 처리 완료." });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "뉴스 처리 중 오류 발생" });
+  }
+};
+
+// 미국 뉴스 처리: 외부 미국 뉴스 수집/분석/저장
 export const testStockNewsProcessing = async (req: Request, res: Response) => {
   try {
     await fetchAndProcessOneStockNews();
     res.status(200).json({ message: "국제 뉴스 처리 완료." });
-  } catch (error) {
-    res.status(500).json({ error: "국제 뉴스 처리 중 오류 발생" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "국제 뉴스 처리 중 오류 발생" });
   }
 };

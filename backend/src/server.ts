@@ -1,4 +1,3 @@
-// /backend/src/server.ts
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import http from "http";

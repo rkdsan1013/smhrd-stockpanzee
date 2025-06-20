@@ -1,6 +1,7 @@
+// /backend/src/services/news/usstockNewsService.ts
 import pool from "../../config/db";
 import { mapStockNews, IStockNews } from "../../utils/news/usstockNewsMapper";
-import { findNewsByLink } from "../../models/newsModel";
+import { findNewsByLink } from "../../models/newsTransactions";
 import { extractFullContentWithPuppeteer } from "../../utils/crawler/usnewsContentCrawler";
 import dotenv from "dotenv";
 dotenv.config();
