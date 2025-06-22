@@ -47,9 +47,9 @@
 | **인증 / 보안**          | ![JWT](https://img.shields.io/badge/JWT-000000?logo=JSON%20web%20tokens&logoColor=white)             |
 | **개발 도구**            | ![VSCode](https://img.shields.io/badge/VSCode-007ACC?logo=visual-studio-code&logoColor=white)       |
 | **서버 환경**            | ![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white) ![WebSocket](https://img.shields.io/badge/WebSocket-010101?logo=websocket&logoColor=white) |
-| **데이터베이스**         | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white) ![FAISS](https://img.shields.io/badge/FAISS-050505?logo=logoColor=white)                      |
+| **데이터베이스**         | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)  [![PGVector](https://img.shields.io/badge/PGVector-PostgreSQL%20Vector%20Extension-blue)](https://github.com/pgvector/pgvector)                     |
 | **협업 도구**            | ![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white) ![Notion](https://img.shields.io/badge/Notion-000000?logo=notion&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white) ![Hancom](https://img.shields.io/badge/Hancom_Docs-0078D4?logo=microsoftword&logoColor=white) |
-| **배포 / 인프라**        | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Naver Cloud](https://img.shields.io/badge/Naver_Cloud_Platform-03C75A?logo=naver&logoColor=white) |
+| **배포 / 인프라**        | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) ![Naver Cloud](https://img.shields.io/badge/Naver_Cloud_Platform-03C75A?logo=naver&logoColor=white) [![Linux](https://img.shields.io/badge/Linux-lightgrey?logo=linux)](https://www.kernel.org/) |
 
 
 
