@@ -21,7 +21,6 @@ interface StockItem {
   priceChange: number;
   marketCap: number;
   logo: string;
-  // "국내", "해외", "암호화폐", "기타"
   category: "국내" | "해외" | "암호화폐" | "기타";
 }
 
@@ -30,40 +29,34 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 const Market: React.FC = () => {
   const navigate = useNavigate();
 
-  // 네비게이션 탭: 시장 필터와 뷰 모드 (정렬은 테이블 헤더의 버튼으로 처리)
+  // 탭 & 뷰 모드
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
     "전체",
   );
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
 
-  // 자산 데이터, 즐겨찾기, 정렬 및 페이지네이션 상태
+  // 데이터 & 상태
   const [stockData, setStockData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "marketCap",
     direction: "desc",
   });
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  // DB에서 자산 데이터를 로드 (매핑 로직 수정)
+  // 데이터 로드 & 5초 주기 갱신
   useEffect(() => {
-    const loadAssets = () => {
+    const load = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
-          console.log("Fetched assets:", assets);
           const list: StockItem[] = assets.map((a) => {
-            const market = a.market; // DB에 저장된 값 그대로 사용 (예: "Binance")
             let category: StockItem["category"];
-            if (market === "KOSPI" || market === "KOSDAQ") {
-              category = "국내";
-            } else if (market === "NASDAQ" || market === "NYSE") {
-              category = "해외";
-            } else if (market === "Binance") {
-              category = "암호화폐";
-            } else {
-              category = "기타";
-            }
+            if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
+            else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
+            else if (a.market === "Binance") category = "암호화폐";
+            else category = "기타";
+
             return {
               id: a.id,
               name: a.name,
@@ -76,116 +69,110 @@ const Market: React.FC = () => {
             };
           });
           setStockData(list);
-          console.log("Mapped stockData:", list);
         })
         .catch(console.error);
     };
-    loadAssets();
-    const intervalId = setInterval(loadAssets, 5000);
-    return () => clearInterval(intervalId);
+
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, []);
 
-  // 필터, 뷰 모드, 정렬 옵션 변경 시 페이지 번호 초기화
+  // 탭/정렬/뷰 변경 시 페이지 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarketTab, viewMode, sortConfig]);
 
-  // 1. 시장 필터 적용
-  const filteredStocks = useMemo(() => {
-    return selectedMarketTab === "전체"
-      ? stockData
-      : stockData.filter((stock) => stock.category === selectedMarketTab);
-  }, [stockData, selectedMarketTab]);
+  // 1) 탭 필터링
+  const filtered = useMemo(
+    () =>
+      selectedMarketTab === "전체"
+        ? stockData
+        : stockData.filter((s) => s.category === selectedMarketTab),
+    [stockData, selectedMarketTab],
+  );
 
-  // 2. 정렬 적용 (종목, 현재가, 변동률, 시가총액)
-  const sortedStocks = useMemo(() => {
-    const sorted = [...filteredStocks];
+  // 2) 정렬
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
     const { key, direction } = sortConfig;
     const factor = direction === "asc" ? 1 : -1;
     if (key === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name) * factor);
+      arr.sort((a, b) => a.name.localeCompare(b.name) * factor);
     } else {
-      sorted.sort((a, b) => ((a as any)[key] - (b as any)[key]) * factor);
+      arr.sort((a, b) => ((a as any)[key] - (b as any)[key]) * factor);
     }
-    return sorted;
-  }, [filteredStocks, sortConfig]);
+    return arr;
+  }, [filtered, sortConfig]);
 
-  // 3. "전체" 모드에서는 즐겨찾기 자산을 최상단에, "즐겨찾기" 모드인 경우 필터링
-  const finalStocks = useMemo(() => {
+  // 3) 즐겨찾기 우선 / 즐겨찾기만 표시
+  const finalList = useMemo(() => {
     if (viewMode === "전체") {
-      const withFavorites = [...sortedStocks].sort((a, b) => {
-        const aFav = favorites.includes(a.id) ? 0 : 1;
-        const bFav = favorites.includes(b.id) ? 0 : 1;
-        return aFav - bFav;
+      return [...sorted].sort((a, b) => {
+        const af = favorites.includes(a.id) ? 0 : 1;
+        const bf = favorites.includes(b.id) ? 0 : 1;
+        return af - bf;
       });
-      return withFavorites;
-    } else {
-      return sortedStocks.filter((stock) => favorites.includes(stock.id));
     }
-  }, [sortedStocks, viewMode, favorites]);
+    return sorted.filter((s) => favorites.includes(s.id));
+  }, [sorted, viewMode, favorites]);
 
-  // 4. 페이지네이션 처리
-  const visibleStocks = useMemo(
-    () => finalStocks.slice(0, currentPage * itemsPerPage),
-    [finalStocks, currentPage],
+  // 4) 페이지네이션 (무한 스크롤)
+  const visible = useMemo(
+    () => finalList.slice(0, currentPage * itemsPerPage),
+    [finalList, currentPage],
   );
 
-  // 추가: 우측 시장 현황 통계 계산
-  const risingCount = finalStocks.filter((stock) => stock.priceChange > 0).length;
-  const fallingCount = finalStocks.filter((stock) => stock.priceChange < 0).length;
-  const unchangedCount = finalStocks.filter((stock) => stock.priceChange === 0).length;
-  const totalCount = finalStocks.length;
-  const avgPrice =
-    finalStocks.length > 0
-      ? Math.round(finalStocks.reduce((sum, stock) => sum + stock.currentPrice, 0) / totalCount)
-      : 0;
-  const totalMarketCap = finalStocks.reduce((sum, stock) => sum + stock.marketCap, 0);
+  // 시장 현황 통계
+  const risingCount = finalList.filter((s) => s.priceChange > 0).length;
+  const fallingCount = finalList.filter((s) => s.priceChange < 0).length;
+  const unchangedCount = finalList.filter((s) => s.priceChange === 0).length;
+  const totalCount = finalList.length;
+  const avgPrice = totalCount
+    ? Math.round(finalList.reduce((sum, s) => sum + s.currentPrice, 0) / totalCount)
+    : 0;
+  const totalMarketCap = finalList.reduce((sum, s) => sum + s.marketCap, 0);
 
-  // 5. 무한 스크롤 구현 (Intersection Observer)
+  // 무한 스크롤 옵저버
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting && visibleStocks.length < finalStocks.length) {
-          setCurrentPage((prev) => prev + 1);
+      ([entry]) => {
+        if (entry.isIntersecting && visible.length < finalList.length) {
+          setCurrentPage((p) => p + 1);
         }
       },
       { threshold: 1 },
     );
-    const currentElem = loadMoreRef.current;
-    if (currentElem) observer.observe(currentElem);
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
     return () => {
-      if (currentElem) observer.unobserve(currentElem);
+      if (el) observer.unobserve(el);
     };
-  }, [visibleStocks, finalStocks]);
+  }, [visible, finalList]);
 
-  // 즐겨찾기 토글 함수
-  const toggleFavorite = (id: number) => {
+  // 즐겨찾기 토글
+  const toggleFavorite = (id: number) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
 
-  // 테이블 컬럼 정렬 토글 함수 (active:scale-95 효과 포함)
-  const handleSort = (key: SortKey) => {
+  // 정렬 토글
+  const handleSort = (key: SortKey) =>
     setSortConfig((prev) =>
       prev.key === key
         ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
         : { key, direction: "desc" },
     );
-  };
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* 헤더 (배경 제거) */}
       <header className="py-4">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
         </div>
       </header>
 
-      {/* 콘텐츠 영역 (뉴스페이지와 일관된 좌우 여백 적용) */}
       <section className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* 네비게이션: 시장 필터 탭 & 뷰 모드 탭 */}
+        {/* 탭 */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex space-x-4 bg-gray-800 p-2 rounded-full">
             {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
@@ -219,13 +206,12 @@ const Market: React.FC = () => {
           </div>
         </div>
 
-        {/* 메인 컨텐츠: 좌측 자산 리스트 & 우측 시장 현황 */}
         <div className="flex flex-col md:flex-row gap-6">
-          {/* 좌측: 자산 리스트 (테이블 형식) */}
+          {/* 좌측 리스트 */}
           <div className="w-full md:w-2/3">
-            {/* 리스트 헤더 (각 컬럼 정렬 버튼) */}
+            {/* 헤더 */}
             <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
-              <div className="w-8"></div>
+              <div className="w-8" />
               <div className="flex-1">
                 <button
                   onClick={() => handleSort("name")}
@@ -272,8 +258,9 @@ const Market: React.FC = () => {
                 </button>
               </div>
             </div>
-            {/* 자산 한 줄 리스트 (개별 행은 구분선 적용, 둥근 효과는 제거) */}
-            {visibleStocks.map((stock) => (
+
+            {/* 데이터 로우 */}
+            {visible.map((stock) => (
               <div
                 key={stock.id}
                 className="flex items-center px-4 py-2 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
@@ -288,7 +275,9 @@ const Market: React.FC = () => {
                 >
                   <Icons
                     name="star"
-                    className={`w-5 h-5 ${favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"}`}
+                    className={`w-5 h-5 ${
+                      favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
+                    }`}
                   />
                 </button>
                 <div className="flex-1">
@@ -300,21 +289,22 @@ const Market: React.FC = () => {
                   {stock.category === "암호화폐" ? "USDT" : "원"}
                 </div>
                 <div
-                  className={`w-20 text-right font-semibold ${stock.priceChange >= 0 ? "text-green-500" : "text-red-500"}`}
+                  className={`w-20 text-right font-semibold ${
+                    stock.priceChange >= 0 ? "text-green-500" : "text-red-500"
+                  }`}
                 >
                   {stock.priceChange >= 0 ? "+" : ""}
                   {stock.priceChange.toFixed(2)}%
                 </div>
                 <div className="w-32 text-right whitespace-nowrap text-white">
-                  {stock.category !== "암호화폐" ? formatCurrency(stock.marketCap) : "N/A"}
+                  {formatCurrency(stock.marketCap)}
                 </div>
               </div>
             ))}
-            {/* 무한 스크롤 감지용 sentinel */}
-            {visibleStocks.length < finalStocks.length && <div ref={loadMoreRef} className="h-4" />}
+            {visible.length < finalList.length && <div ref={loadMoreRef} className="h-4" />}
           </div>
 
-          {/* 우측: 시장 현황 패널 (sticky 처리: header에 가려지지 않도록 top-28 적용) */}
+          {/* 우측 시장 현황 */}
           <div className="w-full md:w-1/3">
             <div className="sticky top-28">
               <div className="bg-gray-800 rounded-lg shadow p-4">
