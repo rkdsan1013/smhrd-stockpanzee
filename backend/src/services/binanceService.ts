@@ -4,118 +4,131 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import axios from "axios";
-import WebSocket from "ws";
-import type { Server as IOServer } from "socket.io";
-import {
-  getAssetBySymbolAndMarket,
-  upsertCryptoInfo,
-  findCryptoAssets,
-} from "../models/assetModel";
+
+import { upsertCryptoInfo, findCryptoAssets } from "../models/assetModel";
 import pool from "../config/db";
 
-// cSpell:ignore binancecoin cardano polkadot dogecoin litecoin chainlink solana
-// 환율 상수: 1 USD = 1400 KRW (한 번만 곱함)
+// 환율 상수: 1 USD = 1400 KRW
 const EXCHANGE_RATE = 1400;
 console.log(`[환율 로그] 1 USD = ${EXCHANGE_RATE} KRW`);
 
-// Binance API 엔드포인트
 const BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr";
+// Coinlore는 API 키 불필요, 최대 100개씩 페이지네이션 지원
+const COINLORE_URL = "https://api.coinlore.net/api/tickers/";
 
-// CoinGecko API 기본 URL
-const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/coins/markets";
+// ── 캐시 로직 ────────────────────────────────────────────────────────────────
+let marketCapCache: Record<string, number> = {};
+let lastFetchTime = 0;
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
 
-// ------------------------------------------------------------------------------
-// Binance 티커 API 응답 타입
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function getMarketCapMap(): Promise<Record<string, number>> {
+  // TTL 검사
+  if (Date.now() - lastFetchTime > CACHE_TTL) {
+    try {
+      // DB에서 갱신 대상 심볼 집합 가져오기
+      const assets = await findCryptoAssets();
+      const needSyms = new Set(assets.map((a) => a.symbol.toUpperCase()));
+      const map: Record<string, number> = {};
+
+      // Coinlore는 100개씩 페이지네이션, 최대 5페이지까지 시도
+      const pageSize = 100;
+      for (let start = 0; start < 500; start += pageSize) {
+        const res = await axios.get<{ data: any[] }>(
+          `${COINLORE_URL}?start=${start}&limit=${pageSize}`,
+        );
+        res.data.data.forEach((item) => {
+          const sym = String(item.symbol).toUpperCase();
+          if (needSyms.has(sym)) {
+            map[sym] = parseFloat(item.market_cap_usd) || 0;
+          }
+        });
+        // 모두 찾았으면 중단
+        if (Object.keys(map).length >= needSyms.size) break;
+        // 다음 페이지 호출 전 짧은 텀
+        await sleep(500);
+      }
+
+      marketCapCache = map;
+      lastFetchTime = Date.now();
+      console.log(`[시총 로그] 캐시 리프레시 완료: ${Object.keys(map).length}개 심볼 로드`);
+    } catch (err: any) {
+      console.warn("[시총 로그] 캐시 리프레시 실패:", err.message || err);
+      // 실패 시에도 기존 캐시 유지
+    }
+  }
+  return marketCapCache;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface BinanceTicker {
   symbol: string;
   lastPrice: string;
   priceChangePercent: string;
 }
 
-// DB 업데이트 쿼리: asset_info의 market_cap을 업데이트 (market_cap이 NULL 또는 0일 때만)
-const UPDATE_CRYPTO_MARKET_CAP = `
-  UPDATE asset_info
-  SET market_cap = ?, last_updated = NOW()
-  WHERE asset_id = ? AND (market_cap IS NULL OR market_cap = 0)
-`;
-
 /**
- * updateCryptoMarketCapOnce()
- *
- * DB의 Binance 자산 정보를 조회하여, 각 자산의 심볼과 name을 이용해 CoinGecko API에 전달할 coinId(= asset.name.toLowerCase())를 구성합니다.
- * CoinGecko API를 통해 시가총액(USD)을 받아오고, 환율 1400을 곱해 KRW로 변환한 값을
- * DB의 asset_info 테이블에서 market_cap이 등록되지 않은 자산에 대해 업데이트합니다.
+ * 최초 한 번: 캐시된 시총으로 market_cap이 비어있는 자산만 채우기
  */
 export async function updateCryptoMarketCapOnce(): Promise<void> {
   try {
-    // DB에서 Binance 시장 자산 조회
+    const cache = await getMarketCapMap();
     const assets = await findCryptoAssets();
-    // 자산 매핑: key = asset.symbol (대문자), value = { id, coinId } (coinId는 asset.name.trim().toLowerCase())
-    const assetMapping: { [symbol: string]: { id: number; coinId: string } } = {};
-    assets.forEach((asset) => {
-      assetMapping[asset.symbol.toUpperCase()] = {
-        id: asset.id,
-        coinId: asset.name.trim().toLowerCase(),
-      };
-    });
-    // 고유 coinId 배열
-    const coinIds = Array.from(new Set(Object.values(assetMapping).map((item) => item.coinId)));
-    const cgUrl = `${COINGECKO_API_URL}?vs_currency=usd&ids=${coinIds.join(",")}`;
-    const cgResponse = await axios.get<any[]>(cgUrl);
-    const cgData = cgResponse.data;
-    // 매핑: CoinGecko ID (소문자) -> marketCapUSD
-    const marketCapData: { [coinId: string]: number } = {};
-    cgData.forEach((coin) => {
-      if (coin.market_cap) {
-        marketCapData[coin.id.toLowerCase()] = coin.market_cap;
-      }
-    });
-    console.log(`[시총 로그] CoinGecko API returned ${cgData.length} items.`);
 
-    // 각 자산에 대해, DB에서 market_cap이 미등록(0 또는 NULL)인 경우에만 업데이트
-    for (const [symbol, { id, coinId }] of Object.entries(assetMapping)) {
-      const asset = await getAssetBySymbolAndMarket(symbol, "Binance");
-      if (!asset) continue;
-      if (asset.market_cap && asset.market_cap > 0) continue; // 이미 시가총액 업데이트된 경우는 건너뜀
-      const marketCapUSD = marketCapData[coinId] || 0;
-      const marketCapKRW = marketCapUSD * EXCHANGE_RATE;
+    for (const asset of assets) {
+      const usdCap = cache[asset.symbol.toUpperCase()] || 0;
+      const krwCap = usdCap * EXCHANGE_RATE;
       const conn = await pool.getConnection();
       try {
-        await conn.execute(UPDATE_CRYPTO_MARKET_CAP, [marketCapKRW, asset.id]);
-        console.log(
-          `[시총 로그] Updated asset ID: ${asset.id} (${symbol}) | Market Cap (KRW): ${marketCapKRW}`,
+        await conn.execute(
+          `UPDATE asset_info
+             SET market_cap = ?, last_updated = NOW()
+           WHERE asset_id = ? AND (market_cap IS NULL OR market_cap = 0)`,
+          [krwCap, asset.id],
         );
-      } catch (err: any) {
-        console.error(`[시총 로그] Update failed for asset ID: ${asset.id}: ${err.message || err}`);
       } finally {
         conn.release();
       }
     }
-  } catch (error: any) {
-    console.error("[BinanceService] Market Cap update failed:", error.message || error);
+    console.log("[시총 로그] updateCryptoMarketCapOnce 완료");
+  } catch (err: any) {
+    console.error("[BinanceService] updateCryptoMarketCapOnce 오류:", err.message || err);
   }
 }
 
 /**
- * updateCryptoAssetInfoPeriodically()
- *
- * Binance의 24hr 티커 API를 호출하여 암호화폐의 현재가와 가격 변동률을 업데이트합니다.
- * 이때, 기존에 등록된 시가총액(market_cap)은 변경하지 않습니다.
+ * 주기적 업데이트: Binance 가격·변동률은 매번, 시가총액은 캐시 사용 (1일 1회)
  */
 export async function updateCryptoAssetInfoPeriodically(): Promise<void> {
   try {
+    const cache = await getMarketCapMap();
+    const assets = await findCryptoAssets();
+
     const { data: tickers } = await axios.get<BinanceTicker[]>(BINANCE_TICKER_URL);
     for (const t of tickers) {
       if (!t.symbol.endsWith("USDT")) continue;
+
       const symbol = t.symbol.slice(0, -4).toUpperCase();
-      const asset = await getAssetBySymbolAndMarket(symbol, "Binance");
+      const asset = assets.find((a) => a.symbol === symbol);
       if (!asset) continue;
+
       const price = parseFloat(t.lastPrice);
       const change = parseFloat(t.priceChangePercent);
-      const marketCap = asset.market_cap || 0; // 기존 시가총액을 그대로 사용
-      await upsertCryptoInfo(asset.id, price, change, marketCap);
+      const usdCap = cache[symbol] || 0;
+      const krwCap = usdCap * EXCHANGE_RATE;
+
+      await upsertCryptoInfo(asset.id, price, change, krwCap);
     }
-  } catch (error: any) {
-    console.error("[BinanceService] Price update failed:", error.message || error);
+
+    console.log("[BinanceService] updateCryptoAssetInfoPeriodically 완료");
+  } catch (err: any) {
+    console.error(
+      "[BinanceService] updateCryptoAssetInfoPeriodically 오류:",
+      err.response?.status || "",
+      err.message || err,
+    );
   }
 }

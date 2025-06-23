@@ -4,7 +4,7 @@ import http from "http";
 import cors from "cors";
 
 import { setupSocket } from "./socket";
-import { startPolygonPriceStream } from "./services/polygonPriceStream";
+//import { startPolygonPriceStream } from "./services/polygonPriceStream";
 // **경로를 꼭 이대로 유지하세요** (src/services 가 아닌 ./services)
 import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
 
@@ -55,7 +55,7 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Polygon 스트림
-  startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
+  //startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
   updateCryptoAssetInfoPeriodically();
