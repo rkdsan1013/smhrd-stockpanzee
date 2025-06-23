@@ -31,7 +31,8 @@
     "pgvector": "^0.2.1",
     "snoowrap": "^1.23.0",
     "socket.io": "^4.8.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
@@ -50,6 +51,7 @@
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "@types/multer": "^1.4.7"
   }
 }
