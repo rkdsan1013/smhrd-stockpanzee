@@ -13,8 +13,56 @@ const EXCHANGE_RATE = 1400;
 console.log(`[환율 로그] 1 USD = ${EXCHANGE_RATE} KRW`);
 
 const BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr";
-// coinpaprika는 API 키 필요 없음
-const COINPAPRIKA_TICKERS_URL = "https://api.coinpaprika.com/v1/tickers?quotes=USD";
+// Coinlore는 API 키 불필요, 최대 100개씩 페이지네이션 지원
+const COINLORE_URL = "https://api.coinlore.net/api/tickers/";
+
+// ── 캐시 로직 ────────────────────────────────────────────────────────────────
+let marketCapCache: Record<string, number> = {};
+let lastFetchTime = 0;
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function getMarketCapMap(): Promise<Record<string, number>> {
+  // TTL 검사
+  if (Date.now() - lastFetchTime > CACHE_TTL) {
+    try {
+      // DB에서 갱신 대상 심볼 집합 가져오기
+      const assets = await findCryptoAssets();
+      const needSyms = new Set(assets.map((a) => a.symbol.toUpperCase()));
+      const map: Record<string, number> = {};
+
+      // Coinlore는 100개씩 페이지네이션, 최대 5페이지까지 시도
+      const pageSize = 100;
+      for (let start = 0; start < 500; start += pageSize) {
+        const res = await axios.get<{ data: any[] }>(
+          `${COINLORE_URL}?start=${start}&limit=${pageSize}`,
+        );
+        res.data.data.forEach((item) => {
+          const sym = String(item.symbol).toUpperCase();
+          if (needSyms.has(sym)) {
+            map[sym] = parseFloat(item.market_cap_usd) || 0;
+          }
+        });
+        // 모두 찾았으면 중단
+        if (Object.keys(map).length >= needSyms.size) break;
+        // 다음 페이지 호출 전 짧은 텀
+        await sleep(500);
+      }
+
+      marketCapCache = map;
+      lastFetchTime = Date.now();
+      console.log(`[시총 로그] 캐시 리프레시 완료: ${Object.keys(map).length}개 심볼 로드`);
+    } catch (err: any) {
+      console.warn("[시총 로그] 캐시 리프레시 실패:", err.message || err);
+      // 실패 시에도 기존 캐시 유지
+    }
+  }
+  return marketCapCache;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface BinanceTicker {
   symbol: string;
@@ -22,72 +70,43 @@ interface BinanceTicker {
   priceChangePercent: string;
 }
 
-// CoinPaprika 응답 타입 (시가총액만 사용)
-interface PaprikaTicker {
-  symbol: string;
-  quotes: {
-    USD: {
-      market_cap: number;
-    };
-  };
-}
-
 /**
- * 최초 한 번: CoinPaprika 전체 티커에서 시가총액만 뽑아 DB에 채워넣기
+ * 최초 한 번: 캐시된 시총으로 market_cap이 비어있는 자산만 채우기
  */
 export async function updateCryptoMarketCapOnce(): Promise<void> {
   try {
-    // 1) CoinPaprika 전체 티커 조회
-    const marketCapMap: Record<string, number> = {};
-    const res = await axios.get<PaprikaTicker[]>(COINPAPRIKA_TICKERS_URL);
-    res.data.forEach((t: PaprikaTicker) => {
-      marketCapMap[t.symbol.toUpperCase()] = t.quotes.USD.market_cap;
-    });
-    console.log(`[시총 로그] CoinPaprika에서 ${res.data.length}개 티커 로드 완료`);
+    const cache = await getMarketCapMap();
+    const assets = await findCryptoAssets();
 
-    // 2) DB에서 자산 목록 조회
-    const assets = await findCryptoAssets(); // [{id, symbol, coin_id}, ...]
-
-    // 3) marketCapMap 기반으로 한 번만 업데이트
     for (const asset of assets) {
-      const usdCap = marketCapMap[asset.symbol] || 0;
+      const usdCap = cache[asset.symbol.toUpperCase()] || 0;
       const krwCap = usdCap * EXCHANGE_RATE;
       const conn = await pool.getConnection();
       try {
         await conn.execute(
           `UPDATE asset_info
-           SET market_cap = ?, last_updated = NOW()
-           WHERE asset_id = ?`,
+             SET market_cap = ?, last_updated = NOW()
+           WHERE asset_id = ? AND (market_cap IS NULL OR market_cap = 0)`,
           [krwCap, asset.id],
         );
-        console.log(`[시총 로그] ${asset.symbol} 시가총액 ${krwCap} KRW로 업데이트`);
       } finally {
         conn.release();
       }
     }
+    console.log("[시총 로그] updateCryptoMarketCapOnce 완료");
   } catch (err: any) {
     console.error("[BinanceService] updateCryptoMarketCapOnce 오류:", err.message || err);
   }
 }
 
 /**
- * 주기적 업데이트: Binance 가격·변동률 로직 그대로 두고,
- * CoinPaprika에서 한 번에 끌어온 시가총액을 함께 upsert
+ * 주기적 업데이트: Binance 가격·변동률은 매번, 시가총액은 캐시 사용 (1일 1회)
  */
 export async function updateCryptoAssetInfoPeriodically(): Promise<void> {
   try {
-    // 1) CoinPaprika 전체 티커 조회 → 시가총액 맵
-    const marketCapMap: Record<string, number> = {};
-    const res = await axios.get<PaprikaTicker[]>(COINPAPRIKA_TICKERS_URL);
-    res.data.forEach((t: PaprikaTicker) => {
-      marketCapMap[t.symbol.toUpperCase()] = t.quotes.USD.market_cap;
-    });
-    console.log(`[시총 로그] CoinPaprika에서 ${res.data.length}개 티커 로드 완료`);
+    const cache = await getMarketCapMap();
+    const assets = await findCryptoAssets();
 
-    // 2) Binance 자산 목록 조회
-    const assets = await findCryptoAssets(); // [{id, symbol, coin_id}, ...]
-
-    // 3) Binance 24hr 티커로 가격·변동률 조회 및 upsert
     const { data: tickers } = await axios.get<BinanceTicker[]>(BINANCE_TICKER_URL);
     for (const t of tickers) {
       if (!t.symbol.endsWith("USDT")) continue;
@@ -98,7 +117,7 @@ export async function updateCryptoAssetInfoPeriodically(): Promise<void> {
 
       const price = parseFloat(t.lastPrice);
       const change = parseFloat(t.priceChangePercent);
-      const usdCap = marketCapMap[symbol] || 0;
+      const usdCap = cache[symbol] || 0;
       const krwCap = usdCap * EXCHANGE_RATE;
 
       await upsertCryptoInfo(asset.id, price, change, krwCap);
