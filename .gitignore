@@ -47,3 +47,6 @@ build/
 *.lock
 *.cache
 *.tmp
+
+# PostgreSQL vector DB local data
+_db/data/
