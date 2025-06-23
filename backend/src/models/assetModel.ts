@@ -37,20 +37,21 @@ export async function upsertAssetInfo(
   await pool.execute(UPSERT_ASSET_INFO, [assetId, currentPrice, priceChange, marketCap]);
 }
 
-/** 암호화폐 전용 price·change upsert */
+/** 암호화폐 전용 price·change·cap upsert */
 export async function upsertCryptoInfo(
   assetId: number,
   currentPrice: number,
   priceChange: number,
+  marketCap: number,
 ): Promise<void> {
-  await pool.execute(UPSERT_CRYPTO_INFO, [assetId, currentPrice, priceChange]);
+  await pool.execute(UPSERT_CRYPTO_INFO, [assetId, currentPrice, priceChange, marketCap]);
 }
 
 /** symbol+market 으로 자산 조회 */
 export async function getAssetBySymbolAndMarket(
   symbol: string,
   market: string,
-): Promise<Pick<Asset, "id" | "symbol" | "name" | "market"> | null> {
+): Promise<Asset | null> {
   const [rows] = await pool.query<RowDataPacket[]>(GET_ASSET_BY_SYMBOL_AND_MARKET, [
     symbol,
     market,

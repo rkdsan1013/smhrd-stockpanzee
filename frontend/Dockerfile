@@ -1,4 +1,4 @@
-# frontend/Dockerfile
+# /frontend/Dockerfile
 FROM node:20-alpine
 WORKDIR /app
 
@@ -6,8 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# 소스 전체 복사
+# 소스 전체 복사 (로컬 파일이 마운트되므로 이는 빌드 시 캐시 용도)
 COPY . .
 
 EXPOSE 5173
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,5 +1,4 @@
 // /backend/src/models/assetQueries.ts
-
 export const SELECT_ALL_ASSETS = `
   SELECT
     a.id,
@@ -41,23 +40,25 @@ export const UPSERT_ASSET_INFO = `
 `;
 
 export const GET_ASSET_BY_SYMBOL_AND_MARKET = `
-  SELECT id, symbol, name, market
-  FROM assets
-  WHERE symbol = ? AND market = ?;
+  SELECT a.id, a.symbol, a.name, a.market, ai.market_cap
+  FROM assets AS a
+  LEFT JOIN asset_info AS ai ON ai.asset_id = a.id
+  WHERE a.symbol = ? AND a.market = ?;
 `;
 
 export const UPSERT_CRYPTO_INFO = `
-  INSERT INTO asset_info (asset_id, current_price, price_change)
-  VALUES (?, ?, ?)
+  INSERT INTO asset_info (asset_id, current_price, price_change, market_cap, last_updated)
+  VALUES (?, ?, ?, ?, NOW())
   ON DUPLICATE KEY UPDATE
     current_price = VALUES(current_price),
     price_change  = VALUES(price_change),
+    market_cap    = VALUES(market_cap),
     last_updated  = NOW()
 `;
-// Binance 시장에 한정하여 자산 목록을 조회하는 쿼리 추가
+
 export const SELECT_CRYPTO_ASSETS = `
   SELECT id, symbol, name, market, created_at, updated_at
   FROM assets
   WHERE market = 'Binance'
-  ORDER BY id
+  ORDER BY id;
 `;

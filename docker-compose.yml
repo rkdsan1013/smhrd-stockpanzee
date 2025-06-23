@@ -1,3 +1,4 @@
+# /docker-compose.yml
 version: "3.9"
 
 services:
@@ -21,8 +22,8 @@ services:
     container_name: stock-api
     command: npm run dev
     volumes:
-      - ./backend:/app # 로컬 코드를 컨테이너에 마운트
-      - /app/node_modules # 컨테이너 주변 node_modules 사용
+      - ./backend:/app # 로컬 백엔드 코드를 컨테이너에 마운트
+      - /app/node_modules # 컨테이너의 node_modules 사용
     env_file: ./backend/.env
     ports:
       - "5000:5000"
@@ -34,11 +35,14 @@ services:
   frontend:
     build: ./frontend
     container_name: stock-web
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
     volumes:
-      - ./frontend:/app # 로컬 프론트엔드 코드 마운트
-      - /app/node_modules
-    env_file: ./frontend/.env # 프론트엔드도 env 파일 사용 (예: VITE_API_BASE_URL=http://localhost:5000/api)
+      - ./frontend:/app # 로컬 프론트엔드 코드를 컨테이너에 마운트
+      - /app/node_modules # 컨테이너의 node_modules 사용
+    env_file: ./frontend/.env
+    environment:
+      - CHOKIDAR_USEPOLLING=true # 파일 변경 감지를 polling 방식으로 진행
+      - CHOKIDAR_INTERVAL=100 # (선택) polling 간격(ms)를 낮춰 더 빠른 반영을 유도
     ports:
       - "5173:5173"
     depends_on:
