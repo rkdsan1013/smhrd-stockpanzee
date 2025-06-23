@@ -1,34 +1,52 @@
 // /backend/src/utils/news/cryptoNewsMapper.ts
-import { INews } from "../../models/newsModel";
-
-/**
- * CryptoCompare API 응답 데이터 타입 (일부 필드만 사용)
- */
 interface CryptoNewsApiResponse {
   Data: Array<{
     id: string;
-    title: string;
+    guid: string;
+    published_on: number;
     imageurl: string;
+    title: string;
+    url: string;
     body: string;
-    // 필요 시 published_on, guid, url 등 추가 필드 정의 가능
+    tags: string;
+    lang: string;
+    upvotes: string;
+    downvotes: string;
+    categories: string;
+    source_info: {
+      name: string;
+      img: string;
+      lang: string;
+    };
+    source: string;
   }>;
 }
 
-/**
- * CryptoCompare API 응답 데이터를 INews 형식으로 매핑합니다.
- *
- * @param rawData API 응답 원본 데이터
- * @returns INews 배열 (모든 필수 필드가 채워짐)
- */
+export interface INews {
+  // models/newsModel.ts에 정의된 인터페이스와 동일한 형태로 반환합니다.
+  news_category: "domestic" | "international" | "crypto";
+  title: string;
+  title_ko?: string;
+  content: string;
+  thumbnail: string;
+  news_link: string;
+  publisher: string;
+  published_at: Date;
+}
+
 export const mapCryptoNews = (rawData: CryptoNewsApiResponse): INews[] => {
   if (!rawData || !Array.isArray(rawData.Data)) {
     throw new Error("잘못된 뉴스 데이터 형식입니다.");
   }
-
   return rawData.Data.map((news) => ({
-    externalId: news.id!, // id 는 반드시 존재한다고 가정합니다.
+    news_category: "crypto",
     title: news.title,
-    thumbnail: news.imageurl,
+    // title_ko는 이후 번역/분석 결과에 따라 업데이트되므로 기본값은 undefined로 둡니다.
     content: news.body,
+    news_link: news.url,
+    thumbnail: news.imageurl,
+    // publisher는 source_info.name으로 설정
+    publisher: news.source_info.name,
+    published_at: new Date(news.published_on * 1000),
   }));
 };
