@@ -1,4 +1,4 @@
-// ✅ /backend/src/services/news/krxNewsService.ts
+// /backend/src/services/news/krxNewsService.ts
 
 import axios from "axios";
 import puppeteer from "puppeteer";
@@ -46,15 +46,20 @@ export const fetchAndProcessSmartKrxNews = async (): Promise<void> => {
     let newsItems = mapKrxNews(newItems, thumbnails, contents, titles, crawledResults);
     newsItems = newsItems.filter((item) => item.content && item.content.trim().length > 0);
 
-    const domesticAssets = (await findAllAssets()).filter(asset => asset.market === "KOSPI" || asset.market === "KOSDAQ");
+    const domesticAssets = (await findAllAssets()).filter(
+      (asset) => asset.market === "KOSPI" || asset.market === "KOSDAQ",
+    );
     const assetMap = new Map(
-      domesticAssets.map((asset) => [asset.name.trim(), asset.symbol.trim()])
+      domesticAssets.map((asset) => [asset.name.trim(), asset.symbol.trim()]),
     );
 
     for (const news of newsItems) {
       const tags: string[] = [];
       for (const [name, symbol] of assetMap.entries()) {
-        if (typeof name === 'string' && (news.title.includes(name) || news.content.includes(name))) {
+        if (
+          typeof name === "string" &&
+          (news.title.includes(name) || news.content.includes(name))
+        ) {
           tags.push(symbol);
         }
       }
@@ -97,7 +102,7 @@ export const fetchAndProcessSmartKrxNews = async (): Promise<void> => {
 };
 
 const getArticleTitleAndContent = async (
-  url: string
+  url: string,
 ): Promise<{ title: string; content: string }> => {
   try {
     const browser = await puppeteer.launch({
@@ -114,7 +119,7 @@ const getArticleTitleAndContent = async (
 
     const page = await browser.newPage();
     await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
     );
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
@@ -153,4 +158,7 @@ export const startSmartKrxNewsScheduler = () => {
     await fetchAndProcessSmartKrxNews();
   });
 };
-fetchAndProcessSmartKrxNews();
+
+// 서버 시작 시 자동 실행되는 뉴스 수집 코드를 주석 처리하여,
+// 라우터 등에서 직접 접근할 때만 뉴스 수집이 실행되도록 함.
+// fetchAndProcessSmartKrxNews();

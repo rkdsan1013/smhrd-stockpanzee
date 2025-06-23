@@ -1,5 +1,4 @@
 // /backend/src/models/assetModel.ts
-
 import type { RowDataPacket } from "mysql2/promise";
 import pool from "../config/db";
 import {
