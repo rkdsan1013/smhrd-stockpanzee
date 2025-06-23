@@ -53,9 +53,9 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Polygon 스트림
-  startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
+  // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  // updateCryptoAssetInfoPeriodically();
+  updateCryptoAssetInfoPeriodically();
   setInterval(updateCryptoAssetInfoPeriodically, 5000);
 });
