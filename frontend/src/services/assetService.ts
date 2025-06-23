@@ -9,8 +9,6 @@ export interface Asset {
   market: string;
   created_at: string;
   updated_at: string;
-
-  // ✅ 추가된 필드 (백엔드에서 전달되는 실시간 데이터)
   currentPrice: number;
   priceChange: number;
   marketCap: number;

@@ -21,7 +21,8 @@ interface StockItem {
   priceChange: number;
   marketCap: number;
   logo: string;
-  category: "국내" | "해외" | "암호화폐";
+  // "국내", "해외", "암호화폐", "기타"
+  category: "국내" | "해외" | "암호화폐" | "기타";
 }
 
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
@@ -29,7 +30,7 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 const Market: React.FC = () => {
   const navigate = useNavigate();
 
-  // 네비게이션 탭: 시장 필터와 뷰 모드 (정렬은 테이블 헤더에서 처리)
+  // 네비게이션 탭: 시장 필터와 뷰 모드 (정렬은 테이블 헤더의 버튼으로 처리)
   const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
     "전체",
   );
@@ -45,17 +46,24 @@ const Market: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 12;
 
-  // 백엔드에서 5초마다 자산 데이터를 업데이트
+  // DB에서 자산 데이터를 로드 (매핑 로직 수정)
   useEffect(() => {
     const loadAssets = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
+          console.log("Fetched assets:", assets);
           const list: StockItem[] = assets.map((a) => {
+            const market = a.market; // DB에 저장된 값 그대로 사용 (예: "Binance")
             let category: StockItem["category"];
-            const m = a.market.toUpperCase();
-            if (m === "KOSPI" || m === "KOSDAQ") category = "국내";
-            else if (m === "NASDAQ" || m === "NYSE") category = "해외";
-            else category = "암호화폐";
+            if (market === "KOSPI" || market === "KOSDAQ") {
+              category = "국내";
+            } else if (market === "NASDAQ" || market === "NYSE") {
+              category = "해외";
+            } else if (market === "Binance") {
+              category = "암호화폐";
+            } else {
+              category = "기타";
+            }
             return {
               id: a.id,
               name: a.name,
@@ -68,6 +76,7 @@ const Market: React.FC = () => {
             };
           });
           setStockData(list);
+          console.log("Mapped stockData:", list);
         })
         .catch(console.error);
     };
@@ -76,7 +85,7 @@ const Market: React.FC = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  // 필터(시장 탭, 뷰 모드, 정렬) 변경 시 페이지 초기화
+  // 필터, 뷰 모드, 정렬 옵션 변경 시 페이지 번호 초기화
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarketTab, viewMode, sortConfig]);
@@ -101,7 +110,7 @@ const Market: React.FC = () => {
     return sorted;
   }, [filteredStocks, sortConfig]);
 
-  // 3. "전체" 모드에서는 즐겨찾기 된 자산을 최상단에 배치
+  // 3. "전체" 모드에서는 즐겨찾기 자산을 최상단에, "즐겨찾기" 모드인 경우 필터링
   const finalStocks = useMemo(() => {
     if (viewMode === "전체") {
       const withFavorites = [...sortedStocks].sort((a, b) => {
@@ -116,9 +125,21 @@ const Market: React.FC = () => {
   }, [sortedStocks, viewMode, favorites]);
 
   // 4. 페이지네이션 처리
-  const visibleStocks = useMemo(() => {
-    return finalStocks.slice(0, currentPage * itemsPerPage);
-  }, [finalStocks, currentPage]);
+  const visibleStocks = useMemo(
+    () => finalStocks.slice(0, currentPage * itemsPerPage),
+    [finalStocks, currentPage],
+  );
+
+  // 추가: 우측 시장 현황 통계 계산
+  const risingCount = finalStocks.filter((stock) => stock.priceChange > 0).length;
+  const fallingCount = finalStocks.filter((stock) => stock.priceChange < 0).length;
+  const unchangedCount = finalStocks.filter((stock) => stock.priceChange === 0).length;
+  const totalCount = finalStocks.length;
+  const avgPrice =
+    finalStocks.length > 0
+      ? Math.round(finalStocks.reduce((sum, stock) => sum + stock.currentPrice, 0) / totalCount)
+      : 0;
+  const totalMarketCap = finalStocks.reduce((sum, stock) => sum + stock.marketCap, 0);
 
   // 5. 무한 스크롤 구현 (Intersection Observer)
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -144,7 +165,7 @@ const Market: React.FC = () => {
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  // 테이블 컬럼에서 정렬 버튼 토글 함수 (클릭 시 active:scale-95 효과 포함)
+  // 테이블 컬럼 정렬 토글 함수 (active:scale-95 효과 포함)
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) =>
       prev.key === key
@@ -152,11 +173,6 @@ const Market: React.FC = () => {
         : { key, direction: "desc" },
     );
   };
-
-  // 시장 현황 통계 계산
-  const risingCount = finalStocks.filter((stock) => stock.priceChange > 0).length;
-  const fallingCount = finalStocks.filter((stock) => stock.priceChange < 0).length;
-  const unchangedCount = finalStocks.filter((stock) => stock.priceChange === 0).length;
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -168,7 +184,7 @@ const Market: React.FC = () => {
       </header>
 
       {/* 콘텐츠 영역 (뉴스페이지와 일관된 좌우 여백 적용) */}
-      <section className="container mx-auto px-4 py-8">
+      <section className="container mx-auto px-4 py-8 max-w-7xl">
         {/* 네비게이션: 시장 필터 탭 & 뷰 모드 탭 */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="flex space-x-4 bg-gray-800 p-2 rounded-full">
@@ -207,8 +223,8 @@ const Market: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-6">
           {/* 좌측: 자산 리스트 (테이블 형식) */}
           <div className="w-full md:w-2/3">
-            {/* 리스트 헤더 (테이블 컬럼 - 각 버튼에 active:scale-95 효과 적용) */}
-            <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
+            {/* 리스트 헤더 (각 컬럼 정렬 버튼) */}
+            <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
               <div className="w-8"></div>
               <div className="flex-1">
                 <button
@@ -220,7 +236,7 @@ const Market: React.FC = () => {
                   </span>
                 </button>
               </div>
-              <div className="w-28 text-right">
+              <div className="w-40 text-right whitespace-nowrap">
                 <button
                   onClick={() => handleSort("currentPrice")}
                   className="w-full text-right focus:outline-none active:scale-95 transition-transform duration-200"
@@ -244,7 +260,7 @@ const Market: React.FC = () => {
                   </span>
                 </button>
               </div>
-              <div className="w-32 text-right">
+              <div className="w-32 text-right whitespace-nowrap">
                 <button
                   onClick={() => handleSort("marketCap")}
                   className="w-full text-right focus:outline-none active:scale-95 transition-transform duration-200"
@@ -256,7 +272,7 @@ const Market: React.FC = () => {
                 </button>
               </div>
             </div>
-            {/* 자산 한 줄 리스트 */}
+            {/* 자산 한 줄 리스트 (개별 행은 구분선 적용, 둥근 효과는 제거) */}
             {visibleStocks.map((stock) => (
               <div
                 key={stock.id}
@@ -279,7 +295,7 @@ const Market: React.FC = () => {
                   <p className="text-white font-semibold">{stock.name}</p>
                   <p className="text-gray-400 text-xs">{stock.symbol}</p>
                 </div>
-                <div className="w-28 text-right text-white">
+                <div className="w-40 text-right whitespace-nowrap text-white">
                   {stock.currentPrice.toLocaleString()}{" "}
                   {stock.category === "암호화폐" ? "USDT" : "원"}
                 </div>
@@ -289,8 +305,8 @@ const Market: React.FC = () => {
                   {stock.priceChange >= 0 ? "+" : ""}
                   {stock.priceChange.toFixed(2)}%
                 </div>
-                <div className="w-32 text-right text-white">
-                  {stock.category !== "암호화폐" ? formatCurrency(stock.marketCap) : ""}
+                <div className="w-32 text-right whitespace-nowrap text-white">
+                  {stock.category !== "암호화폐" ? formatCurrency(stock.marketCap) : "N/A"}
                 </div>
               </div>
             ))}
@@ -298,22 +314,39 @@ const Market: React.FC = () => {
             {visibleStocks.length < finalStocks.length && <div ref={loadMoreRef} className="h-4" />}
           </div>
 
-          {/* 우측: 시장 현황 패널 */}
+          {/* 우측: 시장 현황 패널 (sticky 처리: header에 가려지지 않도록 top-28 적용) */}
           <div className="w-full md:w-1/3">
-            <div className="bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-white text-center mb-4">시장 현황</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">상승 종목</span>
-                  <span className="text-green-500 font-semibold">{risingCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">하락 종목</span>
-                  <span className="text-red-500 font-semibold">{fallingCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">변동 없음</span>
-                  <span className="text-white font-semibold">{unchangedCount}</span>
+            <div className="sticky top-28">
+              <div className="bg-gray-800 rounded-lg shadow p-4">
+                <h2 className="text-lg font-bold text-white text-center mb-3">시장 현황</h2>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">상승 종목</span>
+                    <span className="text-green-500 font-semibold">{risingCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">하락 종목</span>
+                    <span className="text-red-500 font-semibold">{fallingCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">변동 없음</span>
+                    <span className="text-white font-semibold">{unchangedCount}</span>
+                  </div>
+                  <hr className="border-gray-700" />
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">총 종목 수</span>
+                    <span className="text-white font-semibold">{totalCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">평균 현재가</span>
+                    <span className="text-white font-semibold">{avgPrice.toLocaleString()} 원</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">전체 시가총액</span>
+                    <span className="text-white font-semibold">
+                      {formatCurrency(totalMarketCap)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
