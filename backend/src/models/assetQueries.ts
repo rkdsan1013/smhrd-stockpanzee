@@ -57,7 +57,10 @@ export const UPSERT_CRYPTO_INFO = `
 `;
 
 export const SELECT_CRYPTO_ASSETS = `
-  SELECT id, symbol, name, market, created_at, updated_at
+  SELECT
+    id,
+    symbol,
+    LOWER(name) AS coin_id
   FROM assets
   WHERE market = 'Binance'
   ORDER BY id;

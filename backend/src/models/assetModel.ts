@@ -1,4 +1,5 @@
 // /backend/src/models/assetModel.ts
+
 import type { RowDataPacket } from "mysql2/promise";
 import pool from "../config/db";
 import {
@@ -19,6 +20,13 @@ export interface Asset extends RowDataPacket {
   market_cap: number | null;
   created_at: Date;
   updated_at: Date;
+}
+
+/** 암호화폐 전용 타입 (coin_id: LOWER(name)) */
+export interface CryptoAsset extends RowDataPacket {
+  id: number;
+  symbol: string;
+  coin_id: string;
 }
 
 /** 전체 자산 + info */
@@ -60,15 +68,8 @@ export async function getAssetBySymbolAndMarket(
   return assets.length > 0 ? assets[0] : null;
 }
 
-/** Binance 시장 자산만 조회하는 함수 */
-export async function findCryptoAssets(): Promise<Asset[]> {
+/** Binance 시장 자산만, coin_id 포함해서 조회 */
+export async function findCryptoAssets(): Promise<CryptoAsset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
-  return rows as Asset[];
+  return rows as CryptoAsset[];
 }
-
-export const findDomesticAssets = async (): Promise<{ name: string; symbol: string }[]> => {
-  const [rows] = await pool.query(`
-    SELECT name, symbol FROM assets WHERE market IN ('KOSPI', 'KOSDAQ')
-  `);
-  return rows as any[];
-};
