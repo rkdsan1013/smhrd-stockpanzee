@@ -30,13 +30,13 @@ const Community: React.FC = () => {
     setLoading(true);
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/community`)
-      .then(res => {
+      .then((res) => {
         if (Array.isArray(res.data)) setPosts(res.data);
         else if (Array.isArray(res.data.posts)) setPosts(res.data.posts);
         else setPosts([]);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         alert("게시글 불러오기 실패: " + (err.response?.data?.message || err.message));
         setPosts([]);
         setLoading(false);
@@ -46,13 +46,11 @@ const Community: React.FC = () => {
   // 정렬/필터/페이지네이션
   let sortedPosts = posts;
   if (selectedSort === "latest") {
-    sortedPosts = posts.slice().sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    sortedPosts = posts
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   } else if (selectedSort === "popular") {
-    sortedPosts = posts.slice().sort(
-      (a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0)
-    );
+    sortedPosts = posts.slice().sort((a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0));
   }
 
   const filteredPosts =
@@ -177,66 +175,65 @@ const Community: React.FC = () => {
       </div>
 
       {/* 모바일 컨트롤 */}
-<div className="flex md:hidden flex-col mb-6 space-y-4">
-  <div className="flex items-center justify-between w-full">
-    {/* 최신/인기 */}
-    <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
-      <button
-        onClick={() => {
-          setSelectedSort("latest");
-          setCurrentPage(1);
-        }}
-        className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
-          selectedSort === "latest"
-            ? "bg-white/30 text-blue-500"
-            : "bg-transparent hover:bg-white/30"
-        }`}
-      >
-        <Icons name="clock" className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => {
-          setSelectedSort("popular");
-          setCurrentPage(1);
-        }}
-        className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
-          selectedSort === "popular"
-            ? "bg-white/30 text-blue-500"
-            : "bg-transparent hover:bg-white/30"
-        }`}
-      >
-        <Icons name="fire" className="w-5 h-5" />
-      </button>
-    </div>
+      <div className="flex md:hidden flex-col mb-6 space-y-4">
+        <div className="flex items-center justify-between w-full">
+          {/* 최신/인기 */}
+          <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
+            <button
+              onClick={() => {
+                setSelectedSort("latest");
+                setCurrentPage(1);
+              }}
+              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
+                selectedSort === "latest"
+                  ? "bg-white/30 text-blue-500"
+                  : "bg-transparent hover:bg-white/30"
+              }`}
+            >
+              <Icons name="clock" className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                setSelectedSort("popular");
+                setCurrentPage(1);
+              }}
+              className={`w-10 h-10 flex items-center justify-center transition-colors duration-200 text-white rounded-md ${
+                selectedSort === "popular"
+                  ? "bg-white/30 text-blue-500"
+                  : "bg-transparent hover:bg-white/30"
+              }`}
+            >
+              <Icons name="fire" className="w-5 h-5" />
+            </button>
+          </div>
 
-    {/* 카테고리 드롭다운 - 중앙정렬 */}
-    <div className="flex-1 flex justify-center">
-      <select
-        value={selectedTab}
-        onChange={(e) => {
-          setSelectedTab(e.target.value);
-          setCurrentPage(1);
-        }}
-        className="w-32 px-4 py-2 rounded-full bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        {categoryList.map((tab) => (
-          <option key={tab} value={tab}>
-            {tab}
-          </option>
-        ))}
-      </select>
-    </div>
+          {/* 카테고리 드롭다운 - 중앙정렬 */}
+          <div className="flex-1 flex justify-center">
+            <select
+              value={selectedTab}
+              onChange={(e) => {
+                setSelectedTab(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-32 px-4 py-2 rounded-full bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {categoryList.map((tab) => (
+                <option key={tab} value={tab}>
+                  {tab}
+                </option>
+              ))}
+            </select>
+          </div>
 
-    {/* 글쓰기 */}
-    <div>
-      <Link to="/post">
-        <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
-          글쓰기
-        </button>
-      </Link>
+          {/* 글쓰기 */}
+          <div>
+            <Link to="/post">
+              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
+                글쓰기
+              </button>
+            </Link>
           </div>
         </div>
-
       </div>
       {/* 게시글 그리드 */}
       <div id="posts-top" className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -250,9 +247,10 @@ const Community: React.FC = () => {
               <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
                 {/* 썸네일 */}
                 <img
-                  src={post.community_img
-                    ? `data:image/jpeg;base64,${post.community_img}`
-                    : "/panzee.webp"
+                  src={
+                    post.community_img
+                      ? `data:image/jpeg;base64,${post.community_img}`
+                      : "/panzee.webp"
                   }
                   alt="썸네일"
                   className="w-full aspect-video object-cover rounded mb-3"
@@ -266,7 +264,9 @@ const Community: React.FC = () => {
                 {/* 카테고리 | 닉네임 */}
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-base text-white font-bold">{post.category}</span>
-                  <span className="text-sm text-gray-400">{post.nickname || post.name || "익명"}</span>
+                  <span className="text-sm text-gray-400">
+                    {post.nickname || post.name || "익명"}
+                  </span>
                 </div>
                 {/* 시간 | 좋아요 | 댓글수 | 조회수 */}
                 <div className="flex justify-between items-center text-sm text-gray-400">

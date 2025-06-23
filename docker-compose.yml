@@ -1,4 +1,3 @@
-# /docker-compose.yml
 version: "3.9"
 
 services:
@@ -11,7 +10,8 @@ services:
       POSTGRES_PASSWORD: stockpw
       POSTGRES_DB: stockdb
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
@@ -22,8 +22,8 @@ services:
     container_name: stock-api
     command: npm run dev
     volumes:
-      - ./backend:/app # 로컬 백엔드 코드를 컨테이너에 마운트
-      - /app/node_modules # 컨테이너의 node_modules 사용
+      - ./backend:/app
+      - /app/node_modules
     env_file: ./backend/.env
     ports:
       - "5000:5000"
@@ -37,21 +37,18 @@ services:
     container_name: stock-web
     command: npm run dev -- --host 0.0.0.0
     volumes:
-      - ./frontend:/app # 로컬 프론트엔드 코드를 컨테이너에 마운트
-      - /app/node_modules # 컨테이너의 node_modules 사용
+      - ./frontend:/app
+      - /app/node_modules
     env_file: ./frontend/.env
     environment:
-      - CHOKIDAR_USEPOLLING=true # 파일 변경 감지를 polling 방식으로 진행
-      - CHOKIDAR_INTERVAL=100 # (선택) polling 간격(ms)를 낮춰 더 빠른 반영을 유도
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
     ports:
       - "5173:5173"
     depends_on:
       - backend
     networks:
       - app-net
-
-volumes:
-  pgdata:
 
 networks:
   app-net:

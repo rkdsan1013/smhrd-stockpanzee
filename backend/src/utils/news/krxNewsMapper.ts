@@ -29,7 +29,7 @@ export const mapKrxNews = (
   thumbnails: (string | null)[],
   contents: string[],
   titles: string[],
-  crawledResults: CrawledNews[]
+  crawledResults: CrawledNews[],
 ): INews[] => {
   return rawData.map((news, index) => {
     const crawled = crawledResults[index];
@@ -44,7 +44,6 @@ export const mapKrxNews = (
     };
   });
 };
-
 
 const extractSourceTitle = (url: string): string => {
   try {

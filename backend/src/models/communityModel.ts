@@ -23,16 +23,13 @@ export async function createCommunityPost(post: CommunityPost) {
       post.community_contents,
       post.category,
       post.community_img ?? null,
-    ]
+    ],
   );
   return result;
 }
 
 // 상세 조회
 export async function getCommunityPost(id: number) {
-  const [rows]: any = await pool.query(
-    `SELECT * FROM community WHERE id = ?`,
-    [id]
-  );
+  const [rows]: any = await pool.query(`SELECT * FROM community WHERE id = ?`, [id]);
   return rows[0]; // 하나만 반환
 }

@@ -13,9 +13,8 @@ declare module "express-serve-static-core" {
 
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization || req.headers.Authorization;
-  const token = typeof authHeader === "string" && authHeader.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
+  const token =
+    typeof authHeader === "string" && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
     return res.status(401).json({ message: "토큰이 필요합니다." });
