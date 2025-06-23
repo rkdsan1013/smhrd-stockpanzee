@@ -4,7 +4,7 @@ import http from "http";
 import cors from "cors";
 
 import { setupSocket } from "./socket";
-//import { startPolygonPriceStream } from "./services/polygonPriceStream";
+import { startPolygonPriceStream } from "./services/polygonPriceStream";
 // **경로를 꼭 이대로 유지하세요** (src/services 가 아닌 ./services)
 import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
 
@@ -18,7 +18,6 @@ import redditRoutes from "./routes/redditRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 
 dotenv.config();
-
 
 const app = express();
 app.use(
@@ -35,7 +34,6 @@ app.use("/api/news", newsRoutes);
 app.use("/api/community", community);
 app.use("/api/reddit", redditRoutes);
 app.use("/api/chatbot", chatbotRoutes);
-
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
@@ -55,9 +53,9 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Polygon 스트림
-  //startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
+  startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  updateCryptoAssetInfoPeriodically();
+  // updateCryptoAssetInfoPeriodically();
   setInterval(updateCryptoAssetInfoPeriodically, 5000);
 });
