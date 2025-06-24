@@ -6,7 +6,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import { setupSocket } from "./socket";
-// **경로를 꼭 이대로 유지하세요** (src/services 가 아닌 ./services)
+import { startPolygonPriceStream } from "./services/polygonPriceStream";
 import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
 
 import authRoutes from "./routes/authRoutes";
