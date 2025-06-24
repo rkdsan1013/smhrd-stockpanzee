@@ -1,3 +1,4 @@
+// /frontend/src/pages/assetDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchAssetById } from "../services/assetService";
@@ -64,8 +65,12 @@ const AssetDetail: React.FC = () => {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-6">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col">
-          <h1 className="text-2xl md:text-3xl font-bold">{asset.name}</h1>
-          <span className="text-base md:text-lg text-gray-400">({asset.symbol})</span>
+          {/* 이름과 심볼을 가로 배치 */}
+          <div className="flex items-baseline space-x-2">
+            <h1 className="text-2xl md:text-3xl font-bold">{asset.name}</h1>
+            <span className="text-base md:text-lg text-gray-400">({asset.symbol})</span>
+          </div>
+          {/* 가격과 등락률 */}
           <div className="mt-2 flex items-baseline space-x-4">
             <span className="text-xl md:text-2xl font-semibold">
               {currentPrice.toLocaleString()} {unit}
@@ -81,6 +86,8 @@ const AssetDetail: React.FC = () => {
             <span className="text-sm text-gray-500">전일 종가 대비</span>
           </div>
         </div>
+
+        {/* 탭 바 */}
         <nav className="flex space-x-6 border-b border-gray-700">
           <button
             onClick={() => setSelectedTab("chart")}
