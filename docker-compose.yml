@@ -1,16 +1,15 @@
-# /docker-compose.yml
 version: "3.9"
 
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: pgvector-db
+    container_name: stockpanzee-db
     restart: unless-stopped
     env_file:
       - ./_db/.env
     volumes:
-      - ./_db/data:/var/lib/postgresql/data
-      - ./_db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - stockpanzee_pgdata:/var/lib/postgresql/data
+      - ./_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     networks:
@@ -18,12 +17,13 @@ services:
 
   backend:
     build: ./backend
-    container_name: stock-api
+    container_name: stockpanzee-api
     command: npm run dev
     volumes:
       - ./backend:/app
       - /app/node_modules
-    env_file: ./backend/.env
+    env_file:
+      - ./backend/.env
     ports:
       - "5000:5000"
     depends_on:
@@ -33,12 +33,13 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: stock-web
+    container_name: stockpanzee-web
     command: npm run dev -- --host 0.0.0.0
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    env_file: ./frontend/.env
+    env_file:
+      - ./frontend/.env
     environment:
       - CHOKIDAR_USEPOLLING=true
       - CHOKIDAR_INTERVAL=100
@@ -51,3 +52,6 @@ services:
 
 networks:
   app-net:
+
+volumes:
+  stockpanzee_pgdata:

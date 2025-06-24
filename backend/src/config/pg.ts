@@ -1,13 +1,16 @@
 // /backend/src/config/pg.ts
+import dotenv from "dotenv";
 import { Pool } from "pg";
-import * as pg from "pg"; // pg.types 포함
+import * as pg from "pg";
+
+dotenv.config();
 
 const pool = new Pool({
-  user: process.env.PGUSER || "stock",
-  host: process.env.PGHOST || "db",
-  database: process.env.PGDATABASE || "stockdb",
-  password: process.env.PGPASSWORD || "stockpw",
-  port: Number(process.env.PGPORT) || 5432,
+  host: process.env.PG_HOST,
+  port: Number(process.env.PG_PORT),
+  user: process.env.PG_USER,
+  password: process.env.PG_PASS,
+  database: process.env.PG_NAME,
 });
 
 async function initializeTypeParsers(): Promise<void> {
@@ -15,13 +18,9 @@ async function initializeTypeParsers(): Promise<void> {
     const client = await pool.connect();
     client.release();
 
-    if (typeof pg.types !== "undefined") {
-      // 예시: BIGINT (OID 20) 값 파싱
-      pg.types.setTypeParser(20, (val: string): number => parseInt(val, 10));
-      console.log("Type parser for BIGINT (OID 20) registered successfully.");
-    } else {
-      console.error("pg.types is undefined. Check module initialization.");
-    }
+    // BIGINT 등 커스텀 파서 등록
+    pg.types.setTypeParser(20, (val: string) => parseInt(val, 10));
+    console.log("Type parser for BIGINT (OID 20) registered successfully.");
   } catch (error) {
     console.error("Error setting type parsers:", error);
   }
