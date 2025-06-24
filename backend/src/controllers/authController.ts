@@ -43,3 +43,15 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     next(err);
   }
 }
+
+/**
+ * POST /auth/logout
+ */
+export function logout(_req: Request, res: Response) {
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  res.json({ success: true, message: "로그아웃 되었습니다." });
+}

@@ -8,20 +8,20 @@ interface AuthContextProps {
   user: UserProfile | null;
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextProps>({
   user: null,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
 
-  // 마운트 시 이미 로그인된 상태라면 프로필 조회
+  // 마운트 시 프로필 로드
   useEffect(() => {
     authService
       .fetchProfile()
@@ -29,22 +29,20 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       .catch(() => setUser(null));
   }, []);
 
-  // 로그인 처리
   const login = async (data: LoginData) => {
     await authService.loginUser(data);
     const profile = await authService.fetchProfile();
     setUser(profile);
   };
 
-  // 회원가입 처리
   const register = async (data: RegisterData) => {
     await authService.registerUser(data);
     const profile = await authService.fetchProfile();
     setUser(profile);
   };
 
-  // 로그아웃 처리
-  const logout = () => {
+  const logout = async () => {
+    await authService.logoutUser();
     setUser(null);
   };
 

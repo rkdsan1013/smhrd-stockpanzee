@@ -6,6 +6,7 @@ export type RegisterData = {
   email: string;
   password: string;
 };
+
 export type LoginData = {
   email: string;
   password: string;
@@ -22,7 +23,7 @@ export const registerUser = async (data: RegisterData): Promise<void> => {
   await post("/auth/register", data);
 };
 
-// 로그인 (쿠키만 받고, 토큰은 백엔드가 HttpOnly 쿠키에 저장)
+// 로그인
 export const loginUser = async (data: LoginData): Promise<void> => {
   await post("/auth/login", data);
 };
@@ -33,4 +34,9 @@ export const fetchProfile = async (): Promise<UserProfile> => {
   return res.data;
 };
 
-export default { registerUser, loginUser, fetchProfile };
+// 로그아웃
+export const logoutUser = async (): Promise<void> => {
+  await post("/auth/logout");
+};
+
+export default { registerUser, loginUser, fetchProfile, logoutUser };
