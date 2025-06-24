@@ -2,43 +2,42 @@
 import bcrypt from "bcrypt";
 import { v4 as uuidv4, parse as uuidParse } from "uuid";
 import { SignJWT } from "jose";
-import { TextEncoder } from "util";
+import { jwtSecret } from "../config/jose";
 import * as authModel from "../models/authModel";
 
-// JWT 서명을 위한 비밀 키 (환경변수에서 읽음)
-const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET || "default_secret");
+export interface UserProfile {
+  uuid: string;
+  username: string;
+  avatar_url: string | null;
+}
 
 /**
- * 회원가입 서비스를 수행합니다.
- * - 중복 등록 검사
- * - 비밀번호 해싱
- * - UUID 생성 후 DB 등록 (users, user_profiles)
- * - JWT 토큰 생성 후 반환
+ * 회원가입: 이메일 중복 → 해시 → users+profiles 트랜잭션 → JWT 반환
  */
 export async function registerUserService(
   username: string,
   email: string,
   password: string,
 ): Promise<string> {
-  // 중복 등록 검사
-  const existingUsers = await authModel.findUserByEmail(email);
-  if (existingUsers.length > 0) {
-    throw new Error("이미 등록된 이메일입니다.");
+  const existing = await authModel.findUserByEmail(email);
+  if (existing.length) {
+    throw { statusCode: 400, message: "이미 등록된 이메일입니다." };
   }
 
   // 비밀번호 해싱
-  const saltRounds = 10;
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const hashed = await bcrypt.hash(password, 10);
 
-  // UUID 생성 및 BINARY(16) 변환
-  const userUuid = uuidv4();
-  const userUuidBuffer = Buffer.from(uuidParse(userUuid));
+  // UUID 생성 & Buffer 변환
+  const rawUuid = uuidv4();
+  const uuidBuf = Buffer.from(uuidParse(rawUuid));
+  // 토큰 페이로드용 16바이트를 32자리 hex 문자열로
+  const uuidHex = uuidBuf.toString("hex");
 
-  // DB에 사용자 등록 (users, user_profiles)
-  await authModel.registerUser(userUuidBuffer, email, hashedPassword, username);
+  // DB 등록
+  await authModel.registerUser(uuidBuf, email, hashed, username);
 
-  // JWT 토큰 생성 (payload에 uuid 포함)
-  const token = await new SignJWT({ uuid: userUuid })
+  // JWT 생성 (payload.uuid는 hyphen 없는 hex)
+  const token = await new SignJWT({ uuid: uuidHex })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("1h")
@@ -48,33 +47,40 @@ export async function registerUserService(
 }
 
 /**
- * 로그인 서비스를 수행합니다.
- * - 이메일로 사용자 조회 후, 비밀번호 검증
- * - JWT 토큰 생성 후 반환
+ * 로그인: 이메일 조회 → 비밀번호 비교 → JWT 반환
  */
 export async function loginUserService(email: string, password: string): Promise<string> {
-  // 이메일로 사용자 조회
   const users = await authModel.findUserByEmail(email);
-  if (users.length === 0) {
-    throw new Error("가입된 사용자가 없습니다.");
+  if (!users.length) {
+    throw { statusCode: 400, message: "가입된 사용자가 없습니다." };
   }
   const user = users[0];
-
-  // 비밀번호 비교
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    throw new Error("비밀번호가 일치하지 않습니다.");
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    throw { statusCode: 400, message: "비밀번호가 일치하지 않습니다." };
   }
 
-  // DB의 BINARY uuid를 hex 문자열로 변환
-  const userUuidStr = user.uuid.toString("hex");
+  // DB uuid(Buffer) → hex
+  const uuidHex = user.uuid.toString("hex");
 
-  // JWT 토큰 생성 (payload에 uuid 포함)
-  const token = await new SignJWT({ uuid: userUuidStr })
+  const token = await new SignJWT({ uuid: uuidHex })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("1h")
     .sign(jwtSecret);
 
   return token;
+}
+
+/**
+ * 프로필 조회: payload.uuid(hex) → Buffer → DB 조회
+ */
+export async function getProfileService(uuidHex: string): Promise<UserProfile> {
+  const buf = Buffer.from(uuidHex, "hex");
+  const profiles = await authModel.findUserByUuid(buf);
+  if (!profiles.length) {
+    throw { statusCode: 404, message: "사용자를 찾을 수 없습니다." };
+  }
+  const row = profiles[0];
+  return { uuid: uuidHex, username: row.username, avatar_url: row.avatar_url };
 }

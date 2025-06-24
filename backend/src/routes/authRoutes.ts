@@ -1,4 +1,4 @@
-// /backend/src/routes/auth.ts
+// /backend/src/routes/authRoutes.ts
 import express from "express";
 import * as authController from "../controllers/authController";
 

@@ -1,6 +1,7 @@
 // /backend/src/models/authQueries.ts
 export const SELECT_USER_BY_EMAIL = `
-  SELECT * FROM users 
+  SELECT uuid, email, password
+  FROM users
   WHERE email = ?
 `;
 
@@ -15,6 +16,8 @@ export const INSERT_USER_PROFILE = `
 `;
 
 export const SELECT_USER_BY_UUID = `
-  SELECT * FROM users
-  WHERE uuid = ?
+  SELECT u.uuid, u.email, p.name AS username, p.avatar_url
+  FROM users u
+  JOIN user_profiles p ON u.uuid = p.uuid
+  WHERE u.uuid = ?
 `;
