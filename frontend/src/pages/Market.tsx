@@ -5,7 +5,6 @@ import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
 
-// 숫자 단위 포맷 함수
 const formatCurrency = (value: number): string => {
   if (value >= 1e12) return (value / 1e12).toFixed(1) + "조";
   if (value >= 1e8) return (value / 1e8).toFixed(1) + "억";
@@ -28,14 +27,10 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
-
-  // 탭 & 뷰 모드
-  const [selectedMarketTab, setSelectedMarketTab] = useState<"전체" | "국내" | "해외" | "암호화폐">(
+  const [selectedMarketTab, setSelectedMarketTab] = useState<StockItem["category"] | "전체">(
     "전체",
   );
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
-
-  // 데이터 & 상태
   const [stockData, setStockData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
@@ -45,17 +40,25 @@ const Market: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  // 데이터 로드 & 5초 주기 갱신
+  const previousPricesRef = useRef<Map<number, number>>(new Map());
+  const highlightMapRef = useRef<Map<number, "up" | "down">>(new Map());
+  const [, forceUpdate] = useState(0);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const load = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
           const list: StockItem[] = assets.map((a) => {
-            let category: StockItem["category"];
-            if (a.market === "KOSPI" || a.market === "KOSDAQ") category = "국내";
-            else if (a.market === "NASDAQ" || a.market === "NYSE") category = "해외";
-            else if (a.market === "Binance") category = "암호화폐";
-            else category = "기타";
+            const category = (
+              ["KOSPI", "KOSDAQ"].includes(a.market)
+                ? "국내"
+                : ["NASDAQ", "NYSE"].includes(a.market)
+                  ? "해외"
+                  : a.market === "Binance"
+                    ? "암호화폐"
+                    : "기타"
+            ) as StockItem["category"];
 
             return {
               id: a.id,
@@ -68,6 +71,20 @@ const Market: React.FC = () => {
               category,
             };
           });
+
+          list.forEach((s) => {
+            const prev = previousPricesRef.current.get(s.id);
+            if (prev !== undefined && prev !== s.currentPrice) {
+              const dir = s.currentPrice > prev ? "up" : "down";
+              highlightMapRef.current.set(s.id, dir);
+              setTimeout(() => {
+                highlightMapRef.current.delete(s.id);
+                forceUpdate((v) => v + 1);
+              }, 500);
+            }
+            previousPricesRef.current.set(s.id, s.currentPrice);
+          });
+
           setStockData(list);
         })
         .catch(console.error);
@@ -78,12 +95,10 @@ const Market: React.FC = () => {
     return () => clearInterval(id);
   }, []);
 
-  // 탭/정렬/뷰 변경 시 페이지 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarketTab, viewMode, sortConfig]);
 
-  // 1) 탭 필터링
   const filtered = useMemo(
     () =>
       selectedMarketTab === "전체"
@@ -92,38 +107,36 @@ const Market: React.FC = () => {
     [stockData, selectedMarketTab],
   );
 
-  // 2) 정렬
   const sorted = useMemo(() => {
     const arr = [...filtered];
     const { key, direction } = sortConfig;
     const factor = direction === "asc" ? 1 : -1;
-    if (key === "name") {
-      arr.sort((a, b) => a.name.localeCompare(b.name) * factor);
-    } else {
-      arr.sort((a, b) => ((a as any)[key] - (b as any)[key]) * factor);
-    }
+    arr.sort((a, b) =>
+      key === "name"
+        ? a.name.localeCompare(b.name) * factor
+        : ((a as any)[key] - (b as any)[key]) * factor,
+    );
     return arr;
   }, [filtered, sortConfig]);
 
-  // 3) 즐겨찾기 우선 / 즐겨찾기만 표시
   const finalList = useMemo(() => {
     if (viewMode === "전체") {
-      return [...sorted].sort((a, b) => {
-        const af = favorites.includes(a.id) ? 0 : 1;
-        const bf = favorites.includes(b.id) ? 0 : 1;
-        return af - bf;
-      });
+      return [...sorted].sort((a, b) =>
+        favorites.includes(a.id) === favorites.includes(b.id)
+          ? 0
+          : favorites.includes(a.id)
+            ? -1
+            : 1,
+      );
     }
     return sorted.filter((s) => favorites.includes(s.id));
   }, [sorted, viewMode, favorites]);
 
-  // 4) 페이지네이션 (무한 스크롤)
   const visible = useMemo(
     () => finalList.slice(0, currentPage * itemsPerPage),
     [finalList, currentPage],
   );
 
-  // 시장 현황 통계
   const risingCount = finalList.filter((s) => s.priceChange > 0).length;
   const fallingCount = finalList.filter((s) => s.priceChange < 0).length;
   const unchangedCount = finalList.filter((s) => s.priceChange === 0).length;
@@ -133,8 +146,6 @@ const Market: React.FC = () => {
     : 0;
   const totalMarketCap = finalList.reduce((sum, s) => sum + s.marketCap, 0);
 
-  // 무한 스크롤 옵저버
-  const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -148,20 +159,27 @@ const Market: React.FC = () => {
     if (el) observer.observe(el);
     return () => {
       if (el) observer.unobserve(el);
-    };
+    }; // ✅ cleanup without null return
   }, [visible, finalList]);
 
-  // 즐겨찾기 토글
-  const toggleFavorite = (id: number) =>
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleFavorite = (id: number) => {
+    setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  };
 
-  // 정렬 토글
-  const handleSort = (key: SortKey) =>
-    setSortConfig((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+  const handleSort = (key: SortKey) => {
+    setSortConfig((p) =>
+      p.key === key
+        ? { key, direction: p.direction === "asc" ? "desc" : "asc" }
         : { key, direction: "desc" },
     );
+  };
+
+  const headerCols = [
+    { key: "name", label: "종목", width: "flex-1 text-left" },
+    { key: "currentPrice", label: "현재가", width: "w-28 text-right" },
+    { key: "priceChange", label: "변동률", width: "w-20 text-right" },
+    { key: "marketCap", label: "시가총액", width: "w-36 text-right" },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -171,15 +189,16 @@ const Market: React.FC = () => {
         </div>
       </header>
 
-      <section className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* 탭 */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div className="flex space-x-4 bg-gray-800 p-2 rounded-full">
+      <section className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="flex flex-wrap justify-between gap-4 mb-4">
+          <div className="flex space-x-2 bg-gray-800 p-2 rounded-full">
             {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setSelectedMarketTab(tab)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 focus:outline-none ${
+                onClick={() =>
+                  setSelectedMarketTab(tab === "전체" ? "전체" : (tab as StockItem["category"]))
+                }
+                className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
                   selectedMarketTab === tab
                     ? "bg-blue-600 text-white"
                     : "text-gray-300 hover:bg-blue-500 hover:text-white"
@@ -189,12 +208,12 @@ const Market: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="flex space-x-4 bg-gray-800 p-2 rounded-full">
+          <div className="flex space-x-2 bg-gray-800 p-2 rounded-full">
             {(["전체", "즐겨찾기"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 focus:outline-none ${
+                className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
                   viewMode === mode
                     ? "bg-blue-600 text-white"
                     : "text-gray-300 hover:bg-blue-500 hover:text-white"
@@ -206,138 +225,97 @@ const Market: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* 좌측 리스트 */}
-          <div className="w-full md:w-2/3">
-            {/* 헤더 */}
-            <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full md:w-2/3 space-y-2">
+            <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
               <div className="w-8" />
-              <div className="flex-1">
-                <button
-                  onClick={() => handleSort("name")}
-                  className="w-full text-left focus:outline-none active:scale-95 transition-transform duration-200"
-                >
-                  <span className="text-white font-semibold">
-                    종목 {sortConfig.key === "name" && (sortConfig.direction === "asc" ? "▲" : "▼")}
-                  </span>
-                </button>
-              </div>
-              <div className="w-40 text-right whitespace-nowrap">
-                <button
-                  onClick={() => handleSort("currentPrice")}
-                  className="w-full text-right focus:outline-none active:scale-95 transition-transform duration-200"
-                >
-                  <span className="text-white font-semibold">
-                    현재가{" "}
-                    {sortConfig.key === "currentPrice" &&
-                      (sortConfig.direction === "asc" ? "▲" : "▼")}
-                  </span>
-                </button>
-              </div>
-              <div className="w-20 text-right">
-                <button
-                  onClick={() => handleSort("priceChange")}
-                  className="w-full text-right focus:outline-none active:scale-95 transition-transform duration-200"
-                >
-                  <span className="text-white font-semibold">
-                    변동률{" "}
-                    {sortConfig.key === "priceChange" &&
-                      (sortConfig.direction === "asc" ? "▲" : "▼")}
-                  </span>
-                </button>
-              </div>
-              <div className="w-32 text-right whitespace-nowrap">
-                <button
-                  onClick={() => handleSort("marketCap")}
-                  className="w-full text-right focus:outline-none active:scale-95 transition-transform duration-200"
-                >
-                  <span className="text-white font-semibold">
-                    시가총액{" "}
-                    {sortConfig.key === "marketCap" && (sortConfig.direction === "asc" ? "▲" : "▼")}
-                  </span>
-                </button>
-              </div>
+              {headerCols.map((col) => (
+                <div key={col.key} className={col.width}>
+                  <button onClick={() => handleSort(col.key)}>
+                    <span className="text-white font-semibold">
+                      {col.label}
+                      {sortConfig.key === col.key && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+                    </span>
+                  </button>
+                </div>
+              ))}
             </div>
 
-            {/* 데이터 로우 */}
-            {visible.map((stock) => (
-              <div
-                key={stock.id}
-                className="flex items-center px-4 py-2 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
-                onClick={() => navigate(`/asset/${stock.id}`, { state: { asset: stock } })}
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(stock.id);
-                  }}
-                  className="w-8 flex justify-center focus:outline-none"
-                >
-                  <Icons
-                    name="star"
-                    className={`w-5 h-5 ${
-                      favorites.includes(stock.id) ? "text-yellow-500" : "text-gray-400"
-                    }`}
-                  />
-                </button>
-                <div className="flex-1">
-                  <p className="text-white font-semibold">{stock.name}</p>
-                  <p className="text-gray-400 text-xs">{stock.symbol}</p>
-                </div>
-                <div className="w-40 text-right whitespace-nowrap text-white">
-                  {stock.currentPrice.toLocaleString()}{" "}
-                  {stock.category === "암호화폐" ? "USDT" : "원"}
-                </div>
+            {visible.map((s) => {
+              const hl = highlightMapRef.current.get(s.id);
+              const borderClass =
+                hl === "up"
+                  ? "border-green-400"
+                  : hl === "down"
+                    ? "border-red-400"
+                    : "border-transparent";
+              return (
                 <div
-                  className={`w-20 text-right font-semibold ${
-                    stock.priceChange >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
+                  key={s.id}
+                  onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
+                  className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-500 cursor-pointer hover:bg-gray-700 hover:scale-[1.005] ${borderClass}`}
                 >
-                  {stock.priceChange >= 0 ? "+" : ""}
-                  {stock.priceChange.toFixed(2)}%
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(s.id);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center"
+                  >
+                    <Icons
+                      name="star"
+                      className={`w-5 h-5 ${favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"}`}
+                    />
+                  </button>
+                  <div className="flex-1 ml-2">
+                    <p className="text-white font-semibold">{s.name}</p>
+                    <p className="text-gray-400 text-xs">{s.symbol}</p>
+                  </div>
+                  <div className="w-28 text-right text-white font-medium">
+                    {s.currentPrice.toLocaleString()} 원
+                  </div>
+                  <div
+                    className={`w-20 text-right font-semibold ml-2 ${s.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {s.priceChange >= 0 ? "+" : ""}
+                    {s.priceChange.toFixed(2)}%
+                  </div>
+                  <div className="w-36 text-right text-gray-200 ml-2">
+                    {formatCurrency(s.marketCap)}
+                  </div>
                 </div>
-                <div className="w-32 text-right whitespace-nowrap text-white">
-                  {formatCurrency(stock.marketCap)}
-                </div>
-              </div>
-            ))}
-            {visible.length < finalList.length && <div ref={loadMoreRef} className="h-4" />}
+              );
+            })}
+            {visible.length < finalList.length && <div ref={loadMoreRef} className="h-2" />}
           </div>
 
-          {/* 우측 시장 현황 */}
           <div className="w-full md:w-1/3">
-            <div className="sticky top-28">
-              <div className="bg-gray-800 rounded-lg shadow p-4">
-                <h2 className="text-lg font-bold text-white text-center mb-3">시장 현황</h2>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">상승 종목</span>
-                    <span className="text-green-500 font-semibold">{risingCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">하락 종목</span>
-                    <span className="text-red-500 font-semibold">{fallingCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">변동 없음</span>
-                    <span className="text-white font-semibold">{unchangedCount}</span>
-                  </div>
-                  <hr className="border-gray-700" />
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">총 종목 수</span>
-                    <span className="text-white font-semibold">{totalCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">평균 현재가</span>
-                    <span className="text-white font-semibold">{avgPrice.toLocaleString()} 원</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">전체 시가총액</span>
-                    <span className="text-white font-semibold">
-                      {formatCurrency(totalMarketCap)}
-                    </span>
-                  </div>
+            <div className="sticky top-20 bg-gray-800 rounded-lg shadow p-4 space-y-2">
+              <h2 className="text-lg font-bold text-white text-center">시장 현황</h2>
+              {[
+                { label: "상승 종목", value: risingCount, color: "text-green-400" },
+                { label: "하락 종목", value: fallingCount, color: "text-red-400" },
+                { label: "변동 없음", value: unchangedCount, color: "text-gray-200" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex justify-between">
+                  <span className="text-gray-400">{label}</span>
+                  <span className={`${color} font-semibold`}>{value}</span>
                 </div>
+              ))}
+              <hr className="border-gray-700" />
+              <div className="flex justify-between">
+                <span className="text-gray-400">총 종목 수</span>
+                <span className="text-gray-200 font-semibold">{totalCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">평균 현재가</span>
+                <span className="text-gray-200 font-semibold">{avgPrice.toLocaleString()} 원</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">전체 시가총액</span>
+                <span className="text-gray-200 font-semibold">
+                  {formatCurrency(totalMarketCap)}
+                </span>
               </div>
             </div>
           </div>

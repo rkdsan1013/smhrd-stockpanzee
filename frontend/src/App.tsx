@@ -7,6 +7,7 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import Home from "./pages/Home";
 import News from "./pages/News";
+import NewsDetail from "./pages/NewsDetail";
 import Market from "./pages/Market";
 import AssetDetail from "./pages/assetDetail";
 import Community from "./pages/Community";
@@ -23,9 +24,11 @@ const App: React.FC = () => {
           <Route path="/" element={<MainPage />}>
             <Route index element={<Home />} />
             <Route path="news" element={<News />} />
+            <Route path="/news/:id" element={<NewsDetail />} /> {/* 상세페이지 */}
             <Route path="market" element={<Market />} />
             <Route path="asset/:id" element={<AssetDetail />} />
             <Route path="community" element={<Community />} />
+            <Route path="assetDetail" element={<AssetDetail/>} />
             {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
             <Route path="post" element={<PostCreationPage />} />
             <Route path="/communitydetail/:id" element={<CommunityDetail />} />

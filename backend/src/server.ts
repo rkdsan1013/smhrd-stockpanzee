@@ -6,9 +6,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import { setupSocket } from "./socket";
-// **경로를 꼭 이대로 유지하세요** (src/services 가 아닌 ./services)
-//import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
-//import { startPolygonPriceStream } from "./services/polygonPriceStream";
+import { startPolygonPriceStream } from "./services/polygonPriceStream";
+import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -53,13 +52,14 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Polygon 스트림
-  //startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
+  // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  //   updateCryptoAssetInfoPeriodically();
-  //   setInterval(updateCryptoAssetInfoPeriodically, 5000);
+  // updateCryptoAssetInfoPeriodically();
+  // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 });

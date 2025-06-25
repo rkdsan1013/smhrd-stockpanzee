@@ -1,5 +1,6 @@
 // /frontend/src/components/NewsCard.tsx
 import React from "react";
+import { Link } from "react-router-dom";
 import type { NewsItem } from "../services/newsService";
 
 interface NewsCardProps {
@@ -66,48 +67,52 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem }) => {
 
   return (
     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105">
-      {/* 이미지 영역 */}
-      <div className="relative h-48">
-        <img src={newsItem.image} alt={newsItem.title} className="object-cover w-full h-full" />
-      </div>
-      {/* 카드 본문 */}
-      <div className="p-4">
-        {/* 카테고리 및 감성 배지 */}
-        <div className="flex items-center space-x-2 mb-3">
-          <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-            {getCategoryLabel(newsItem.category)}
-          </span>
-          <span
-            className={`px-3 py-1 text-xs font-semibold rounded-full ${getSentimentBadgeStyles(newsItem.sentiment)}`}
-          >
-            {getSentimentLabel(newsItem.sentiment)}
-          </span>
+      <Link to={`/news/${newsItem.id}`} className="block hover:no-underline">
+        {/* 이미지 영역 */}
+        <div className="relative h-48">
+          <img src={newsItem.image} alt={newsItem.title} className="object-cover w-full h-full" />
         </div>
-        {/* 관련 종목 태그 */}
-        {tagsArray.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tagsArray.map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
-              >
-                {tag}
-              </span>
-            ))}
+        {/* 카드 본문 */}
+        <div className="p-4">
+          {/* 카테고리 및 감성 배지 */}
+          <div className="flex items-center space-x-2 mb-3">
+            <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
+              {getCategoryLabel(newsItem.category)}
+            </span>
+            <span
+              className={`px-3 py-1 text-xs font-semibold rounded-full ${getSentimentBadgeStyles(newsItem.sentiment)}`}
+            >
+              {getSentimentLabel(newsItem.sentiment)}
+            </span>
           </div>
-        )}
-        {/* 뉴스 제목 */}
-        <h3 className="text-lg font-bold text-white mb-2">{newsItem.title_ko || newsItem.title}</h3>
-        {/* 간결 요약 */}
-        <p className="text-sm text-gray-300 mb-3">{newsItem.brief_summary}</p>
-        {/* 퍼블리셔 및 발행일 영역 */}
-        <div className="mt-4 space-y-1">
-          <div className="text-xs text-gray-400">{newsItem.publisher}</div>
-          <div className="text-xs text-gray-400">
-            {new Date(newsItem.published_at).toLocaleString()}
+          {/* 관련 종목 태그 */}
+          {tagsArray.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tagsArray.map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {/* 뉴스 제목 */}
+          <h3 className="text-lg font-bold text-white mb-2">
+            {newsItem.title_ko || newsItem.title}
+          </h3>
+          {/* 간결 요약 */}
+          <p className="text-sm text-gray-300 mb-3">{newsItem.brief_summary}</p>
+          {/* 퍼블리셔 및 발행일 영역 */}
+          <div className="mt-4 space-y-1">
+            <div className="text-xs text-gray-400">{newsItem.publisher}</div>
+            <div className="text-xs text-gray-400">
+              {new Date(newsItem.published_at).toLocaleString()}
+            </div>
           </div>
         </div>
-      </div>
+      </Link>
     </div>
   );
 };
