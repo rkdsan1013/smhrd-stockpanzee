@@ -263,7 +263,7 @@ const Market: React.FC = () => {
                     className="w-8 h-8 flex items-center justify-center"
                   >
                     <Icons
-                      name="star"
+                      name="banana"
                       className={`w-5 h-5 ${favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"}`}
                     />
                   </button>
