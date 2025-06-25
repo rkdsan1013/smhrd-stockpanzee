@@ -22,6 +22,7 @@ export interface Asset extends RowDataPacket {
   updated_at: Date;
 }
 
+
 /** 암호화폐 전용 타입 (coin_id: LOWER(name)) */
 export interface CryptoAsset extends RowDataPacket {
   id: number;
@@ -72,4 +73,16 @@ export async function getAssetBySymbolAndMarket(
 export async function findCryptoAssets(): Promise<CryptoAsset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
   return rows as CryptoAsset[];
+}
+
+//자산 종목 정보
+export async function findAssetWithInfoById(assetId: number) {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.symbol, a.name, a.market, ai.current_price, ai.price_change
+     FROM assets a
+     LEFT JOIN asset_info ai ON a.id = ai.asset_id
+     WHERE a.id = ?`, [assetId]
+  );
+  if ((rows as any[]).length === 0) return null;
+  return (rows as any[])[0]; // id 포함
 }

@@ -1,5 +1,6 @@
 // /frontend/src/components/NewsCard.tsx
 import React from "react";
+import { Link } from "react-router-dom";
 import type { NewsItem } from "../services/newsService";
 
 interface NewsCardProps {
@@ -65,6 +66,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem }) => {
   }
 
   return (
+    <Link to={`/news/${newsItem.id}`} className="block hover:no-underline">
     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105">
       {/* 이미지 영역 */}
       <div className="relative h-48">
@@ -109,6 +111,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem }) => {
         </div>
       </div>
     </div>
+    </Link>
   );
 };
 
