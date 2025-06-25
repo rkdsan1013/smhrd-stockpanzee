@@ -33,7 +33,6 @@ function timeAgo(dateString: string) {
 
 // 이미지 미리보기 및 파일 업로드 컴포넌트
 function FileInputWithPreview({
-  file,
   setFile,
   preview,
   setPreview,
