@@ -6,11 +6,21 @@ import { fetchAndProcessSmartKrxNews } from "../services/news/krxNewsService";
 import { getAllNews } from "../models/newsTransactions";
 import * as newsService from "../services/newsService";
 
-// 뉴스 목록 조회: 뉴스와 뉴스 분석 데이터를 LEFT JOIN하여 반환
+// 뉴스 목록 조회: 종목 필터링(asset, exclude) 지원
 export const getNews = async (req: Request, res: Response) => {
+  const { asset, exclude } = req.query;
   try {
-    const news = await getAllNews();
-    res.status(200).json(news);
+    if (asset) {
+      // asset 파라미터가 있으면 해당 종목 심볼(news_analysis.tags 기반)으로 필터 조회
+      const list = await newsService.getNewsByAsset(
+        String(asset),
+        exclude ? Number(exclude) : undefined,
+      );
+      return res.status(200).json(list);
+    }
+    // 기본: 전체 뉴스 조회
+    const all = await getAllNews();
+    res.status(200).json(all);
   } catch (error: any) {
     console.error("뉴스 조회 중 오류 발생:", error);
     res.status(500).json({ error: error.message || "뉴스 조회 중 오류 발생" });
@@ -49,7 +59,6 @@ export const testStockNewsProcessing = async (req: Request, res: Response) => {
 };
 
 // 뉴스 상세보기 처리
-
 export const getNewsDetail = async (req: Request, res: Response): Promise<void> => {
   const newsId = Number(req.params.id);
   if (isNaN(newsId)) {
@@ -65,7 +74,7 @@ export const getNewsDetail = async (req: Request, res: Response): Promise<void> 
     res.json(newsDetail);
   } catch (err) {
     // ★ 반드시 에러 로그 콘솔에 남기기!
-    console.error("[getNewsDetail 500]", err);  // ← 이게 꼭 찍혀야 해요!
+    console.error("[getNewsDetail 500]", err);
     res.status(500).json({ error: "서버 오류" });
   }
 };

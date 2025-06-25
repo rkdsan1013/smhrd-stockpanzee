@@ -1,5 +1,5 @@
 // frontend/src/pages/NewsDetail.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchNewsDetail, fetchLatestNewsByAsset } from "../services/newsService";
 import type { NewsDetail, NewsItem } from "../services/newsService";
@@ -39,8 +39,8 @@ const NewsDetailPage: React.FC = () => {
     fetchNewsDetail(+id)
       .then((data) => {
         setNews(data);
-        if (data.tags?.length) {
-          return fetchLatestNewsByAsset(data.tags[0], data.id);
+        if (data.assets_symbol) {
+          return fetchLatestNewsByAsset(data.assets_symbol, data.id);
         }
         return Promise.resolve([]);
       })
@@ -157,7 +157,9 @@ const NewsDetailPage: React.FC = () => {
 
           {/* 최신 뉴스 */}
           <div className="bg-gray-800 rounded-xl p-4">
-            <h4 className="text-white font-bold mb-4">{news.tags?.[0] || "종목"} 최신 뉴스</h4>
+            <h4 className="text-white font-bold mb-4">
+              {news.assets_name ?? news.assets_symbol ?? "종목"} 최신 뉴스
+            </h4>
             <ul className="space-y-3">
               {latest.length === 0 ? (
                 <li className="text-gray-500">관련 뉴스 없음</li>
@@ -182,4 +184,3 @@ const NewsDetailPage: React.FC = () => {
 };
 
 export default NewsDetailPage;
-// frontend/src/pages/NewsDetail.tsx
