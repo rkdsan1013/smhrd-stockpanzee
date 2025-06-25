@@ -30,8 +30,6 @@ services:
       - db
     networks:
       - app-net
-    environment:
-      - TZ=Asia/Seoul
 
   frontend:
     build: ./frontend
