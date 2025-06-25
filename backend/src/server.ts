@@ -61,5 +61,5 @@ server.listen(PORT, () => {
 
   // Binance 암호화폐 5초 주기 DB 업데이트
   // updateCryptoAssetInfoPeriodically();
-  setInterval(updateCryptoAssetInfoPeriodically, 5000);
+  // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 });
