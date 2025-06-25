@@ -182,3 +182,4 @@ const NewsDetailPage: React.FC = () => {
 };
 
 export default NewsDetailPage;
+// frontend/src/pages/NewsDetail.tsx
