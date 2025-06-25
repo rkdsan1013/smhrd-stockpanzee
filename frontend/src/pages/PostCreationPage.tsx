@@ -17,9 +17,31 @@ const PostCreationPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!title.trim() || !content.trim()) {
+    alert("제목과 내용을 입력해주세요.");
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append("community_title", title);
+    formData.append("community_contents", content);
+    formData.append("category", category);
+    if (image) formData.append("image", image);
+
+    // API 주소는 환경변수 활용, 백엔드 라우터 맞게 수정
+    await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/community`, 
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" }, withCredentials: true }
+    );
+    alert("글이 성공적으로 작성되었습니다.");
+    navigate("/community"); // 작성 후 목록으로 이동
+  } catch (err: any) {
+    alert("작성 실패: " + (err.response?.data?.message || err.message));
+  }
+};
 
   // ...아래는 기존 렌더링 그대로...
 

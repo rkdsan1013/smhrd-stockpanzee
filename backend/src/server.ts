@@ -12,7 +12,7 @@ import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
 import newsRoutes from "./routes/newsRoutes";
-import communityRoutes from "./routes/community";
+import communityRoutes from "./routes/communityRoutes";
 import redditRoutes from "./routes/redditRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import userRoutes from "./routes/userRoutes";

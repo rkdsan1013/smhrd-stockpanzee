@@ -70,31 +70,27 @@ export const getCommunityPost = async (
   }
 };
 
-// 게시글 등록
+// 게시글 등록 (assets_id, image 없이)
 export const createCommunityPost = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const r = req as MulterRequest;
-
   try {
-    const { assets_id, uuid, community_title, community_contents, category } = r.body;
-    const community_img = r.file?.buffer ?? null;
+    const { uuid, community_title, community_contents, category } = req.body;
 
-    if (!assets_id || !uuid || !community_title || !community_contents || !category) {
+    // 필수값 체크
+    if (!uuid || !community_title || !community_contents || !category) {
       res.status(400).json({ message: "필수값 누락" });
       return;
     }
 
     const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
     const result = await communityService.createCommunityPost({
-      assets_id: Number(assets_id),
       uuid: uuidBuffer,
       community_title,
       community_contents,
       category,
-      community_img,
     });
 
     if (!result.insertId) {
@@ -110,6 +106,7 @@ export const createCommunityPost = async (
     next(err);
   }
 };
+
 
 // 게시글 수정
 export const updateCommunityPost = async (

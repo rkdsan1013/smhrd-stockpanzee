@@ -11,12 +11,10 @@ export async function getCommunityPosts() {
 
 // 게시글 생성
 export async function createCommunityPost(post: {
-  assets_id: number;
   uuid: Buffer;
   community_title: string;
   community_contents: string;
   category: string;
-  community_img?: Buffer | null;
 }) {
   return await communityModel.createCommunityPost(post);
 }

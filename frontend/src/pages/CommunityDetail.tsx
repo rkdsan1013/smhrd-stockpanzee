@@ -1,3 +1,4 @@
+//frontend/src/pages/CommunityDetail.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import Icons from "../components/Icons";
