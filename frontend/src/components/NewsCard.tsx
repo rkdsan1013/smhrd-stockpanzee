@@ -66,8 +66,8 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem }) => {
   }
 
   return (
-    <Link to={`/news/${newsItem.id}`} className="block hover:no-underline">
     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105">
+      <Link to={`/news/${newsItem.id}`} className="block hover:no-underline">
       {/* 이미지 영역 */}
       <div className="relative h-48">
         <img src={newsItem.image} alt={newsItem.title} className="object-cover w-full h-full" />
@@ -110,8 +110,8 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem }) => {
           </div>
         </div>
       </div>
-    </div>
     </Link>
+    </div>
   );
 };
 

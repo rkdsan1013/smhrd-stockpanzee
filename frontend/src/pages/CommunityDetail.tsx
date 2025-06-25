@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import Icons from "../components/Icons";
 import axios from "axios";
 
+
 // 타입 선언
 interface Reply {
   id: number;
@@ -19,15 +20,16 @@ interface Comment extends Reply {
 }
 
 // 시간 표시 함수
-const timeAgo = (dateString: string) => {
+function timeAgo(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 0) return '방금 전';  // 음수 방지
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
   return `${Math.floor(diff / 86400)}일 전`;
-};
+}
 
 // 이미지 미리보기 및 파일 업로드 컴포넌트
 function FileInputWithPreview({
@@ -249,15 +251,53 @@ const CommunityDetail: React.FC = () => {
   }, [id]);
 
   // 게시글 상세 + 조회수 fetch
-  useEffect(() => {
+  const fetchPost = useCallback(() => {
     setLoading(true);
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
       .then((res) => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    fetchPost();
     fetchComments();
-  }, [id, fetchComments]);
+  }, [id, fetchPost, fetchComments]);
+
+  // 게시글 좋아요 관련 상태
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+
+  // post가 바뀔 때 서버값으로 동기화
+  useEffect(() => {
+    setIsLiked(post?.isLiked || false);
+    setLikeCount(post?.community_likes || 0);
+  }, [post]);
+
+  // 좋아요 토글 (서버 응답에 따라 동기화)
+  const handleLikeToggle = async () => {
+    if (!post) return;
+    try {
+      const url = `${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`;
+      // 서버에서 { isLiked, likes } 반환하도록 수정 필요!
+      const res = await axios.post(url, {}, { withCredentials: true });
+      setIsLiked(res.data.isLiked);
+      setLikeCount(res.data.likes);
+    } catch {
+      alert("로그인 후 사용 가능합니다.");
+    }
+  };
+
+  // 댓글/대댓글 좋아요 (fetchComments 후 서버 동기화)
+  const handleCommentLike = (commentId: number, isLiked: boolean) => {
+    const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${commentId}/like`;
+    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
+  };
+  const handleReplyLike = (replyId: number, isLiked: boolean) => {
+    const url = `${import.meta.env.VITE_API_BASE_URL}/community/replies/${replyId}/like`;
+    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
+  };
 
   // 댓글 등록
   const handleCommentSubmit = (content: string, img: File | null) => {
@@ -282,43 +322,6 @@ const CommunityDetail: React.FC = () => {
         headers: { "Content-Type": "multipart/form-data" },
       })
       .then(() => fetchComments());
-  };
-
-  // 댓글/대댓글 좋아요
-  const handleCommentLike = (commentId: number, isLiked: boolean) => {
-    const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${commentId}/like`;
-    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
-  };
-  const handleReplyLike = (replyId: number, isLiked: boolean) => {
-    const url = `${import.meta.env.VITE_API_BASE_URL}/community/replies/${replyId}/like`;
-    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
-  };
-
-  // 게시글 좋아요
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-
-  useEffect(() => {
-    setIsLiked(post?.isLiked || false);
-    setLikeCount(post?.community_likes || 0);
-  }, [post]);
-
-  const handleLikeToggle = async () => {
-    if (!post) return;
-    try {
-      const url = `${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`;
-      if (isLiked) {
-        await axios.delete(url, { withCredentials: true });
-        setIsLiked(false);
-        setLikeCount(likeCount - 1);
-      } else {
-        await axios.post(url, {}, { withCredentials: true });
-        setIsLiked(true);
-        setLikeCount(likeCount + 1);
-      }
-    } catch {
-      alert("로그인 후 사용 가능합니다.");
-    }
   };
 
   // 더보기 메뉴
@@ -416,7 +419,9 @@ const CommunityDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="text-gray-200 mb-8">{post.community_contents}</div>
+      <div className="text-gray-200 mb-8 whitespace-pre-wrap">
+        {post.community_contents}
+      </div>
       <hr className="border-black opacity-60 my-6" />
 
       {/* 댓글 입력 */}

@@ -7,43 +7,32 @@ const PostCreationPage: React.FC = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("국내");
   const [content, setContent] = useState("");
-  const [image, setImage] = useState<File | null>(null);
 
   const navigate = useNavigate();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files[0]);
+    const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim()) {
+      alert("제목과 내용을 입력해주세요.");
+      return;
+    }
+    try {
+      // 환경변수에서 API 주소 읽어와서 사용
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/community`,
+        {
+          community_title: title,
+          community_contents: content,
+          category,
+        },
+        { withCredentials: true }
+      );
+      alert("글이 성공적으로 작성되었습니다.");
+      navigate("/community"); // 작성 후 목록으로 이동
+    } catch (err: any) {
+      alert("작성 실패: " + (err.response?.data?.message || err.message));
     }
   };
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!title.trim() || !content.trim()) {
-    alert("제목과 내용을 입력해주세요.");
-    return;
-  }
-  try {
-    const formData = new FormData();
-    formData.append("community_title", title);
-    formData.append("community_contents", content);
-    formData.append("category", category);
-    if (image) formData.append("image", image);
-
-    // API 주소는 환경변수 활용, 백엔드 라우터 맞게 수정
-    await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/community`, 
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" }, withCredentials: true }
-    );
-    alert("글이 성공적으로 작성되었습니다.");
-    navigate("/community"); // 작성 후 목록으로 이동
-  } catch (err: any) {
-    alert("작성 실패: " + (err.response?.data?.message || err.message));
-  }
-};
-
-  // ...아래는 기존 렌더링 그대로...
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
@@ -96,8 +85,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           ></textarea>
         </div>
 
-        {/* 이미지 업로드 */}
-        <div>
+        {/* 이미지 업로드 - 일단 보류/숨김 */}
+        {/* <div>
           <label htmlFor="image" className="block text-sm font-medium mb-1">
             이미지 업로드
           </label>
@@ -108,7 +97,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             onChange={handleImageChange}
             className="w-full text-white"
           />
-        </div>
+        </div> */}
 
         {/* 제출 버튼 */}
         <div className="flex justify-end">

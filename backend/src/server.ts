@@ -60,7 +60,7 @@ server.listen(PORT, () => {
   // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  updateCryptoAssetInfoPeriodically();
-  setInterval(updateCryptoAssetInfoPeriodically, 5000);
+  // updateCryptoAssetInfoPeriodically();
+  // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 });
 
