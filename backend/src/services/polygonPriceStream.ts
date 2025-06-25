@@ -7,7 +7,7 @@ import WebSocket from "ws";
 import type { Server as IOServer } from "socket.io";
 import mysql from "mysql2/promise";
 import * as model from "../models/assetModel";
-import { upsertAssetInfo } from "../models/assetModel";
+import { upsertAssetInfo, findStockAssets } from "../models/assetModel";
 import pool from "../config/db"; // MySQL 연결 풀
 
 // 환경변수에서 FMP_API_KEY 도 읽음
@@ -130,7 +130,7 @@ export async function updatePreviousCloses(): Promise<void> {
   );
 
   // assets 테이블에서 관련 데이터를 가져옴
-  const assets = await model.findAllAssets();
+  const assets = await findStockAssets();
   const mapId = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));
 
   // 폴리곤 API 결과에서 업데이트할 심볼 리스트 (대문자로 변환)
@@ -172,10 +172,11 @@ export async function startPolygonPriceStream(io: IOServer) {
   await updatePreviousCloses();
 
   // 이후 실시간 업데이트에서는 시가총액은 업데이트된 값 그대로 사용
-  const assets = await model.findAllAssets();
+  const assets = await findStockAssets();
   const idMap = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));
 
   let reconnect = 1000;
+  priceMap.clear();
   async function connect() {
     const ws = new WebSocket(POLYGON_WS_URL);
 

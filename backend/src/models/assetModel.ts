@@ -7,6 +7,7 @@ import {
   UPSERT_ASSET_INFO,
   GET_ASSET_BY_SYMBOL_AND_MARKET,
   SELECT_CRYPTO_ASSETS,
+  SELECT_STOCK_ASSETS,
   UPSERT_CRYPTO_INFO,
 } from "./assetQueries";
 
@@ -72,4 +73,10 @@ export async function getAssetBySymbolAndMarket(
 export async function findCryptoAssets(): Promise<CryptoAsset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
   return rows as CryptoAsset[];
+}
+
+// 주식 전용 조회 함수 추가
+export async function findStockAssets(): Promise<Asset[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(SELECT_STOCK_ASSETS);
+  return rows as Asset[];
 }

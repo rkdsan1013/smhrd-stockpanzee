@@ -65,3 +65,21 @@ export const SELECT_CRYPTO_ASSETS = `
   WHERE market = 'Binance'
   ORDER BY id;
 `;
+
+export const SELECT_STOCK_ASSETS = `
+  SELECT
+    a.id,
+    a.symbol,
+    a.name,
+    a.market,
+    ai.current_price    AS current_price,
+    ai.price_change     AS price_change,
+    ai.market_cap       AS market_cap,
+    a.created_at,
+    a.updated_at
+  FROM assets AS a
+  LEFT JOIN asset_info AS ai
+    ON ai.asset_id = a.id
+  WHERE a.market IN ('NYSE','NASDAQ')
+  ORDER BY a.id;
+`;
