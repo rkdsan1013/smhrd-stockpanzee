@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import type { NewsItem } from "../services/newsService";
 
 export interface NewsCardProps {
-  /** 렌더링 모드: default | compact | hero */
-  variant?: "default" | "compact" | "hero";
+  /** "hero" | "default" | "compact" */
+  variant?: "hero" | "default" | "compact";
   newsItem: NewsItem;
 }
 
@@ -29,9 +29,8 @@ const getSentiment = (v: number | string | null): { label: string; style: string
 const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) => {
   // tags 배열화
   let tags: string[] = [];
-  if (Array.isArray(newsItem.tags)) {
-    tags = newsItem.tags as string[];
-  } else if (typeof newsItem.tags === "string") {
+  if (Array.isArray(newsItem.tags)) tags = newsItem.tags as string[];
+  else if (typeof newsItem.tags === "string") {
     try {
       const p = JSON.parse(newsItem.tags);
       if (Array.isArray(p)) tags = p as string[];
@@ -39,32 +38,74 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
   }
 
   const sentiment = getSentiment(newsItem.sentiment);
+  const categoryLabel = getCategoryLabel(newsItem.category);
 
-  // HERO 모드
-  if (variant === "hero") {
+  // 이미지 높이 & 제목 크기
+  const imgHeight = variant === "hero" ? "h-80" : variant === "default" ? "h-48" : "";
+  const titleSize =
+    variant === "hero" ? "text-3xl" : variant === "default" ? "text-lg" : "text-base";
+
+  // COMPACT 모드
+  if (variant === "compact") {
     return (
       <Link
         to={`/news/${newsItem.id}`}
-        className="block bg-gray-800 rounded-lg overflow-hidden transform hover:scale-[1.02] shadow-lg transition"
+        className="flex flex-col bg-gray-800 rounded-lg overflow-hidden transform hover:scale-[1.02] transition"
       >
-        <div className="relative w-full h-80">
-          <img
-            src={newsItem.image}
-            alt={newsItem.title}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
+        <div className="p-4 flex-1 flex flex-col justify-between">
+          {/* 상단: 배지 + 제목 */}
+          <div>
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="px-2 py-1 bg-gray-700 text-xs font-semibold rounded-full">
+                {categoryLabel}
+              </span>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${sentiment.style}`}>
+                {sentiment.label}
+              </span>
+            </div>
+            <h3 className="font-semibold text-white line-clamp-2">
+              {newsItem.title_ko || newsItem.title}
+            </h3>
+          </div>
+          {/* 하단: 퍼블리셔 · 날짜 */}
+          <div className="mt-4 text-xs text-gray-400 space-y-1">
+            <div>{newsItem.publisher}</div>
+            <div>{new Date(newsItem.published_at).toLocaleString()}</div>
+          </div>
         </div>
-        <div className="p-6 space-y-4">
+      </Link>
+    );
+  }
+
+  // HERO / DEFAULT 모드
+  return (
+    <Link
+      to={`/news/${newsItem.id}`}
+      className="flex flex-col bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-[1.02] transition"
+    >
+      {/* 이미지 */}
+      <div className={`relative w-full ${imgHeight}`}>
+        <img
+          src={newsItem.image}
+          alt={newsItem.title}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+      </div>
+      {/* 내용 */}
+      <div className="flex flex-col flex-1 p-6">
+        <div className="space-y-3">
+          {/* 배지 */}
           <div className="flex items-center space-x-2">
             <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-              {getCategoryLabel(newsItem.category)}
+              {categoryLabel}
             </span>
             <span className={`px-3 py-1 text-xs font-semibold rounded-full ${sentiment.style}`}>
               {sentiment.label}
             </span>
           </div>
+          {/* 종목 태그 */}
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-2">
               {tags.map((t, i) => (
                 <span
                   key={i}
@@ -75,76 +116,17 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
               ))}
             </div>
           )}
-          <h2 className="text-3xl font-bold text-white">{newsItem.title_ko || newsItem.title}</h2>
-          <p className="text-gray-300 line-clamp-3">{newsItem.summary || newsItem.brief_summary}</p>
-        </div>
-      </Link>
-    );
-  }
-
-  // COMPACT 모드: 이미지 없이 텍스트 리스트 스타일
-  if (variant === "compact") {
-    return (
-      <Link
-        to={`/news/${newsItem.id}`}
-        className="block bg-gray-800 rounded-lg p-3 hover:bg-gray-700 transition"
-      >
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-semibold text-white line-clamp-2 flex-1">
+          {/* 제목 */}
+          <h3 className={`font-bold text-white ${titleSize}`}>
             {newsItem.title_ko || newsItem.title}
           </h3>
-          <span
-            className={`ml-3 px-2 py-0.5 text-xs font-semibold rounded-full ${sentiment.style}`}
-          >
-            {sentiment.label}
-          </span>
+          {/* 요약 */}
+          <p className="text-sm text-gray-300 line-clamp-2">
+            {newsItem.brief_summary || newsItem.summary}
+          </p>
         </div>
-        <div className="mt-1 flex items-center text-xs text-gray-400 space-x-2">
-          <span>{new Date(newsItem.published_at).toLocaleDateString()}</span>
-          <span>·</span>
-          <span>{getCategoryLabel(newsItem.category)}</span>
-        </div>
-      </Link>
-    );
-  }
-
-  // DEFAULT 모드
-  return (
-    <Link
-      to={`/news/${newsItem.id}`}
-      className="block bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-[1.02] transition"
-    >
-      <div className="relative w-full h-48">
-        <img
-          src={newsItem.image}
-          alt={newsItem.title}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-      </div>
-      <div className="p-4 space-y-3">
-        <div className="flex items-center space-x-2">
-          <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-            {getCategoryLabel(newsItem.category)}
-          </span>
-          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${sentiment.style}`}>
-            {sentiment.label}
-          </span>
-        </div>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {tags.map((t, i) => (
-              <span
-                key={i}
-                className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-        <h3 className="text-lg font-bold text-white">{newsItem.title_ko || newsItem.title}</h3>
-        <p className="text-sm text-gray-300 line-clamp-2">{newsItem.brief_summary}</p>
-        <div className="mt-4 text-xs text-gray-400 space-y-1">
+        {/* 하단: 퍼블리셔 · 작성일 */}
+        <div className="mt-auto pt-4 text-xs text-gray-400 space-y-1">
           <div>{newsItem.publisher}</div>
           <div>{new Date(newsItem.published_at).toLocaleString()}</div>
         </div>
