@@ -5,9 +5,9 @@ export const SELECT_ALL_ASSETS = `
     a.symbol,
     a.name,
     a.market,
-    ai.current_price    AS current_price,
-    ai.price_change     AS price_change,
-    ai.market_cap       AS market_cap,
+    ai.current_price   AS current_price,
+    ai.price_change    AS price_change,
+    ai.market_cap      AS market_cap,
     a.created_at,
     a.updated_at
   FROM assets AS a
@@ -30,7 +30,8 @@ export const UPSERT_ASSET = `
 `;
 
 export const UPSERT_ASSET_INFO = `
-  INSERT INTO asset_info (asset_id, current_price, price_change, market_cap, last_updated)
+  INSERT INTO asset_info
+    (asset_id, current_price, price_change, market_cap, last_updated)
   VALUES (?, ?, ?, ?, NOW())
   ON DUPLICATE KEY UPDATE
     current_price = VALUES(current_price),
@@ -40,14 +41,17 @@ export const UPSERT_ASSET_INFO = `
 `;
 
 export const GET_ASSET_BY_SYMBOL_AND_MARKET = `
-  SELECT a.id, a.symbol, a.name, a.market, ai.market_cap
+  SELECT
+    a.id, a.symbol, a.name, a.market, ai.market_cap
   FROM assets AS a
-  LEFT JOIN asset_info AS ai ON ai.asset_id = a.id
+  LEFT JOIN asset_info AS ai
+    ON ai.asset_id = a.id
   WHERE a.symbol = ? AND a.market = ?;
 `;
 
 export const UPSERT_CRYPTO_INFO = `
-  INSERT INTO asset_info (asset_id, current_price, price_change, market_cap, last_updated)
+  INSERT INTO asset_info
+    (asset_id, current_price, price_change, market_cap, last_updated)
   VALUES (?, ?, ?, ?, NOW())
   ON DUPLICATE KEY UPDATE
     current_price = VALUES(current_price),

@@ -11,7 +11,7 @@ export interface MulterRequest extends Request {
 export const getCommunityPosts = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const posts = await communityService.getCommunityPosts();
@@ -21,12 +21,11 @@ export const getCommunityPosts = async (
   }
 };
 
-
 // 게시글 상세 조회 (조회수 1 증가)
 export const getCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
@@ -55,10 +54,7 @@ export const getCommunityPost = async (
     const user_uuid = (req as any).user?.uuid;
     let isLiked = false;
     if (user_uuid) {
-      isLiked = await communityService.isPostLikedByUser(
-        id,
-        Buffer.from(user_uuid, "hex")
-      );
+      isLiked = await communityService.isPostLikedByUser(id, Buffer.from(user_uuid, "hex"));
     }
     // 좋아요 개수
     const community_likes = await communityService.getCommunityLikesCount(id);
@@ -67,7 +63,7 @@ export const getCommunityPost = async (
     res.json({
       ...post,
       community_likes,
-      isLiked
+      isLiked,
     });
   } catch (err) {
     next(err);
@@ -78,27 +74,15 @@ export const getCommunityPost = async (
 export const createCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   const r = req as MulterRequest;
 
   try {
-    const {
-      assets_id,
-      uuid,
-      community_title,
-      community_contents,
-      category,
-    } = r.body;
+    const { assets_id, uuid, community_title, community_contents, category } = r.body;
     const community_img = r.file?.buffer ?? null;
 
-    if (
-      !assets_id ||
-      !uuid ||
-      !community_title ||
-      !community_contents ||
-      !category
-    ) {
+    if (!assets_id || !uuid || !community_title || !community_contents || !category) {
       res.status(400).json({ message: "필수값 누락" });
       return;
     }
@@ -131,7 +115,7 @@ export const createCommunityPost = async (
 export const updateCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     // TODO: 실제 업데이트 로직 구현
@@ -145,7 +129,7 @@ export const updateCommunityPost = async (
 export const deleteCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     // TODO: 실제 삭제 로직 구현
@@ -155,14 +139,11 @@ export const deleteCommunityPost = async (
   }
 };
 
-
-
-
 // 게시글 좋아요
 export const likeCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
@@ -172,10 +153,7 @@ export const likeCommunityPost = async (
       return;
     }
 
-    await communityService.likeCommunityPost(
-      id,
-      Buffer.from(user_uuid, "hex")
-    );
+    await communityService.likeCommunityPost(id, Buffer.from(user_uuid, "hex"));
     res.json({ message: "좋아요 완료" });
   } catch (err) {
     next(err);
@@ -186,7 +164,7 @@ export const likeCommunityPost = async (
 export const unlikeCommunityPost = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
@@ -196,10 +174,7 @@ export const unlikeCommunityPost = async (
       return;
     }
 
-    await communityService.unlikeCommunityPost(
-      id,
-      Buffer.from(user_uuid, "hex")
-    );
+    await communityService.unlikeCommunityPost(id, Buffer.from(user_uuid, "hex"));
     res.json({ message: "좋아요 취소" });
   } catch (err) {
     next(err);
@@ -209,7 +184,7 @@ export const unlikeCommunityPost = async (
 export const getComments = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const comm_id = Number(req.params.id);
@@ -225,7 +200,7 @@ export const getComments = async (
 export const createComment = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const { content, parent_id, uuid } = req.body;
@@ -254,7 +229,7 @@ export const createComment = async (
 export const likeComment = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const commentId = Number(req.params.id);
@@ -273,7 +248,7 @@ export const likeComment = async (
 export const unlikeComment = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const commentId = Number(req.params.id);

@@ -15,13 +15,13 @@ export interface INews {
 
 export interface NewsAnalysis {
   news_id: number;
-  news_sentiment: number; // 1 ~ 5
-  news_positive: string;
-  news_negative: string;
+  news_sentiment: number; // 1 ~ 5 (1: 매우 부정, 5: 매우긍정)
+  news_positive: string; // JSON 문자열 (예: '["긍정포인트1", "긍정포인트2"]')
+  news_negative: string; // JSON 문자열
   community_sentiment?: number;
   summary: string;
   brief_summary: string;
-  tags: string;
+  tags: string; // JSON 문자열 (예: '["BTC", "ETH"]')
 }
 
 export interface NewsDetail {

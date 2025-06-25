@@ -1,13 +1,14 @@
 // /frontend/src/components/LoginForm.tsx
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LoginData } from "../services/authService";
-import authService from "../services/authService";
 import Icons from "./Icons";
 import TermsAgreement from "./TermsAgreement";
+import { AuthContext } from "../providers/AuthProvider";
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
   const [googleStep, setGoogleStep] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,28 +17,21 @@ const LoginForm: React.FC = () => {
   const handleLocalLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data: LoginData = { email, password };
+    setErrorMsg("");
     try {
-      const response = await authService.loginUser(data);
-      console.log(response.message);
-      navigate("/"); // 로그인 성공 후 홈으로 이동
+      await login(data);
+      navigate("/");
     } catch (error: any) {
       setErrorMsg(error.message || "로그인 중 오류 발생");
     }
   };
 
-  const handleGoogleLoginClick = () => {
-    setGoogleStep(true);
-  };
-
+  const handleGoogleLoginClick = () => setGoogleStep(true);
   const handleAgreeForGoogle = () => {
     setGoogleStep(false);
     navigate("/");
-    // 실제 Google OAuth 로직 추가 가능
   };
-
-  const handleCancelGoogleTerms = () => {
-    setGoogleStep(false);
-  };
+  const handleCancelGoogleTerms = () => setGoogleStep(false);
 
   if (googleStep) {
     return (
@@ -51,7 +45,7 @@ const LoginForm: React.FC = () => {
   return (
     <div>
       <h2 className="text-center text-3xl font-bold mb-6">로그인</h2>
-      {errorMsg && <p className="text-red-500">{errorMsg}</p>}
+      {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
       <form onSubmit={handleLocalLoginSubmit} className="space-y-5">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-300">

@@ -261,18 +261,9 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
           strokeWidth="2"
           d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12 18 19.5 12 19.5 1.5 12 1.5 12Z"
         />
-        <circle
-          cx="12"
-          cy="12"
-          r="3.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-        />
+        <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
-
-
 
     userHeadset: (
       <svg
@@ -328,7 +319,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-
   };
 
   if (!iconMap[name]) {

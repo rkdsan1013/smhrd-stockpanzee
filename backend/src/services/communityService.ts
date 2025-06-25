@@ -23,25 +23,19 @@ export async function createCommunityPost(post: {
 
 export async function incrementCommunityViews(postId: number) {
   console.log("[조회수 증가 호출] id=", postId);
-  await pool.query(
-    `UPDATE community SET community_views = community_views + 1 WHERE id = ?`,
-    [postId]
-  );
+  await pool.query(`UPDATE community SET community_views = community_views + 1 WHERE id = ?`, [
+    postId,
+  ]);
   console.log("[조회수 증가 완료] id=", postId);
 }
 
-
 export async function getCommunityPost(id: number) {
   // 무조건 최신값 SELECT
-  const [rows]: any = await pool.query(
-    `SELECT * FROM community WHERE id = ?`, [id]
-  );
+  const [rows]: any = await pool.query(`SELECT * FROM community WHERE id = ?`, [id]);
   return rows[0];
 }
 
-
 // ...추가로 update, delete, getById 등도 여기에 작성!
-
 
 // 게시글 좋아요
 export async function likeCommunityPost(postId: number, user_uuid: Buffer) {
@@ -50,7 +44,7 @@ export async function likeCommunityPost(postId: number, user_uuid: Buffer) {
     `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
       VALUES (?, 'post', ?, 1)
       ON DUPLICATE KEY UPDATE is_liked=1, updated_at=NOW()`,
-    [user_uuid, postId]
+    [user_uuid, postId],
   );
 }
 
@@ -60,7 +54,7 @@ export async function unlikeCommunityPost(postId: number, user_uuid: Buffer) {
     `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
       VALUES (?, 'post', ?, 0)
       ON DUPLICATE KEY UPDATE is_liked=0, updated_at=NOW()`,
-    [user_uuid, postId]
+    [user_uuid, postId],
   );
 }
 
@@ -68,7 +62,7 @@ export async function unlikeCommunityPost(postId: number, user_uuid: Buffer) {
 export async function getCommunityLikesCount(postId: number) {
   const [rows]: any = await pool.query(
     `SELECT COUNT(*) AS count FROM likes WHERE target_type='post' AND target_id=? AND is_liked=1`,
-    [postId]
+    [postId],
   );
   return rows[0]?.count || 0;
 }
@@ -77,7 +71,7 @@ export async function getCommunityLikesCount(postId: number) {
 export async function isPostLikedByUser(postId: number, user_uuid: Buffer) {
   const [rows]: any = await pool.query(
     `SELECT is_liked FROM likes WHERE target_type='post' AND target_id=? AND user_uuid=?`,
-    [postId, user_uuid]
+    [postId, user_uuid],
   );
   return rows[0]?.is_liked === 1;
 }
@@ -90,28 +84,36 @@ export async function getComments(comm_id: number, user_uuid?: string) {
      FROM community_com cc
      LEFT JOIN users u ON u.uuid = cc.uuid
      LEFT JOIN likes l ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
-     WHERE cc.comm_id=? ORDER BY cc.created_at ASC`, [user_uuid ?? Buffer.alloc(16), comm_id]
+     WHERE cc.comm_id=? ORDER BY cc.created_at ASC`,
+    [user_uuid ?? Buffer.alloc(16), comm_id],
   );
 
   // 1차: 댓글, 2차: 대댓글로 분류
-  const comments = rows.filter((r: any) => !r.parent_id)
+  const comments = rows
+    .filter((r: any) => !r.parent_id)
     .map((row: any) => ({
       id: row.id,
       nickname: row.nickname,
       createdAt: row.created_at,
       content: row.comm_contents,
       likes: row.comm_likes,
-      imgUrl: row.comm_img ? `data:image/jpeg;base64,${row.comm_img.toString("base64")}` : undefined,
+      imgUrl: row.comm_img
+        ? `data:image/jpeg;base64,${row.comm_img.toString("base64")}`
+        : undefined,
       isLiked: !!row.isLiked,
-      replies: rows.filter((r: any) => r.parent_id === row.id).map((reply: any) => ({
-        id: reply.id,
-        nickname: reply.nickname,
-        createdAt: reply.created_at,
-        content: reply.comm_contents,
-        likes: reply.comm_likes,
-        imgUrl: reply.comm_img ? `data:image/jpeg;base64,${reply.comm_img.toString("base64")}` : undefined,
-        isLiked: !!reply.isLiked,
-      })),
+      replies: rows
+        .filter((r: any) => r.parent_id === row.id)
+        .map((reply: any) => ({
+          id: reply.id,
+          nickname: reply.nickname,
+          createdAt: reply.created_at,
+          content: reply.comm_contents,
+          likes: reply.comm_likes,
+          imgUrl: reply.comm_img
+            ? `data:image/jpeg;base64,${reply.comm_img.toString("base64")}`
+            : undefined,
+          isLiked: !!reply.isLiked,
+        })),
     }));
   return comments;
 }
@@ -127,7 +129,7 @@ export async function createComment(data: {
   const [result]: any = await pool.query(
     `INSERT INTO community_com (comm_id, uuid, comm_contents, comm_img, parent_id)
      VALUES (?, ?, ?, ?, ?)`,
-    [data.comm_id, data.uuid, data.comm_contents, data.comm_img ?? null, data.parent_id ?? null]
+    [data.comm_id, data.uuid, data.comm_contents, data.comm_img ?? null, data.parent_id ?? null],
   );
   return result;
 }
@@ -138,7 +140,7 @@ export async function likeComment(commentId: number, user_uuid: Buffer) {
     `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
       VALUES (?, 'community_comment', ?, 1)
       ON DUPLICATE KEY UPDATE is_liked=1, updated_at=NOW()`,
-    [user_uuid, commentId]
+    [user_uuid, commentId],
   );
 }
 // 댓글 좋아요 취소
@@ -147,6 +149,6 @@ export async function unlikeComment(commentId: number, user_uuid: Buffer) {
     `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
       VALUES (?, 'community_comment', ?, 0)
       ON DUPLICATE KEY UPDATE is_liked=0, updated_at=NOW()`,
-    [user_uuid, commentId]
+    [user_uuid, commentId],
   );
 }

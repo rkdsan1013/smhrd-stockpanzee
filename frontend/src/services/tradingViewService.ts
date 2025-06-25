@@ -18,33 +18,23 @@ export function loadTradingViewScript(): Promise<void> {
 }
 
 /**
- * DB에서 가져온 symbol과 market 정보를 TradingView가 이해하는 형식으로 변환합니다.
- * 암호화폐의 경우 symbol 전체를 사용하고, 주식(KRX)만 '.' 기준으로 분리합니다.
+ * symbol과 market 정보를 TradingView 형식으로 변환합니다.
  */
 export function getTradingViewSymbol(symbol: string, market: string): string {
   const exch = market.toUpperCase();
   const base = symbol.toUpperCase();
-
   switch (exch) {
     case "KRX":
     case "KOSPI":
     case "KOSDAQ":
-      // 국내 주식: 005930.KQ → KRX:005930
       return `KRX:${base.split(".")[0]}`;
-
     case "NASDAQ":
     case "NYSE":
-      // 미국 주식: AAPL → NASDAQ:AAPL
       return `${exch}:${base}`;
-
     case "BINANCE":
-      // Binance 암호화폐: 기본 USDT 페어로 변환
-      // DB에 BTCUSDT 등 풀페어가 이미 있으면 그대로, 아니면 USDT suffix 추가
       const pair = base.endsWith("USDT") ? base : `${base}USDT`;
       return `BINANCE:${pair}`;
-
     default:
-      // 그 외: 그대로 exchange:base
       return `${exch}:${base}`;
   }
 }

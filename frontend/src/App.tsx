@@ -26,6 +26,7 @@ const App: React.FC = () => {
             <Route path="news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} /> {/* 상세페이지 */}
             <Route path="market" element={<Market />} />
+            <Route path="asset/:id" element={<AssetDetail />} />
             <Route path="community" element={<Community />} />
             <Route path="assetDetail" element={<AssetDetail/>} />
             {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}

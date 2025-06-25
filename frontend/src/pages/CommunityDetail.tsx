@@ -49,12 +49,12 @@ function FileInputWithPreview({
       <input
         type="file"
         accept={accept}
-        onChange={e => {
+        onChange={(e) => {
           const f = e.target.files?.[0] || null;
           setFile(f);
           if (f) {
             const reader = new FileReader();
-            reader.onload = e => setPreview(e.target?.result as string);
+            reader.onload = (e) => setPreview(e.target?.result as string);
             reader.readAsDataURL(f);
           } else setPreview(null);
         }}
@@ -88,13 +88,21 @@ const CommentInput: React.FC<{
       <textarea
         className="flex-1 p-3 rounded bg-gray-800 border border-gray-700 text-white"
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
         rows={3}
         placeholder="도움 및 힘이 되는 코멘트를 남기세요."
       />
       <div className="flex items-center gap-2">
-        <FileInputWithPreview file={img} setFile={setImg} preview={preview} setPreview={setPreview} />
-        <button className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" type="submit">
+        <FileInputWithPreview
+          file={img}
+          setFile={setImg}
+          preview={preview}
+          setPreview={setPreview}
+        />
+        <button
+          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          type="submit"
+        >
           포스트
         </button>
       </div>
@@ -125,16 +133,30 @@ const ReplyInput: React.FC<{
       <textarea
         className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
         rows={2}
         placeholder="대댓글을 입력하세요"
       />
       <div className="flex items-center gap-2">
-        <FileInputWithPreview file={img} setFile={setImg} preview={preview} setPreview={setPreview} className="text-sm" />
-        <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" onClick={handleRegister} type="button">
+        <FileInputWithPreview
+          file={img}
+          setFile={setImg}
+          preview={preview}
+          setPreview={setPreview}
+          className="text-sm"
+        />
+        <button
+          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          onClick={handleRegister}
+          type="button"
+        >
           등록
         </button>
-        <button className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm" onClick={onCancel} type="button">
+        <button
+          className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
+          onClick={onCancel}
+          type="button"
+        >
           취소
         </button>
       </div>
@@ -166,14 +188,16 @@ const CommentItem: React.FC<{
           </button>
           <button
             className="text-xs text-blue-400 underline"
-            onClick={() => setShowReply(v => !v)}
+            onClick={() => setShowReply((v) => !v)}
           >
             {showReply ? "취소" : "답글"}
           </button>
         </div>
       </div>
       <div className="text-white whitespace-pre-wrap">{comment.content}</div>
-      {comment.imgUrl && <img src={comment.imgUrl} alt="comment" className="mt-2 max-h-40 rounded" />}
+      {comment.imgUrl && (
+        <img src={comment.imgUrl} alt="comment" className="mt-2 max-h-40 rounded" />
+      )}
       {showReply && (
         <ReplyInput
           onSubmit={(content, img) => {
@@ -184,7 +208,7 @@ const CommentItem: React.FC<{
         />
       )}
       <div className="mt-2 space-y-2 ml-6">
-        {comment.replies.map(reply => (
+        {comment.replies.map((reply) => (
           <div key={reply.id} className="text-sm p-2 rounded border border-gray-700 bg-gray-950">
             <div className="flex justify-between text-gray-400 mb-0.5">
               <div>
@@ -199,7 +223,9 @@ const CommentItem: React.FC<{
               </button>
             </div>
             <div className="text-white whitespace-pre-wrap">{reply.content}</div>
-            {reply.imgUrl && <img src={reply.imgUrl} alt="reply-img" className="mt-1 max-h-32 rounded" />}
+            {reply.imgUrl && (
+              <img src={reply.imgUrl} alt="reply-img" className="mt-1 max-h-32 rounded" />
+            )}
           </div>
         ))}
       </div>
@@ -217,7 +243,7 @@ const CommunityDetail: React.FC = () => {
   const fetchComments = useCallback(() => {
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
-      .then(res => setComments(res.data))
+      .then((res) => setComments(res.data))
       .catch(() => setComments([]));
   }, [id]);
 
@@ -226,7 +252,7 @@ const CommunityDetail: React.FC = () => {
     setLoading(true);
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
-      .then(res => setPost(res.data))
+      .then((res) => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
     fetchComments();
@@ -303,8 +329,7 @@ const CommunityDetail: React.FC = () => {
     return () => window.removeEventListener("click", closeMenu);
   }, [showMenu]);
 
-  if (loading || !post)
-    return <div className="text-center py-16">불러오는 중...</div>;
+  if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
 
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
@@ -317,9 +342,9 @@ const CommunityDetail: React.FC = () => {
         <div className="ml-auto relative">
           <button
             className="ml-2 p-1 hover:bg-gray-700 rounded-full"
-            onClick={e => {
+            onClick={(e) => {
               e.stopPropagation();
-              setShowMenu(v => !v);
+              setShowMenu((v) => !v);
             }}
             type="button"
           >
@@ -332,7 +357,7 @@ const CommunityDetail: React.FC = () => {
           {showMenu && (
             <div
               className="absolute right-0 mt-2 w-28 bg-gray-900 border border-gray-700 rounded shadow-lg z-20"
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               <button
                 className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"

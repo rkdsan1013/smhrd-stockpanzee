@@ -48,7 +48,6 @@ export const testStockNewsProcessing = async (req: Request, res: Response) => {
   }
 };
 
-
 // 뉴스 상세보기 처리
 
 export const getNewsDetail = async (req: Request, res: Response): Promise<void> => {

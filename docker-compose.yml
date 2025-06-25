@@ -1,17 +1,15 @@
-# /docker-compose.yml
 version: "3.9"
 
 services:
   db:
     image: pgvector/pgvector:pg16
-    container_name: pgvector-db
+    container_name: stockpanzee-db
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: stock
-      POSTGRES_PASSWORD: stockpw
-      POSTGRES_DB: stockdb
+    env_file:
+      - ./_db/.env
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - stockpanzee_pgdata:/var/lib/postgresql/data
+      - ./_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     networks:
@@ -19,12 +17,13 @@ services:
 
   backend:
     build: ./backend
-    container_name: stock-api
+    container_name: stockpanzee-api
     command: npm run dev
     volumes:
-      - ./backend:/app # 로컬 백엔드 코드를 컨테이너에 마운트
-      - /app/node_modules # 컨테이너의 node_modules 사용
-    env_file: ./backend/.env
+      - ./backend:/app
+      - /app/node_modules
+    env_file:
+      - ./backend/.env
     ports:
       - "5000:5000"
     depends_on:
@@ -34,15 +33,16 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: stock-web
+    container_name: stockpanzee-web
     command: npm run dev -- --host 0.0.0.0
     volumes:
-      - ./frontend:/app # 로컬 프론트엔드 코드를 컨테이너에 마운트
-      - /app/node_modules # 컨테이너의 node_modules 사용
-    env_file: ./frontend/.env
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env
     environment:
-      - CHOKIDAR_USEPOLLING=true # 파일 변경 감지를 polling 방식으로 진행
-      - CHOKIDAR_INTERVAL=100 # (선택) polling 간격(ms)를 낮춰 더 빠른 반영을 유도
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
     ports:
       - "5173:5173"
     depends_on:
@@ -50,8 +50,8 @@ services:
     networks:
       - app-net
 
-volumes:
-  pgdata:
-
 networks:
   app-net:
+
+volumes:
+  stockpanzee_pgdata:
