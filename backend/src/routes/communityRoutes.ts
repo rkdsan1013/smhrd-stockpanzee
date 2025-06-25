@@ -1,4 +1,4 @@
-// /backend/src/routes/community.ts
+// /backend/src/routes/communityRoutes.ts
 import { Router } from "express";
 import * as communityController from "../controllers/communityController";
 import multer from "multer";

@@ -5,18 +5,21 @@ dotenv.config();
 import axios from "axios";
 import { upsertCryptoInfo, findCryptoAssets } from "../models/assetModel";
 import pool from "../config/db";
-
-// 환율 상수: 1 USD = 1400 KRW
-const EXCHANGE_RATE = Number(process.env.EXCHANGE_RATE || 1400);
-console.log(`[환율 로그] 1 USD = ${EXCHANGE_RATE} KRW`);
+import { getExchangeRate } from "../utils/exchangeRate";
 
 const BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr";
 const COINLORE_URL = "https://api.coinlore.net/api/tickers/";
 
-// ── 캐시 로직 ────────────────────────────────────────────────────────────────
+interface BinanceTicker {
+  symbol: string;
+  lastPrice: string;
+  priceChangePercent: string;
+}
+
+// ── 시가총액 캐시 ─────────────────────────────────────────────────────
 let marketCapCache: Record<string, number> = {};
 let lastFetchTime = 0;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -48,21 +51,17 @@ async function getMarketCapMap(): Promise<Record<string, number>> {
   }
   return marketCapCache;
 }
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface BinanceTicker {
-  symbol: string;
-  lastPrice: string;
-  priceChangePercent: string;
-}
+// ──────────────────────────────────────────────────────────────────────
 
 /**
  * 최초 1회 실행: 비어있는 시총만 KRW로 채우기
  */
 export async function updateCryptoMarketCapOnce() {
   try {
+    const EXCHANGE_RATE = await getExchangeRate("USD", "KRW");
     const cache = await getMarketCapMap();
     const assets = await findCryptoAssets();
+
     for (const asset of assets) {
       const usdCap = cache[asset.symbol.toUpperCase()] || 0;
       const krwCap = usdCap * EXCHANGE_RATE;
@@ -78,6 +77,7 @@ export async function updateCryptoMarketCapOnce() {
         conn.release();
       }
     }
+
     console.log("[시총 로그] updateCryptoMarketCapOnce 완료");
   } catch (err: any) {
     console.error("[BinanceService] updateCryptoMarketCapOnce 오류:", err.message || err);
@@ -89,6 +89,7 @@ export async function updateCryptoMarketCapOnce() {
  */
 export async function updateCryptoAssetInfoPeriodically() {
   try {
+    const EXCHANGE_RATE = await getExchangeRate("USD", "KRW");
     const cache = await getMarketCapMap();
     const assets = await findCryptoAssets();
     const { data: tickers } = await axios.get<BinanceTicker[]>(BINANCE_TICKER_URL);
@@ -99,16 +100,13 @@ export async function updateCryptoAssetInfoPeriodically() {
       const asset = assets.find((a) => a.symbol === symbol);
       if (!asset) continue;
 
-      // USD->KRW 환산
       const priceUsd = parseFloat(t.lastPrice);
       const priceKrw = priceUsd * EXCHANGE_RATE;
       const changePct = parseFloat(t.priceChangePercent);
 
-      // 시총도 KRW로
       const usdCap = cache[symbol] || 0;
       const marketCapKrw = usdCap * EXCHANGE_RATE;
 
-      // KRW 가격·변동·시총만 저장
       await upsertCryptoInfo(asset.id, priceKrw, changePct, marketCapKrw);
     }
 

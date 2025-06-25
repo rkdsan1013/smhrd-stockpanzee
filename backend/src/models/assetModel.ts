@@ -7,6 +7,7 @@ import {
   UPSERT_ASSET_INFO,
   GET_ASSET_BY_SYMBOL_AND_MARKET,
   SELECT_CRYPTO_ASSETS,
+  SELECT_STOCK_ASSETS,
   UPSERT_CRYPTO_INFO,
 } from "./assetQueries";
 
@@ -79,6 +80,11 @@ export async function findCryptoAssets(): Promise<CryptoAsset[]> {
   return rows as CryptoAsset[];
 }
 
+// 주식 전용 조회 함수 추가
+export async function findStockAssets(): Promise<Asset[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(SELECT_STOCK_ASSETS);
+  return rows as Asset[];
+}
 
 //자산 종목 정보
 export async function findAssetWithInfoById(assetId: number) {
@@ -86,7 +92,8 @@ export async function findAssetWithInfoById(assetId: number) {
     `SELECT a.id, a.symbol, a.name, a.market, ai.current_price, ai.price_change
      FROM assets a
      LEFT JOIN asset_info ai ON a.id = ai.asset_id
-     WHERE a.id = ?`, [assetId]
+     WHERE a.id = ?`,
+    [assetId],
   );
   if ((rows as any[]).length === 0) return null;
   return (rows as any[])[0]; // id 포함

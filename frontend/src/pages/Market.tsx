@@ -49,28 +49,22 @@ const Market: React.FC = () => {
     const load = () => {
       fetchAssets()
         .then((assets: Asset[]) => {
-          const list: StockItem[] = assets.map((a) => {
-            const category = (
-              ["KOSPI", "KOSDAQ"].includes(a.market)
-                ? "국내"
-                : ["NASDAQ", "NYSE"].includes(a.market)
-                  ? "해외"
-                  : a.market === "Binance"
-                    ? "암호화폐"
-                    : "기타"
-            ) as StockItem["category"];
-
-            return {
-              id: a.id,
-              name: a.name,
-              symbol: a.symbol,
-              currentPrice: a.currentPrice,
-              priceChange: a.priceChange,
-              marketCap: a.marketCap,
-              logo: "/panzee.webp",
-              category,
-            };
-          });
+          const list = assets.map<StockItem>((a) => ({
+            id: a.id,
+            name: a.name,
+            symbol: a.symbol,
+            currentPrice: a.currentPrice,
+            priceChange: a.priceChange,
+            marketCap: a.marketCap,
+            logo: "/panzee.webp",
+            category: ["KOSPI", "KOSDAQ"].includes(a.market)
+              ? "국내"
+              : ["NASDAQ", "NYSE"].includes(a.market)
+                ? "해외"
+                : a.market === "Binance"
+                  ? "암호화폐"
+                  : "기타",
+          }));
 
           list.forEach((s) => {
             const prev = previousPricesRef.current.get(s.id);
@@ -108,28 +102,20 @@ const Market: React.FC = () => {
   );
 
   const sorted = useMemo(() => {
-    const arr = [...filtered];
     const { key, direction } = sortConfig;
     const factor = direction === "asc" ? 1 : -1;
-    arr.sort((a, b) =>
+    return [...filtered].sort((a, b) =>
       key === "name"
         ? a.name.localeCompare(b.name) * factor
         : ((a as any)[key] - (b as any)[key]) * factor,
     );
-    return arr;
   }, [filtered, sortConfig]);
 
   const finalList = useMemo(() => {
-    if (viewMode === "전체") {
-      return [...sorted].sort((a, b) =>
-        favorites.includes(a.id) === favorites.includes(b.id)
-          ? 0
-          : favorites.includes(a.id)
-            ? -1
-            : 1,
-      );
-    }
-    return sorted.filter((s) => favorites.includes(s.id));
+    const withFavorites = [...sorted].sort((a, b) =>
+      favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1,
+    );
+    return viewMode === "전체" ? withFavorites : sorted.filter((s) => favorites.includes(s.id));
   }, [sorted, viewMode, favorites]);
 
   const visible = useMemo(
@@ -147,6 +133,9 @@ const Market: React.FC = () => {
   const totalMarketCap = finalList.reduce((sum, s) => sum + s.marketCap, 0);
 
   useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visible.length < finalList.length) {
@@ -155,21 +144,20 @@ const Market: React.FC = () => {
       },
       { threshold: 1 },
     );
-    const el = loadMoreRef.current;
-    if (el) observer.observe(el);
-    return () => {
-      if (el) observer.unobserve(el);
-    }; // ✅ cleanup without null return
+
+    observer.observe(el);
+
+    return () => observer.unobserve(el); // ✅ 반드시 void 반환
   }, [visible, finalList]);
 
   const toggleFavorite = (id: number) => {
-    setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const handleSort = (key: SortKey) => {
-    setSortConfig((p) =>
-      p.key === key
-        ? { key, direction: p.direction === "asc" ? "desc" : "asc" }
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
         : { key, direction: "desc" },
     );
   };
@@ -195,9 +183,7 @@ const Market: React.FC = () => {
             {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() =>
-                  setSelectedMarketTab(tab === "전체" ? "전체" : (tab as StockItem["category"]))
-                }
+                onClick={() => setSelectedMarketTab(tab === "전체" ? "전체" : tab)}
                 className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
                   selectedMarketTab === tab
                     ? "bg-blue-600 text-white"
@@ -231,11 +217,25 @@ const Market: React.FC = () => {
               <div className="w-8" />
               {headerCols.map((col) => (
                 <div key={col.key} className={col.width}>
-                  <button onClick={() => handleSort(col.key)}>
-                    <span className="text-white font-semibold">
-                      {col.label}
-                      {sortConfig.key === col.key && (sortConfig.direction === "asc" ? " ▲" : " ▼")}
-                    </span>
+                  <button
+                    onClick={() => handleSort(col.key)}
+                    className={`flex items-center gap-1 ${
+                      col.key === "name" ? "justify-start" : "justify-end"
+                    } w-full text-white font-semibold`}
+                  >
+                    <span>{col.label}</span>
+                    <Icons
+                      name={
+                        sortConfig.key === col.key
+                          ? sortConfig.direction === "asc"
+                            ? "caretUp"
+                            : "caretDown"
+                          : "caretDown"
+                      }
+                      className={`w-4 h-4 ${
+                        sortConfig.key === col.key ? "text-white" : "text-transparent"
+                      }`}
+                    />
                   </button>
                 </div>
               ))}
@@ -263,7 +263,7 @@ const Market: React.FC = () => {
                     className="w-8 h-8 flex items-center justify-center"
                   >
                     <Icons
-                      name="star"
+                      name="banana"
                       className={`w-5 h-5 ${favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"}`}
                     />
                   </button>
@@ -275,7 +275,9 @@ const Market: React.FC = () => {
                     {s.currentPrice.toLocaleString()} 원
                   </div>
                   <div
-                    className={`w-20 text-right font-semibold ml-2 ${s.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}
+                    className={`w-20 text-right font-semibold ml-2 ${
+                      s.priceChange >= 0 ? "text-green-400" : "text-red-400"
+                    }`}
                   >
                     {s.priceChange >= 0 ? "+" : ""}
                     {s.priceChange.toFixed(2)}%

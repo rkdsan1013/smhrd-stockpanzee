@@ -1,300 +1,185 @@
-//frontend/src/pages/NewsDetail.tsx
-import React, { useEffect, useState } from "react";
+// frontend/src/pages/NewsDetail.tsx
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchNewsDetail, fetchLatestNewsByAsset } from "../services/newsService";
 import type { NewsDetail, NewsItem } from "../services/newsService";
 import { TradingViewMiniChart } from "../components/Chart/TradingViewMiniChart";
 import { getTradingViewSymbol } from "../services/tradingViewService";
 
-// 감정 점수별 텍스트/색상 매핑
-const sentimentMap = [
-  "매우 부정", "부정", "중립", "긍정", "매우 긍정"
-];
-const sentimentBarColor = (sentiment: number) => {
-  if (sentiment <= 2) return "bg-red-500";
-  if (sentiment === 3) return "bg-yellow-400";
-  if (sentiment >= 4) return "bg-green-500";
-  return "bg-gray-400";
+const MAX_LATEST = 5;
+const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
+const sentimentColor = (score: number) =>
+  score <= 2 ? "bg-red-500" : score === 3 ? "bg-yellow-400" : "bg-green-500";
+
+const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
+  if (score == null || isNaN(score)) {
+    return <span className="text-gray-400 text-sm">데이터 없음</span>;
+  }
+  const valid = Math.max(1, Math.min(5, score));
+  return (
+    <div className="flex items-center space-x-2">
+      <div className={`h-2 w-32 rounded-full ${sentimentColor(valid)}`} />
+      <span className="text-sm font-bold text-white">{sentimentLabels[valid - 1]}</span>
+    </div>
+  );
 };
-
-const PAGE_SIZE = 5;
-
-// Pagination helper
-function range(start: number, end: number) {
-  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-}
-function getPagination(current: number, total: number, max = 5): (number | string)[] {
-  if (total <= max) return range(1, total);
-  const delta = Math.floor(max / 2);
-  let start = Math.max(2, current - delta);
-  let end = Math.min(total - 1, current + delta);
-
-  if (current <= delta + 1) { start = 2; end = max; }
-  if (current >= total - delta) { start = total - max + 1; end = total - 1; }
-
-  const pages: (number | string)[] = [1];
-  if (start > 2) pages.push("...");
-  for (let i = start; i <= end; ++i) pages.push(i);
-  if (end < total - 1) pages.push("...");
-  pages.push(total);
-  return pages;
-}
-
-
-
-
-// HorizonBar
-const HorizonBar = () => (
-  <div
-    style={{
-      width: "100%",
-      height: 2,
-      background: "linear-gradient(90deg,rgb(112, 112, 112), rgb(255, 255, 255))",
-      opacity: 0.6,
-      margin: "10px 0 16px 0"
-    }}
-  />
-);
 
 const NewsDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<NewsDetail | null>(null);
-  const [latestNews, setLatestNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [latest, setLatest] = useState<NewsItem[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
   useEffect(() => {
     if (!id) {
-      setError("잘못된 접근입니다.");
-      setLoading(false);
-      setNews(null);
-      setLatestNews([]);
+      setStatus("error");
       return;
     }
-    setLoading(true);
-    setError(null);
-    setPage(1); // 뉴스 ID 바뀌면 1페이지부터
-
-    fetchNewsDetail(Number(id))
+    setStatus("loading");
+    fetchNewsDetail(+id)
       .then((data) => {
         setNews(data);
-        // 태그가 있으면 첫 번째 태그로 최신뉴스 검색
-        if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
-          fetchLatestNewsByAsset(data.tags[0], data.id).then(setLatestNews);
-        } else {
-          setLatestNews([]);
+        if (data.tags?.length) {
+          return fetchLatestNewsByAsset(data.tags[0], data.id);
         }
-        setLoading(false);
+        return Promise.resolve([]);
       })
-      .catch(() => {
-        setNews(null);
-        setLatestNews([]);
-        setError("뉴스를 찾을 수 없습니다.");
-        setLoading(false);
-      });
+      .then((list) => {
+        setLatest(list.slice(0, MAX_LATEST));
+        setStatus("idle");
+      })
+      .catch(() => setStatus("error"));
   }, [id]);
 
-  const pageCount = Math.ceil(latestNews.length / PAGE_SIZE);
-  const pagedNews = latestNews.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  //const pagination = getPagination(page, pageCount, 5);
-
-  // 에러·로딩 처리
-  if (loading) return <div className="p-12 text-center text-white">로딩 중…</div>;
-  if (error) return <div className="p-12 text-center text-red-400">{error}</div>;
-  if (!news) return null;
-
-  // 안전하게 변수 꺼내기
-  //const sentimentLabel = sentimentMap[Math.max(0, Math.min(4, (news.news_sentiment ?? 3) - 1))];
-
-  // 값 추출(정수여부 확인, 기본값 3)
-  const aiSentiment = Math.max(1, Math.min(5, news.news_sentiment ?? 3));
-  const aiSentimentLabel = sentimentMap[aiSentiment - 1];
-
-  const commuSentiment = Number(news.community_sentiment);
-  const commuSentimentValid = !isNaN(commuSentiment) && commuSentiment >= 1 && commuSentiment <= 5;
-  const commuSentimentLabel = commuSentimentValid ? sentimentMap[commuSentiment - 1] : "데이터 없음";
-
-  // tags - assets 심볼 매칭
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        로딩 중…
+      </div>
+    );
+  }
+  if (status === "error" || !news) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
+        뉴스를 불러올 수 없습니다.
+      </div>
+    );
+  }
 
   const tvSymbol =
-    news.assets_market && news.assets_symbol
+    news.assets_symbol && news.assets_market
       ? getTradingViewSymbol(news.assets_symbol, news.assets_market)
       : "";
 
-
- return (
-  <div className="min-h-screen flex justify-center items-start  p-[3px]">
-    <div className="w-full max-w-[1300px] rounded-xl bg-[#181a20]">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 px-3 py-3">
-        {/* 메인 */}
+  return (
+    <div className="w-full bg-gray-900 px-6 py-8">
+      <div className="max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* 좌측 메인 콘텐츠 */}
         <div className="lg:col-span-3 space-y-6">
-          {/* 뉴스 헤더 */}
-          <div className="rounded-xl p-4 mb-1 flex flex-row gap-6 items-stretch border border-[#33363f] bg-[#181a20]">
-  {/* 텍스트 영역: 세로 분할(제목/나머지) */}
-  <div className="flex flex-col justify-between flex-1 min-w-0" style={{ minHeight: "128px" }}>
-    {/* 제목(위) */}
-    <h1 className="text-2xl font-bold mb-2 break-words">{news.title_ko}</h1>
-    {/* 기타 정보(아래) */}
-    <div className="flex items-center space-x-3 text-sm text-gray-400 flex-wrap">
-      <span>{news.publisher}</span>
-      <span>•</span>
-      <span>{new Date(news.published_at).toLocaleString()}</span>
-      <span>•</span>
-      <a
-        href={news.news_link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-400 underline"
-      >
-        뉴스 원문보기
-      </a>
-    </div>
-  </div>
-  {/* 썸네일 */}
-  {news.thumbnail && (
-    <img
-      src={news.thumbnail}
-      alt="뉴스 이미지"
-      className="w-52 h-32 object-cover rounded-xl flex-shrink-0"
-      style={{ minWidth: "208px", minHeight: "128px", maxHeight: "128px" }}
-    />
-  )}
-</div>
-
-
-          {/* AI 감정평가/반응 바 */}
-         <div className="flex items-center space-x-8 rounded-xl p-3 mb-1 border border-[#33363f] bg-transparent">
-          {/* AI 감정평가 */}
-          <div>
-            <div className="text-xs text-gray-300">AI 감정평가</div>
-            <div className="flex items-center space-x-1 mt-1">
-              <div className={`h-2 w-32 rounded-full ${sentimentBarColor(aiSentiment)}`} />
-              <span className="ml-2 text-sm font-bold">{aiSentimentLabel}</span>
-            </div>
-          </div>
-          {/* 커뮤니티 반응 시각화 */}
-          <div>
-            <div className="text-xs text-gray-300">커뮤니티 반응</div>
-            {commuSentimentValid ? (
-              <div className="flex items-center space-x-1 mt-1">
-                <div className={`h-2 w-32 rounded-full ${sentimentBarColor(commuSentiment)}`} />
-                <span className="ml-2 text-sm font-bold">{commuSentimentLabel}</span>
+          {/* 헤더 */}
+          <div className="bg-gray-800 rounded-xl p-6 flex flex-col lg:flex-row gap-6">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-white mb-2 break-words">{news.title_ko}</h1>
+              <div className="text-gray-400 text-sm flex flex-wrap gap-2">
+                <span>{news.publisher}</span>
+                <span>•</span>
+                <span>{new Date(news.published_at).toLocaleString()}</span>
+                <span>•</span>
+                <a
+                  href={news.news_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  원문 보기
+                </a>
               </div>
-            ) : (
-              <span className="text-gray-400 font-semibold text-sm">아직 없음</span>
+            </div>
+            {news.thumbnail && (
+              <img
+                src={news.thumbnail}
+                alt="뉴스 썸네일"
+                className="w-full max-w-xs h-40 object-cover rounded-xl"
+              />
             )}
           </div>
-          {/* 태그 */}
-          <div>
-            <div className="text-xs text-gray-300">태그</div>
-            <div className="flex gap-1 flex-wrap">
-              {(news.tags || []).map((tag, i) => (
-                <span key={i} className="bg-blue-700 rounded-full px-2 py-0.5 text-xs">{tag}</span>
-              ))}
+
+          {/* 감정평가 */}
+          <div className="bg-gray-800 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-6">
+            <div>
+              <div className="text-gray-300 text-xs mb-1">AI 감정평가</div>
+              <ProgressBar score={news.news_sentiment} />
+            </div>
+            <div>
+              <div className="text-gray-300 text-xs mb-1">커뮤니티 반응</div>
+              <ProgressBar score={Number(news.community_sentiment)} />
+            </div>
+            <div>
+              <div className="text-gray-300 text-xs mb-1">태그</div>
+              <div className="flex flex-wrap gap-2">
+                {(news.tags || []).map((t) => (
+                  <span key={t} className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs">
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
 
           {/* AI 요약 */}
-          <section>
-            <div className="rounded-xl p-4 mb-1 flex flex-col items-center text-center border border-[#33363f]">
-              <div className="font-bold text-lg mb-1 w-full flex flex-col items-center">
-                <span>AI 요약</span>
-                <HorizonBar />
-              </div>
-              <div className="text-gray-100 text-left w-full">{news.summary}</div>
-            </div>
-          </section>
+          <div className="bg-gray-800 rounded-xl p-6">
+            <h2 className="font-bold text-xl text-white mb-2">AI 요약</h2>
+            <div className="border-t border-gray-700 mb-4" />
+            <p className="text-gray-200">{news.summary}</p>
+          </div>
 
           {/* 긍/부정 평가 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-            <div className="rounded-xl p-4 flex flex-col items-center text-center border border-[#33363f]">
-              <div className="font-semibold mb-1 w-full flex flex-col items-center">
-                <span>긍정평가</span>
-                <HorizonBar />
-              </div>
-              <div className="text-green-400 text-left w-full">{news.news_positive || "해당 없음"}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h3 className="font-semibold text-white mb-2">긍정평가</h3>
+              <div className="border-t border-gray-700 mb-4" />
+              <p className="text-green-400">{news.news_positive || "해당 없음"}</p>
             </div>
-            <div className="rounded-xl p-4 flex flex-col items-center text-center border border-[#33363f]">
-              <div className="font-semibold mb-1 w-full flex flex-col items-center">
-                <span>부정평가</span>
-                <HorizonBar />
-              </div>
-              <div className="text-red-400 text-left w-full">{news.news_negative || "해당 없음"}</div>
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h3 className="font-semibold text-white mb-2">부정평가</h3>
+              <div className="border-t border-gray-700 mb-4" />
+              <p className="text-red-400">{news.news_negative || "해당 없음"}</p>
             </div>
           </div>
         </div>
 
-        {/* 우측 패널 */}
-        <aside className="lg:col-span-1 flex flex-col space-y-6">
-          {/* 트레이딩뷰 차트 */}
-          <div className="rounded-xl p-3 flex items-center justify-center border border-[#33363f]" style={{ minHeight: 220 }}>
-            {news?.tags && news.tags[0]
-              ? <TradingViewMiniChart symbol={tvSymbol} />
-              : <TradingViewMiniChart />
-            }
+        {/* 우측 사이드바 */}
+        <aside className="space-y-6">
+          {/* 차트 */}
+          <div className="bg-gray-800 rounded-xl p-4 h-56 flex items-center justify-center">
+            <TradingViewMiniChart symbol={tvSymbol} />
           </div>
-          {/* 최신 뉴스 리스트 + 페이지네이션 */}
-          <div className="rounded-xl p-3 border border-[#33363f]">
-            <div className="font-bold mb-2">{news.tags?.[0] || "종목"} 최신 뉴스</div>
-            <ul className="text-sm text-gray-200 space-y-1">
-              {pagedNews.length === 0 && (
+
+          {/* 최신 뉴스 */}
+          <div className="bg-gray-800 rounded-xl p-4">
+            <h4 className="text-white font-bold mb-4">{news.tags?.[0] || "종목"} 최신 뉴스</h4>
+            <ul className="space-y-3">
+              {latest.length === 0 ? (
                 <li className="text-gray-500">관련 뉴스 없음</li>
+              ) : (
+                latest.map((item) => (
+                  <li key={item.id}>
+                    <Link to={`/news/${item.id}`} className="block hover:underline">
+                      <time className="text-gray-400 text-xs">
+                        {new Date(item.published_at).toLocaleDateString()}
+                      </time>
+                      <p className="text-white text-sm mt-1">{item.title_ko ?? item.title}</p>
+                    </Link>
+                  </li>
+                ))
               )}
-              {pagedNews.map((item) => (
-                <li key={item.id}>
-                  <Link to={`/news/${item.id}`} className="hover:underline">
-                    <span className="text-gray-400 mr-1">
-                      {new Date(item.published_at).toLocaleDateString()}
-                    </span>
-                    <br />
-                    {item.title_ko ?? item.title}
-                  </Link>
-                </li>
-              ))}
             </ul>
-            {/* 페이지네이션 */}
-            {pageCount > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-4">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-2 py-1 rounded text-xs bg-gray-700 disabled:opacity-30"
-                >
-                  &lt;
-                </button>
-                {getPagination(page, pageCount).map((p, idx) =>
-                  typeof p === "number" ? (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`px-2 py-1 rounded text-xs ${page === p ? "bg-blue-600 font-bold" : "bg-gray-700"}`}
-                      disabled={page === p}
-                    >
-                      {p}
-                    </button>
-                  ) : (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
-                  )
-                )}
-                <button
-                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                  disabled={page === pageCount}
-                  className="px-2 py-1 rounded text-xs bg-gray-700 disabled:opacity-30"
-                >
-                  &gt;
-                </button>
-              </div>
-            )}
           </div>
         </aside>
       </div>
     </div>
-  </div>
-);
-
+  );
 };
 
 export default NewsDetailPage;
+// frontend/src/pages/NewsDetail.tsx
