@@ -8,17 +8,24 @@ import { getTradingViewSymbol } from "../services/tradingViewService";
 
 const MAX_LATEST = 5;
 const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
-const sentimentColor = (score: number) =>
-  score <= 2 ? "bg-red-500" : score === 3 ? "bg-yellow-400" : "bg-green-500";
+// 단계별 색상: 1~5
+const stepColors = ["bg-red-500", "bg-orange-500", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
 
 const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   if (score == null || isNaN(score)) {
     return <span className="text-gray-400 text-sm">데이터 없음</span>;
   }
-  const valid = Math.max(1, Math.min(5, score));
+  // 점수를 1~5로 반올림 후 clamp
+  const valid = Math.max(1, Math.min(5, Math.round(score)));
+  const fillColor = stepColors[valid - 1];
+
   return (
-    <div className="flex items-center space-x-2">
-      <div className={`h-2 w-32 rounded-full ${sentimentColor(valid)}`} />
+    <div className="flex flex-col space-y-1">
+      <div className="flex h-2 w-32 rounded overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className={`flex-1 mx-[1px] ${i < valid ? fillColor : "bg-gray-700"}`} />
+        ))}
+      </div>
       <span className="text-sm font-bold text-white">{sentimentLabels[valid - 1]}</span>
     </div>
   );
@@ -66,10 +73,11 @@ const NewsDetailPage: React.FC = () => {
     );
   }
 
-  const tvSymbol =
-    news.assets_symbol && news.assets_market
-      ? getTradingViewSymbol(news.assets_symbol, news.assets_market)
-      : "";
+  const tvSymbol = news.assets_symbol
+    ? news.news_category === "crypto"
+      ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
+      : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
+    : "";
 
   return (
     <div className="w-full bg-gray-900 px-6 py-8">
@@ -158,7 +166,14 @@ const NewsDetailPage: React.FC = () => {
           {/* 최신 뉴스 */}
           <div className="bg-gray-800 rounded-xl p-4">
             <h4 className="text-white font-bold mb-4">
-              {news.assets_name ?? news.assets_symbol ?? "종목"} 최신 뉴스
+              {news.assets_symbol
+                ? news.news_category === "crypto"
+                  ? // 암호화폐는 항상 USDT 페어
+                    `${news.assets_symbol.toUpperCase()}USDT`
+                  : // 주식은 심볼 그대로
+                    news.assets_symbol.toUpperCase()
+                : "종목"}{" "}
+              최신 뉴스
             </h4>
             <ul className="space-y-3">
               {latest.length === 0 ? (
