@@ -20,9 +20,7 @@ router.get("/test-news2", testNewsProcessing2);
 // ✅ Alpha Vantage 국제 뉴스 테스트용 경로 추가
 router.get("/test-stock-news", testStockNewsProcessing);
 
-
 // 뉴스 상세 조회
 router.get("/:id", getNewsDetail);
-
 
 export default router;
