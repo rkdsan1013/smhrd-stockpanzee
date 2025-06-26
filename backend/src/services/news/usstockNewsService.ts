@@ -1,8 +1,7 @@
 // /backend/src/services/news/usstockNewsService.ts
 import pool from "../../config/db";
 import { mapStockNews } from "../../utils/news/usstockNewsMapper";
-import { extractFullContentWithPuppeteer } from "../../utils/crawler/usnewsContentCrawler";
-
+import { extractFullContent } from "../../utils/newsContentExtractor";
 import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
 import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
 import { findStockAssets } from "../../../src/models/assetModel";
@@ -12,7 +11,7 @@ import { upsertNewsVector, NewsVector } from "./storeNewsVector";
 const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY!;
 const STOCK_NEWS_API_URL = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&apikey=${ALPHAVANTAGE_API_KEY}`;
 
-/** "YYYYMMDDThhmmss" 포맷을 Date 객체로 변환 */
+/** "YYYYMMDDThhmmss" → Date */
 const parseTimePublished = (raw: string): Date => {
   const m = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
   if (!m) return new Date(NaN);
@@ -31,7 +30,7 @@ export const fetchAndProcessOneStockNews = async (): Promise<void> => {
     if (!response.ok) throw new Error(`뉴스 API 요청 실패: ${response.status}`);
     const rawData = await response.json();
 
-    // 2) 매핑 & published_at 보정
+    // 2) 매핑 & published_at 설정
     const newsItems = mapStockNews(rawData, validSymbols).map((item) => {
       const feed = rawData.feed.find((f: any) => f.url === item.news_link);
       item.published_at = parseTimePublished(feed?.time_published ?? "");
@@ -47,8 +46,8 @@ export const fetchAndProcessOneStockNews = async (): Promise<void> => {
         continue;
       }
 
-      // 4) Puppeteer로 전문 크롤링
-      const fullContent = await extractFullContentWithPuppeteer(news.news_link);
+      // 4) extractFullContent로 전문 추출
+      const fullContent = await extractFullContent(news.news_link);
       if (!fullContent) {
         console.warn(`본문 추출 실패, 스킵: ${news.news_link}`);
         continue;
@@ -63,18 +62,17 @@ export const fetchAndProcessOneStockNews = async (): Promise<void> => {
       const analysis = await analyzeNews(news.title, news.content, publishedStr);
       console.log("GPT 분석 결과:", analysis);
 
-      // 7) 자산심볼 태그 필터링
+      // 7) 자산 심볼 태그 필터링
       const assets = await findStockAssets();
       const symbols = new Set(assets.map((a) => a.symbol.toUpperCase()));
       const filteredTags = analysis.tags.filter((t: string) => symbols.has(t.toUpperCase()));
 
-      // 8) DB 저장을 위한 INews 준비
+      // 8) DB 저장 준비
       const preparedNews = {
         ...news,
-        news_category: "international" as "international",
-        publisher: news.source_title, // INews.required
+        news_category: "international" as const,
+        publisher: news.source_title,
       };
-
       const newsId = await createNewsWithAnalysis(
         preparedNews,
         {
@@ -93,7 +91,6 @@ export const fetchAndProcessOneStockNews = async (): Promise<void> => {
       // 9) 임베딩 생성 및 벡터 저장
       const vectorText = `${news.title} ${publishedStr} ${analysis.summary}`;
       const embedding = await getEmbedding(vectorText);
-
       const newsVector: NewsVector = {
         id: news.news_link,
         values: embedding,
