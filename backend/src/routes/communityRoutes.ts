@@ -20,7 +20,8 @@ router.post("/", authenticate, communityController.createCommunityPost);
 router.put("/:id", communityController.updateCommunityPost);
 
 // 커뮤니티 글 삭제
-router.delete("/:id", communityController.deleteCommunityPost);
+router.delete("/:id", authenticate, communityController.deleteCommunityPost);
+
 
 // 댓글 라우트
 router.get("/:id/comments", communityController.getComments);

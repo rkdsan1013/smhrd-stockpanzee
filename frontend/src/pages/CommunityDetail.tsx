@@ -1,9 +1,8 @@
-//frontend/src/pages/CommunityDetail.tsx
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useContext } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import axios from "axios";
-
+import { AuthContext } from "../providers/AuthProvider";
 
 // 타입 선언
 interface Reply {
@@ -24,7 +23,7 @@ function timeAgo(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 0) return '방금 전';  // 음수 방지
+  if (diff < 0) return "방금 전";
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
@@ -240,6 +239,8 @@ const CommunityDetail: React.FC = () => {
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // 댓글/대댓글 목록 불러오기
   const fetchComments = useCallback(() => {
@@ -268,7 +269,6 @@ const CommunityDetail: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
 
-  // post가 바뀔 때 서버값으로 동기화
   useEffect(() => {
     setIsLiked(post?.isLiked || false);
     setLikeCount(post?.community_likes || 0);
@@ -279,7 +279,6 @@ const CommunityDetail: React.FC = () => {
     if (!post) return;
     try {
       const url = `${import.meta.env.VITE_API_BASE_URL}/community/${id}/like`;
-      // 서버에서 { isLiked, likes } 반환하도록 수정 필요!
       const res = await axios.post(url, {}, { withCredentials: true });
       setIsLiked(res.data.isLiked);
       setLikeCount(res.data.likes);
@@ -332,6 +331,33 @@ const CommunityDetail: React.FC = () => {
     return () => window.removeEventListener("click", closeMenu);
   }, [showMenu]);
 
+  // 삭제 함수 (작성자만)
+  const handleDelete = async () => {
+    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+      alert("작성자가 아닙니다.");
+      return;
+    }
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}`, {
+        withCredentials: true,
+      });
+      alert("삭제되었습니다.");
+      navigate("/community");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "삭제 실패");
+    }
+  };
+
+  // 수정 함수 (작성자만)
+  const handleEdit = () => {
+    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+      alert("작성자가 아닙니다.");
+      return;
+    }
+    navigate(`/post/edit/${post.id}`);
+  };
+
   if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
 
   return (
@@ -366,7 +392,7 @@ const CommunityDetail: React.FC = () => {
                 className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
                 onClick={() => {
                   setShowMenu(false);
-                  alert("수정 기능은 준비 중입니다.");
+                  handleEdit();
                 }}
               >
                 수정
@@ -375,7 +401,7 @@ const CommunityDetail: React.FC = () => {
                 className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700"
                 onClick={() => {
                   setShowMenu(false);
-                  alert("삭제 기능은 준비 중입니다.");
+                  handleDelete();
                 }}
               >
                 삭제
@@ -418,9 +444,7 @@ const CommunityDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="text-gray-200 mb-8 whitespace-pre-wrap">
-        {post.community_contents}
-      </div>
+      <div className="text-gray-200 mb-8 whitespace-pre-wrap">{post.community_contents}</div>
       <hr className="border-black opacity-60 my-6" />
 
       {/* 댓글 입력 */}

@@ -1,17 +1,18 @@
 // /frontend/src/pages/Community.tsx
-import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Icons from "../components/Icons";
+import { Link } from "react-router-dom";
+import { AuthContext } from "../providers/AuthProvider"; // ★ context import
 
 const categoryList = ["전체", "국내", "해외", "암호화폐"];
 
-// 시간 표시 함수
 function timeAgo(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 0) return '방금 전';  // 음수 방지
+  if (diff < 0) return '방금 전';
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
@@ -26,7 +27,19 @@ const Community: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 실제 API 연동
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext); // ★ context로 로그인 판별
+
+  // 글쓰기 버튼 클릭 핸들러
+  const handleWriteClick = () => {
+    if (!user) {
+      alert("로그인이 필요합니다. 로그인 후 이용해 주세요.");
+      return;
+    }
+    navigate("/post");
+  };
+
+  // 게시글 불러오기
   useEffect(() => {
     setLoading(true);
     axios
@@ -47,9 +60,7 @@ const Community: React.FC = () => {
   // 정렬/필터/페이지네이션
   let sortedPosts = posts;
   if (selectedSort === "latest") {
-    sortedPosts = posts
-      .slice()
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    sortedPosts = posts.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   } else if (selectedSort === "popular") {
     sortedPosts = posts.slice().sort((a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0));
   }
@@ -167,11 +178,12 @@ const Community: React.FC = () => {
         </div>
         {/* 글쓰기 */}
         <div>
-          <Link to="/post">
-            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
-              글쓰기
-            </button>
-          </Link>
+          <button
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700"
+            onClick={handleWriteClick}
+          >
+            글쓰기
+          </button>
         </div>
       </div>
 
@@ -207,7 +219,6 @@ const Community: React.FC = () => {
               <Icons name="fire" className="w-5 h-5" />
             </button>
           </div>
-
           {/* 카테고리 드롭다운 - 중앙정렬 */}
           <div className="flex-1 flex justify-center">
             <select
@@ -225,17 +236,18 @@ const Community: React.FC = () => {
               ))}
             </select>
           </div>
-
           {/* 글쓰기 */}
           <div>
-            <Link to="/post">
-              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700">
-                글쓰기
-              </button>
-            </Link>
+            <button
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700"
+              onClick={handleWriteClick}
+            >
+              글쓰기
+            </button>
           </div>
         </div>
       </div>
+
       {/* 게시글 그리드 */}
       <div id="posts-top" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading ? (
@@ -244,8 +256,11 @@ const Community: React.FC = () => {
           <div className="col-span-full text-center text-gray-400 py-12">게시글이 없습니다.</div>
         ) : (
           currentPosts.map((post) => (
-            <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
-                <Link to={`/communitydetail/${post.id}`} key={post.id} className="block">
+            <div
+              key={post.id}
+              className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md"
+            >
+              <Link to={`/communitydetail/${post.id}`} className="block">
                 {/* 썸네일 */}
                 <img
                   src={
@@ -287,8 +302,8 @@ const Community: React.FC = () => {
                     </span>
                   </div>
                 </div>
-            </Link>
-              </div>
+              </Link>
+            </div>
           ))
         )}
       </div>
