@@ -1,4 +1,5 @@
 // frontend/src/components/NewsCard.tsx
+
 import React from "react";
 import { Link } from "react-router-dom";
 import type { NewsItem } from "../services/newsService";
@@ -86,11 +87,16 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
       {/* 이미지 */}
       <div className={`relative w-full ${imgHeight}`}>
         <img
-          src={newsItem.image}
+          src={newsItem.image || "/panzee.webp"}
           alt={newsItem.title}
           className="absolute inset-0 w-full h-full object-cover object-center"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = "/panzee.webp";
+          }}
         />
       </div>
+
       {/* 내용 */}
       <div className="flex flex-col flex-1 p-6">
         <div className="space-y-3">
@@ -103,6 +109,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
               {sentiment.label}
             </span>
           </div>
+
           {/* 종목 태그 */}
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -116,15 +123,18 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
               ))}
             </div>
           )}
+
           {/* 제목 */}
           <h3 className={`font-bold text-white ${titleSize}`}>
             {newsItem.title_ko || newsItem.title}
           </h3>
+
           {/* 요약 */}
           <p className="text-sm text-gray-300 line-clamp-2">
             {newsItem.brief_summary || newsItem.summary}
           </p>
         </div>
+
         {/* 하단: 퍼블리셔 · 작성일 */}
         <div className="mt-auto pt-4 text-xs text-gray-400 space-y-1">
           <div>{newsItem.publisher}</div>

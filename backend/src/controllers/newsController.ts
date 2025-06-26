@@ -65,7 +65,7 @@ export const getNewsDetail = async (req: Request, res: Response): Promise<void> 
     res.json(newsDetail);
   } catch (err) {
     // ★ 반드시 에러 로그 콘솔에 남기기!
-    console.error("[getNewsDetail 500]", err);  // ← 이게 꼭 찍혀야 해요!
+    console.error("[getNewsDetail 500]", err); // ← 이게 꼭 찍혀야 해요!
     res.status(500).json({ error: "서버 오류" });
   }
 };
