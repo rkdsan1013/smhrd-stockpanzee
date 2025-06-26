@@ -24,11 +24,10 @@ const Home: React.FC = () => {
   useEffect(() => {
     fetchNews()
       .then((data) => {
-        setNewsItems(
-          data.sort(
-            (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
-          ),
+        const sorted = data.sort(
+          (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
         );
+        setNewsItems(sorted);
       })
       .catch((e) => setError(e.message || "뉴스 로드 실패"))
       .finally(() => setLoading(false));
@@ -39,7 +38,7 @@ const Home: React.FC = () => {
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
   // 2) 히어로 + 서브 뉴스
-  const hero = filtered[0];
+  const hero = filtered[0]!;
   const subNews = filtered.slice(1, 5);
 
   // 3) 최근 7일 필터
@@ -47,17 +46,35 @@ const Home: React.FC = () => {
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  // 4) 뉴스 감정 분석 (recent)
-  let posCount = 0,
-    negCount = 0;
+  // 4) 뉴스 감정 분포 및 평균
+  const LEVELS = [1, 2, 3, 4, 5] as const;
+  type Level = (typeof LEVELS)[number];
+
+  const dist = LEVELS.reduce<Record<Level, number>>(
+    (acc, lvl) => {
+      acc[lvl] = 0;
+      return acc;
+    },
+    {} as Record<Level, number>,
+  );
+
+  let sumWeighted = 0;
   recent.forEach((n) => {
-    const v = Number(n.sentiment) || 3;
-    if (v >= 4) posCount++;
-    if (v <= 2) negCount++;
+    const v = Math.min(5, Math.max(1, Number(n.sentiment) || 3));
+    dist[v as Level] += 1;
+    sumWeighted += v;
   });
+
   const totalRecent = recent.length || 1;
-  const posPct = (posCount / totalRecent) * 100;
-  const negPct = (negCount / totalRecent) * 100;
+  const avgSentiment = sumWeighted / totalRecent;
+
+  const distPct = LEVELS.reduce<Record<Level, number>>(
+    (acc, lvl) => {
+      acc[lvl] = (dist[lvl] / totalRecent) * 100;
+      return acc;
+    },
+    {} as Record<Level, number>,
+  );
 
   // 5) 키워드 트렌드 (recent)
   const tagCounts: Record<string, number> = {};
@@ -76,23 +93,25 @@ const Home: React.FC = () => {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
-  if (loading)
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         뉴스 로딩 중…
       </div>
     );
-  if (error)
+  }
+  if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
         오류: {error}
       </div>
     );
+  }
 
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-12">
-        {/* — 카테고리 탭 */}
+        {/* 카테고리 탭 */}
         <nav className="overflow-x-auto pb-2">
           <ul className="flex space-x-3">
             {TABS.map((t) => (
@@ -112,7 +131,7 @@ const Home: React.FC = () => {
           </ul>
         </nav>
 
-        {/* — 메인 그리드 */}
+        {/* 메인 그리드 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 뉴스 영역 (2/3) */}
           <div className="lg:col-span-2 space-y-8">
@@ -131,28 +150,43 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>긍정 비율</span>
-                    <span>{posPct.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+              {/* 1) 스택형 바 차트 */}
+              <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
+                {LEVELS.map((lvl) => {
+                  const color =
+                    lvl <= 2
+                      ? lvl === 1
+                        ? "bg-red-600"
+                        : "bg-red-400"
+                      : lvl === 3
+                        ? "bg-gray-500"
+                        : lvl === 4
+                          ? "bg-green-400"
+                          : "bg-green-600";
+                  return (
                     <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${posPct}%` }}
+                      key={lvl}
+                      className={`${color} h-full`}
+                      style={{ width: `${distPct[lvl]}%` }}
+                      title={`${lvl}점: ${distPct[lvl].toFixed(1)}%`}
                     />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm text-gray-300 mb-1">
-                    <span>부정 비율</span>
-                    <span>{negPct.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                    <div className="bg-red-500 h-2 rounded-full" style={{ width: `${negPct}%` }} />
-                  </div>
-                </div>
+                  );
+                })}
+              </div>
+              {/* 2) 평균 감정 */}
+              <div className="mt-3 text-white flex items-center justify-between">
+                <span className="text-sm">평균 감정</span>
+                <span
+                  className={`text-lg font-semibold ${
+                    avgSentiment >= 3.5
+                      ? "text-green-300"
+                      : avgSentiment <= 2.5
+                        ? "text-red-300"
+                        : "text-gray-300"
+                  }`}
+                >
+                  {avgSentiment.toFixed(2)}
+                </span>
               </div>
             </div>
 
