@@ -14,6 +14,7 @@ import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
 import AppProvider from "./providers/AppProvider"; // 전역 프로바이더 예시
 import CommunityDetail from "./pages/CommunityDetail";
+import PostEditPage from './pages/PostEditPage';
 
 const App: React.FC = () => {
   return (
@@ -28,6 +29,7 @@ const App: React.FC = () => {
             <Route path="market" element={<Market />} />
             <Route path="asset/:id" element={<AssetDetail />} />
             <Route path="community" element={<Community />} />
+            <Route path="/post/edit/:id" element={<PostEditPage />} />
             <Route path="assetDetail" element={<AssetDetail/>} />
             {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
             <Route path="post" element={<PostCreationPage />} />

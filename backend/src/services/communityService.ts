@@ -52,10 +52,11 @@ export async function getCommunityPost(id: number) {
 // 댓글/대댓글 트리 반환
 export async function getComments(comm_id: number, user_uuid?: string) {
   const [rows]: any = await pool.query(
-    `SELECT cc.*, u.nickname, 
+    `SELECT cc.*, p.name AS nickname, 
         CASE WHEN l.is_liked = 1 THEN 1 ELSE 0 END as isLiked
      FROM community_com cc
      LEFT JOIN users u ON u.uuid = cc.uuid
+     LEFT JOIN user_profiles p ON u.uuid = p.uuid
      LEFT JOIN likes l ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
      WHERE cc.comm_id=? ORDER BY cc.created_at ASC`,
     [user_uuid ?? Buffer.alloc(16), comm_id],
@@ -90,6 +91,7 @@ export async function getComments(comm_id: number, user_uuid?: string) {
     }));
   return comments;
 }
+
 
 // 댓글/대댓글 생성
 export async function createComment(data: {
@@ -134,4 +136,50 @@ export async function isPostLikedByUser(postId: number, userUuid: Buffer) {
 
 export async function getCommunityLikesCount(postId: number) {
   return communityModel.getLikeCount("post", postId);
+}
+
+export async function deleteCommunityPost(postId: number) {
+  // 1. 해당 게시글의 모든 댓글 id 가져오기
+  const [commentRows]: any = await pool.query(
+    `SELECT id FROM community_com WHERE comm_id = ?`,
+    [postId]
+  );
+  const commentIds = commentRows.map((row: any) => row.id);
+
+  // 2. 트랜잭션 시작
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 3. 댓글 좋아요 삭제 (댓글 있을 때만)
+    if (commentIds.length > 0) {
+      // mysql2의 IN (?) 문법은 배열이 들어가면 (?,?,?) 형태로 변환됨
+      await conn.query(
+        `DELETE FROM likes WHERE target_type='community_com' AND target_id IN (${commentIds.map(() => '?').join(',')})`,
+        commentIds
+      );
+    }
+    // 4. 게시글 좋아요 삭제
+    await conn.query(
+      `DELETE FROM likes WHERE target_type='post' AND target_id=?`,
+      [postId]
+    );
+    // 5. 댓글/대댓글 삭제
+    await conn.query(
+      `DELETE FROM community_com WHERE comm_id=?`,
+      [postId]
+    );
+    // 6. 게시글 삭제
+    await conn.query(
+      `DELETE FROM community WHERE id=?`,
+      [postId]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
