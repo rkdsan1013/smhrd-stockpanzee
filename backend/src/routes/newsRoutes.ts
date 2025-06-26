@@ -10,17 +10,19 @@ import {
 
 const router = Router();
 
-// 뉴스 목록 조회: GET /api/news (뉴스와 분석 데이터를 조인하여 반환)
+// 전체 또는 ?asset=XXX&exclude=ID 방식의 뉴스 목록 조회
 router.get("/", getNews);
 
-// 테스트 뉴스 처리: 뉴스 수집/분석/저장을 실행 (GET /api/news/test-news)
+// 테스트: 암호화폐 뉴스 파이프라인 실행
 router.get("/test-news", testNewsProcessing);
+
+// 테스트: KRX 뉴스 파이프라인 실행
 router.get("/test-news2", testNewsProcessing2);
 
-// ✅ Alpha Vantage 국제 뉴스 테스트용 경로 추가
+// 테스트: 해외주식 뉴스 파이프라인 실행
 router.get("/test-stock-news", testStockNewsProcessing);
 
-// 뉴스 상세 조회
+// 뉴스 상세 조회 (/:id)
 router.get("/:id", getNewsDetail);
 
 export default router;
