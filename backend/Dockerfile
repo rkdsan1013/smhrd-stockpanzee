@@ -2,7 +2,18 @@
 FROM node:22-alpine
 
 # Alpine 패키지 업데이트 (보안 패치 적용)
-RUN apk update && apk upgrade
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont \
+      dumb-init
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
