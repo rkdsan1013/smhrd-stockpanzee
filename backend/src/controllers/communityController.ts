@@ -1,6 +1,7 @@
 // /backend/src/controllers/communityController.ts
 import { Request, Response, NextFunction } from "express";
 import * as communityService from "../services/communityService";
+import * as communityModel from "../models/communityModel";
 
 // multer 적용 시에만 req.file 사용하기 위한 인터페이스 확장
 export interface MulterRequest extends Request {
@@ -20,6 +21,18 @@ export const getCommunityPosts = async (
     next(err);
   }
 };
+
+// 좋아요 여부 (특정 유저가 해당 게시글에 좋아요 했는지)
+export async function isPostLikedByUser(postId: number, userUuid: Buffer): Promise<boolean> {
+  const row = await communityModel.findLike(userUuid, "post", postId);
+  return !!(row && row.is_liked === 1);
+}
+
+// 게시글 좋아요 개수
+export async function getCommunityLikesCount(postId: number): Promise<number> {
+  return communityModel.getLikeCount("post", postId);
+}
+
 
 // 게시글 상세 조회 (조회수 1 증가)
 export const getCommunityPost = async (
@@ -70,7 +83,7 @@ export const getCommunityPost = async (
   }
 };
 
-// 게시글 등록
+// 게시글 등록 
 export const createCommunityPost = async (
   req: Request,
   res: Response,
@@ -79,22 +92,20 @@ export const createCommunityPost = async (
   const r = req as MulterRequest;
 
   try {
-    const { assets_id, uuid, community_title, community_contents, category } = r.body;
-    const community_img = r.file?.buffer ?? null;
+    const { community_title, community_contents, category } = r.body;
+    const uuid = (r as any).user?.uuid; // 인증 미들웨어에서 유저 정보 받아옴
 
-    if (!assets_id || !uuid || !community_title || !community_contents || !category) {
+    if (!uuid || !community_title || !community_contents || !category) {
       res.status(400).json({ message: "필수값 누락" });
       return;
     }
 
     const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
     const result = await communityService.createCommunityPost({
-      assets_id: Number(assets_id),
       uuid: uuidBuffer,
       community_title,
       community_contents,
       category,
-      community_img,
     });
 
     if (!result.insertId) {
@@ -110,6 +121,8 @@ export const createCommunityPost = async (
     next(err);
   }
 };
+
+
 
 // 게시글 수정
 export const updateCommunityPost = async (
@@ -139,47 +152,6 @@ export const deleteCommunityPost = async (
   }
 };
 
-// 게시글 좋아요
-export const likeCommunityPost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const id = Number(req.params.id);
-    const user_uuid = (req as any).user?.uuid;
-    if (!user_uuid) {
-      res.status(401).json({ message: "로그인 필요" });
-      return;
-    }
-
-    await communityService.likeCommunityPost(id, Buffer.from(user_uuid, "hex"));
-    res.json({ message: "좋아요 완료" });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// 게시글 좋아요 취소
-export const unlikeCommunityPost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const id = Number(req.params.id);
-    const user_uuid = (req as any).user?.uuid;
-    if (!user_uuid) {
-      res.status(401).json({ message: "로그인 필요" });
-      return;
-    }
-
-    await communityService.unlikeCommunityPost(id, Buffer.from(user_uuid, "hex"));
-    res.json({ message: "좋아요 취소" });
-  } catch (err) {
-    next(err);
-  }
-};
 // 댓글 트리 가져오기
 export const getComments = async (
   req: Request,
@@ -225,27 +197,32 @@ export const createComment = async (
   }
 };
 
-// 댓글 좋아요
-export const likeComment = async (
+// 게시글 좋아요/취소 토글
+export const toggleCommunityLike = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const commentId = Number(req.params.id);
+    const postId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
       res.status(401).json({ message: "로그인 필요" });
       return;
     }
-    await communityService.likeComment(commentId, Buffer.from(user_uuid, "hex"));
-    res.json({ message: "댓글 좋아요 완료" });
+    const uuidBuffer = Buffer.from(user_uuid, "hex");
+    // 좋아요 상태 토글하고 결과를 받음
+    const isLiked = await communityService.toggleLike(uuidBuffer, "post", postId);
+    const likes = await communityService.getCommunityLikesCount(postId); // <- 좋아요 수도 같이 응답
+    res.json({ isLiked, likes, message: isLiked ? "좋아요" : "좋아요 취소" });
   } catch (err) {
     next(err);
   }
 };
 
-export const unlikeComment = async (
+
+// 댓글 좋아요/취소
+export const toggleCommentLike = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -254,15 +231,38 @@ export const unlikeComment = async (
     const commentId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
-      res.status(401).json({ message: "로그인 필요" });
-      return;
+    res.status(401).json({ message: "로그인 필요" });
+    return;
     }
-    await communityService.unlikeComment(commentId, Buffer.from(user_uuid, "hex"));
-    res.json({ message: "댓글 좋아요 취소" });
+
+    const uuidBuffer = Buffer.from(user_uuid, "hex");
+    const isLike = req.method === "POST";
+    await communityService.toggleLike(uuidBuffer, "community_comment", commentId);
+    res.json({ message: isLike ? "댓글 좋아요 완료" : "댓글 좋아요 취소" });
   } catch (err) {
     next(err);
   }
 };
-// 대댓글 좋아요 (댓글과 구조는 똑같이 동작)
-export const likeReply = likeComment;
-export const unlikeReply = unlikeComment;
+
+// 대댓글 좋아요/취소
+export const toggleReplyLike = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const replyId = Number(req.params.id);
+    const user_uuid = (req as any).user?.uuid;
+    if (!user_uuid) {
+    res.status(401).json({ message: "로그인 필요" });
+    return;
+    }
+
+    const uuidBuffer = Buffer.from(user_uuid, "hex");
+    const isLike = req.method === "POST";
+    await communityService.toggleLike(uuidBuffer, "asset_comment", replyId);
+    res.json({ message: isLike ? "대댓글 좋아요 완료" : "대댓글 좋아요 취소" });
+  } catch (err) {
+    next(err);
+  }
+};

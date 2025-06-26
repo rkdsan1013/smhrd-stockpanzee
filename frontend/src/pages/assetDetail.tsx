@@ -1,4 +1,4 @@
-// /frontend/src/pages/assetDetail.tsx
+// frontend/src/pages/AssetDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchAssetById } from "../services/assetService";
@@ -19,21 +19,27 @@ type Tab = "chart" | "community";
 const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [liveData, setLiveData] = useState<{ currentPrice: number; priceChange: number } | null>(
-    null,
-  );
+  const [liveData, setLiveData] = useState<{
+    currentPrice: number;
+    priceChange: number;
+  } | null>(null);
   const [selectedTab, setSelectedTab] = useState<Tab>("chart");
 
+  // 자산 정보 & 실시간 데이터 로드
   useEffect(() => {
     if (!id) return;
     fetchAssetById(Number(id))
       .then((a) => {
         setAsset(a);
-        setLiveData({ currentPrice: a.currentPrice, priceChange: a.priceChange });
+        setLiveData({
+          currentPrice: a.currentPrice,
+          priceChange: a.priceChange,
+        });
       })
       .catch(console.error);
   }, [id]);
 
+  // 차트 렌더링
   useEffect(() => {
     if (!asset || selectedTab !== "chart") return;
     const tvSymbol = getTradingViewSymbol(asset.symbol, asset.market);
@@ -41,36 +47,43 @@ const AssetDetail: React.FC = () => {
     const container = document.getElementById(containerId);
     if (container) container.innerHTML = "";
     renderTradingViewChart(containerId, tvSymbol);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asset?.id, selectedTab]);
 
+  // 5초 단위 실시간 가격 갱신
   useEffect(() => {
     if (!asset) return;
     const timer = setInterval(() => {
       fetchAssetById(Number(id))
-        .then((a) => setLiveData({ currentPrice: a.currentPrice, priceChange: a.priceChange }))
+        .then((a) =>
+          setLiveData({
+            currentPrice: a.currentPrice,
+            priceChange: a.priceChange,
+          }),
+        )
         .catch(console.error);
     }, 5000);
     return () => clearInterval(timer);
   }, [asset, id]);
 
   if (!asset || !liveData) {
-    return <div className="text-white p-8">로딩 중…</div>;
+    return <div className="text-white p-8 bg-gray-900 min-h-screen">로딩 중…</div>;
   }
 
-  const containerId = `tv-chart-${asset.id}`;
+  // 통화 단위: "원"
+  const unit = "원";
   const { currentPrice, priceChange } = liveData;
-  const unit = asset.market === "Binance" ? "USDT" : "원";
+  const containerId = `tv-chart-${asset.id}`;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-6">
+      {/* 헤더 */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col">
-          {/* 이름과 심볼을 가로 배치 */}
           <div className="flex items-baseline space-x-2">
             <h1 className="text-2xl md:text-3xl font-bold">{asset.name}</h1>
             <span className="text-base md:text-lg text-gray-400">({asset.symbol})</span>
           </div>
-          {/* 가격과 등락률 */}
           <div className="mt-2 flex items-baseline space-x-4">
             <span className="text-xl md:text-2xl font-semibold">
               {currentPrice.toLocaleString()} {unit}
@@ -112,6 +125,7 @@ const AssetDetail: React.FC = () => {
         </nav>
       </header>
 
+      {/* 콘텐츠 */}
       {selectedTab === "chart" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 bg-gray-800 rounded-2xl shadow-lg p-4">

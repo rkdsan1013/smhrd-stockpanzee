@@ -1,32 +1,41 @@
-// /backend/src/routes/community.ts
+// /backend/src/routes/communityRoutes.ts
 import { Router } from "express";
 import * as communityController from "../controllers/communityController";
 import multer from "multer";
+import { authenticate } from "../middlewares/auth";
 
 const upload = multer();
 const router = Router();
 
+// 커뮤니티 전체보기
 router.get("/", communityController.getCommunityPosts);
-router.get("/:id", communityController.getCommunityPost);
-router.post("/", upload.single("image"), communityController.createCommunityPost);
-router.put("/:id", communityController.updateCommunityPost);
-router.delete("/:id", communityController.deleteCommunityPost);
 
-// 좋아요 추가
-router.post("/:id/like", communityController.likeCommunityPost);
-// 좋아요 취소
-router.delete("/:id/like", communityController.unlikeCommunityPost);
+// 커뮤니티 상세보기
+router.get("/:id", communityController.getCommunityPost);
+
+// 커뮤니티 글 작성
+router.post("/", authenticate, communityController.createCommunityPost);
+
+// 커뮤니티 글 수정
+router.put("/:id", communityController.updateCommunityPost);
+
+// 커뮤니티 글 삭제
+router.delete("/:id", communityController.deleteCommunityPost);
 
 // 댓글 라우트
 router.get("/:id/comments", communityController.getComments);
 router.post("/:id/comments", upload.single("image"), communityController.createComment);
 
-// 댓글 좋아요
-router.post("/comments/:id/like", communityController.likeComment);
-router.delete("/comments/:id/like", communityController.unlikeComment);
+// 게시글 좋아요
+router.post("/:id/like", authenticate, communityController.toggleCommunityLike);
+router.delete("/:id/like", authenticate, communityController.toggleCommunityLike);
 
-// 대댓글 좋아요 (id는 reply id)
-router.post("/replies/:id/like", communityController.likeReply);
-router.delete("/replies/:id/like", communityController.unlikeReply);
+// 댓글 좋아요
+router.post("/comments/:id/like", authenticate, communityController.toggleCommentLike);
+router.delete("/comments/:id/like", authenticate, communityController.toggleCommentLike);
+
+// 대댓글 좋아요
+router.post("/replies/:id/like", authenticate, communityController.toggleReplyLike);
+router.delete("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 
 export default router;

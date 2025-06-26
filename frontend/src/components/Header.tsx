@@ -1,4 +1,4 @@
-// /frontend/src/components/Header.tsx
+// frontend/src/components/Header.tsx
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icons from "./Icons";
@@ -19,7 +19,7 @@ const Header: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 드롭다운 외부 클릭 시 닫기
+  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -30,13 +30,13 @@ const Header: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
 
-  // 검색 활성화 클릭
+  // 검색 활성화
   const activateSearch = () => {
     if (blurTimeout.current) clearTimeout(blurTimeout.current);
     setSearchActive(true);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
-  // 검색 blur
+  // 검색 비활성화
   const deactivateSearch = () => {
     blurTimeout.current = setTimeout(() => {
       setSearchActive(false);
@@ -44,7 +44,6 @@ const Header: React.FC = () => {
     }, 150);
   };
 
-  // 네비 아이템
   const navItems = [
     { key: "news", label: "뉴스", path: "/news" },
     { key: "market", label: "마켓", path: "/market" },
@@ -54,7 +53,7 @@ const Header: React.FC = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black to-transparent text-white px-6 py-4">
       <div className="relative container mx-auto flex items-center justify-between">
-        {/* 좌측: 로고 */}
+        {/* 로고 */}
         <Link to="/" className="flex items-center">
           <img src="/logo.svg" alt="Logo" className="h-10 w-auto" />
           <span className="ml-2 text-xl font-bold hidden lg:inline">STOCKPANZEE</span>
@@ -77,8 +76,10 @@ const Header: React.FC = () => {
                   <Link
                     key={item.key}
                     to={item.path}
-                    className={`px-4 py-1 whitespace-nowrap transition ${
-                      isActive ? "text-blue-500" : "hover:bg-white/30 rounded-full"
+                    className={`px-4 py-1 whitespace-nowrap rounded-full transition focus:outline-none ${
+                      isActive
+                        ? "text-blue-500"
+                        : "text-gray-300 hover:bg-white/30 hover:text-white"
                     }`}
                   >
                     {item.label}
@@ -89,13 +90,9 @@ const Header: React.FC = () => {
           ) : (
             <div
               className="flex flex-col items-center transition-all duration-300 ease-in-out"
-              style={{
-                width: "20rem",
-                opacity: 1,
-                pointerEvents: "auto",
-              }}
+              style={{ width: "20rem" }}
             >
-              <div className="relative">
+              <div className="relative w-full">
                 <input
                   ref={inputRef}
                   type="text"
@@ -103,12 +100,7 @@ const Header: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onBlur={deactivateSearch}
                   placeholder="검색어를 입력하세요..."
-                  className="bg-white text-black rounded-full px-4 py-2 outline-none transition-all duration-300 ease-in-out"
-                  style={{
-                    width: "20rem",
-                    opacity: 1,
-                    pointerEvents: "auto",
-                  }}
+                  className="w-full bg-white text-black rounded-full px-4 py-2 outline-none transition-all duration-300 ease-in-out"
                 />
                 {searchTerm && <SearchResults searchTerm={searchTerm} />}
               </div>
@@ -122,12 +114,15 @@ const Header: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((o) => !o)}
-                className="px-3 py-1 bg-white/20 rounded-full hover:bg-white/30 transition"
+                className="p-2 hover:bg-white/30 rounded-full transition"
               >
-                {user.username}
+                <Icons name="user" className="w-8 h-8" />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-lg z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded shadow-lg z-50 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-gray-200 font-semibold">
+                    {user.username}
+                  </div>
                   <button className="block w-full text-left px-4 py-2 hover:bg-gray-100">
                     프로필 수정
                   </button>
@@ -146,7 +141,7 @@ const Header: React.FC = () => {
           ) : (
             <Link to="/auth/login">
               <button className="p-2 hover:bg-white/30 rounded-full transition">
-                <Icons name="user" className="w-8 h-8" />
+                <Icons name="arrowLeftToBracket" className="w-8 h-8" />
               </button>
             </Link>
           )}

@@ -3,20 +3,25 @@ import * as communityModel from "../models/communityModel";
 
 import pool from "../config/db";
 
-// 게시글 전체 목록 가져오기 (예시)
+// 게시글 전체 목록
 export async function getCommunityPosts() {
-  const [rows] = await pool.query("SELECT * FROM community ORDER BY id DESC");
+  const [rows] = await pool.query(`
+    SELECT c.*, p.name AS nickname,
+      (SELECT COUNT(*) FROM likes WHERE target_type='post' AND target_id=c.id AND is_liked=1) AS community_likes
+    FROM community c
+    LEFT JOIN users u ON c.uuid = u.uuid
+    LEFT JOIN user_profiles p ON u.uuid = p.uuid
+    ORDER BY c.id DESC
+  `);
   return rows;
 }
 
 // 게시글 생성
 export async function createCommunityPost(post: {
-  assets_id: number;
   uuid: Buffer;
   community_title: string;
   community_contents: string;
   category: string;
-  community_img?: Buffer | null;
 }) {
   return await communityModel.createCommunityPost(post);
 }
@@ -29,52 +34,20 @@ export async function incrementCommunityViews(postId: number) {
   console.log("[조회수 증가 완료] id=", postId);
 }
 
+// 게시글 상세조회
 export async function getCommunityPost(id: number) {
-  // 무조건 최신값 SELECT
-  const [rows]: any = await pool.query(`SELECT * FROM community WHERE id = ?`, [id]);
+  const [rows]: any = await pool.query(`
+    SELECT c.*, p.name AS nickname
+    FROM community c
+    LEFT JOIN users u ON c.uuid = u.uuid
+    LEFT JOIN user_profiles p ON u.uuid = p.uuid
+    WHERE c.id = ?
+  `, [id]);
   return rows[0];
 }
 
 // ...추가로 update, delete, getById 등도 여기에 작성!
 
-// 게시글 좋아요
-export async function likeCommunityPost(postId: number, user_uuid: Buffer) {
-  // upsert
-  await pool.query(
-    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
-      VALUES (?, 'post', ?, 1)
-      ON DUPLICATE KEY UPDATE is_liked=1, updated_at=NOW()`,
-    [user_uuid, postId],
-  );
-}
-
-// 게시글 좋아요 취소
-export async function unlikeCommunityPost(postId: number, user_uuid: Buffer) {
-  await pool.query(
-    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
-      VALUES (?, 'post', ?, 0)
-      ON DUPLICATE KEY UPDATE is_liked=0, updated_at=NOW()`,
-    [user_uuid, postId],
-  );
-}
-
-// 게시글 좋아요 수 집계 (post 상세 조회 시 사용)
-export async function getCommunityLikesCount(postId: number) {
-  const [rows]: any = await pool.query(
-    `SELECT COUNT(*) AS count FROM likes WHERE target_type='post' AND target_id=? AND is_liked=1`,
-    [postId],
-  );
-  return rows[0]?.count || 0;
-}
-
-// 현재 유저가 좋아요 했는지 (상세 조회 시 사용)
-export async function isPostLikedByUser(postId: number, user_uuid: Buffer) {
-  const [rows]: any = await pool.query(
-    `SELECT is_liked FROM likes WHERE target_type='post' AND target_id=? AND user_uuid=?`,
-    [postId, user_uuid],
-  );
-  return rows[0]?.is_liked === 1;
-}
 
 // 댓글/대댓글 트리 반환
 export async function getComments(comm_id: number, user_uuid?: string) {
@@ -134,21 +107,31 @@ export async function createComment(data: {
   return result;
 }
 
-// 댓글 좋아요
-export async function likeComment(commentId: number, user_uuid: Buffer) {
-  await pool.query(
-    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
-      VALUES (?, 'community_comment', ?, 1)
-      ON DUPLICATE KEY UPDATE is_liked=1, updated_at=NOW()`,
-    [user_uuid, commentId],
-  );
+
+export async function toggleLike(
+  userUuid: Buffer, 
+  targetType: string, 
+  targetId: number
+) {
+  const row = await communityModel.findLike(userUuid, targetType, targetId);
+
+  if (row) {
+    // row가 있고 is_liked가 1이면 0으로(취소), 0이면 1로(재좋아요)
+    const newValue = row.is_liked === 1 ? 0 : 1;
+    await communityModel.updateLike(userUuid, targetType, targetId, newValue);
+    return newValue === 1;
+  } else {
+    // row 없으면 insert
+    // 👉 INSERT ON DUPLICATE KEY UPDATE 형태로 변경 추천!
+    await communityModel.insertLikeOrUpdate(userUuid, targetType, targetId, 1);
+    return true;
+  }
 }
-// 댓글 좋아요 취소
-export async function unlikeComment(commentId: number, user_uuid: Buffer) {
-  await pool.query(
-    `INSERT INTO likes (user_uuid, target_type, target_id, is_liked)
-      VALUES (?, 'community_comment', ?, 0)
-      ON DUPLICATE KEY UPDATE is_liked=0, updated_at=NOW()`,
-    [user_uuid, commentId],
-  );
+
+export async function isPostLikedByUser(postId: number, userUuid: Buffer) {
+  return communityModel.isLiked("post", postId, userUuid);
+}
+
+export async function getCommunityLikesCount(postId: number) {
+  return communityModel.getLikeCount("post", postId);
 }

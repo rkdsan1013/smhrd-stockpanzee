@@ -11,6 +11,7 @@ function timeAgo(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 0) return '방금 전';  // 음수 방지
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
@@ -243,8 +244,8 @@ const Community: React.FC = () => {
           <div className="col-span-full text-center text-gray-400 py-12">게시글이 없습니다.</div>
         ) : (
           currentPosts.map((post) => (
-            <Link to={`/communitydetail/${post.id}`} key={post.id} className="block">
-              <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
+            <div className="p-4 transition-colors duration-200 hover:bg-gray-800 rounded-md">
+                <Link to={`/communitydetail/${post.id}`} key={post.id} className="block">
                 {/* 썸네일 */}
                 <img
                   src={
@@ -286,8 +287,8 @@ const Community: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              </div>
             </Link>
+              </div>
           ))
         )}
       </div>

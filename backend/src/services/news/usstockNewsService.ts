@@ -1,70 +1,117 @@
 // /backend/src/services/news/usstockNewsService.ts
 import pool from "../../config/db";
-import { mapStockNews, IStockNews } from "../../utils/news/usstockNewsMapper";
-import { findNewsByLink } from "../../models/newsTransactions";
+import { mapStockNews } from "../../utils/news/usstockNewsMapper";
 import { extractFullContentWithPuppeteer } from "../../utils/crawler/usnewsContentCrawler";
-import dotenv from "dotenv";
-dotenv.config();
 
-const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY;
+import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
+import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
+import { findStockAssets } from "../../../src/models/assetModel";
+import { getEmbedding } from "../../../src/ai/embeddingService";
+import { upsertNewsVector, NewsVector } from "./storeNewsVector";
+
+const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY!;
 const STOCK_NEWS_API_URL = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&apikey=${ALPHAVANTAGE_API_KEY}`;
 
-// ✅ 서비스 내부에 날짜 변환 함수 정의
+/** "YYYYMMDDThhmmss" 포맷을 Date 객체로 변환 */
 const parseTimePublished = (raw: string): Date => {
-  const match = raw?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
-  if (!match) return new Date(NaN);
-  const [, year, month, day, hour, minute, second] = match;
-  return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+  const m = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (!m) return new Date(NaN);
+  const [, Y, M, D, h, mnt, s] = m;
+  return new Date(`${Y}-${M}-${D}T${h}:${mnt}:${s}Z`);
 };
 
 export const fetchAndProcessOneStockNews = async (): Promise<void> => {
   try {
-    const [rows] = await pool.query(
-      "SELECT symbol FROM assets WHERE market = 'NASDAQ' OR market = 'NYSE'",
-    );
-    const validSymbols = new Set((rows as any[]).map((row) => row.symbol));
+    // 1) NASDAQ/NYSE 심볼 조회
+    const [rows] = await pool.query("SELECT symbol FROM assets WHERE market IN ('NASDAQ','NYSE')");
+    const validSymbols = new Set((rows as any[]).map((r) => r.symbol.toUpperCase()));
 
-    console.log("Alpha Vantage 뉴스 수집 시작:", STOCK_NEWS_API_URL);
+    console.log("US Stock 뉴스 수집 시작:", STOCK_NEWS_API_URL);
     const response = await fetch(STOCK_NEWS_API_URL);
     if (!response.ok) throw new Error(`뉴스 API 요청 실패: ${response.status}`);
-
     const rawData = await response.json();
-    const mappedNews = mapStockNews(rawData, validSymbols);
 
-    // ✅ published_at 값을 수동으로 덮어쓰기
-    for (const item of mappedNews) {
-      const rawFeedItem = rawData.feed.find((f: any) => f.url === item.news_link);
-      item.published_at = parseTimePublished(rawFeedItem?.time_published ?? "");
-    }
+    // 2) 매핑 & published_at 보정
+    const newsItems = mapStockNews(rawData, validSymbols).map((item) => {
+      const feed = rawData.feed.find((f: any) => f.url === item.news_link);
+      item.published_at = parseTimePublished(feed?.time_published ?? "");
+      return item;
+    });
 
-    console.log(`심볼 필터링 후 뉴스 개수: ${mappedNews.length}`);
-    const testNewsItems = mappedNews.slice(0, 1);
+    console.log(`수집된 US 뉴스 개수: ${newsItems.length}`);
 
-    for (let i = 0; i < testNewsItems.length; i++) {
-      const news = testNewsItems[i];
-      const exists = await findNewsByLink(news.news_link);
-      if (exists) continue;
+    for (const news of newsItems) {
+      // 3) 중복 체크
+      if (await findNewsByLink(news.news_link)) {
+        console.log(`이미 처리된 뉴스, 스킵: ${news.news_link}`);
+        continue;
+      }
 
+      // 4) Puppeteer로 전문 크롤링
       const fullContent = await extractFullContentWithPuppeteer(news.news_link);
-      if (!fullContent) continue;
-
+      if (!fullContent) {
+        console.warn(`본문 추출 실패, 스킵: ${news.news_link}`);
+        continue;
+      }
       news.content = fullContent;
 
-      const isValidDate = (d: Date) => !isNaN(d.getTime());
-      const publishedStr = isValidDate(news.published_at)
-        ? news.published_at.toISOString()
-        : "유효하지 않은 날짜";
+      // 5) 날짜 문자열화
+      const dt = news.published_at;
+      const publishedStr = !isNaN(dt.getTime()) ? dt.toISOString() : "Invalid Date";
 
-      console.log(`\n---------------------- [뉴스 ${i + 1}] ----------------------`);
-      console.log(`타이틀     : ${news.title}`);
-      console.log(`내용       :\n${fullContent}`);
-      console.log(`뉴스 링크  : ${news.news_link}`);
-      console.log(`썸네일     : ${news.thumbnail}`);
-      console.log(`게시일     : ${publishedStr}`);
-      console.log(`출처 타이틀: ${news.source_title}`);
-      console.log(`📦 원본 JSON 전체:\n${JSON.stringify(news, null, 2)}`);
+      // 6) GPT로 뉴스 분석
+      const analysis = await analyzeNews(news.title, news.content, publishedStr);
+      console.log("GPT 분석 결과:", analysis);
+
+      // 7) 자산심볼 태그 필터링
+      const assets = await findStockAssets();
+      const symbols = new Set(assets.map((a) => a.symbol.toUpperCase()));
+      const filteredTags = analysis.tags.filter((t: string) => symbols.has(t.toUpperCase()));
+
+      // 8) DB 저장을 위한 INews 준비
+      const preparedNews = {
+        ...news,
+        news_category: "international" as "international",
+        publisher: news.source_title, // INews.required
+      };
+
+      const newsId = await createNewsWithAnalysis(
+        preparedNews,
+        {
+          news_sentiment: analysis.news_sentiment,
+          news_positive: JSON.stringify(analysis.news_positive),
+          news_negative: JSON.stringify(analysis.news_negative),
+          community_sentiment: 3,
+          summary: analysis.summary,
+          brief_summary: analysis.brief_summary,
+          tags: JSON.stringify(filteredTags),
+        },
+        analysis.title_ko,
+      );
+      console.log(`뉴스 DB 및 분석 저장 완료: ID=${newsId}`);
+
+      // 9) 임베딩 생성 및 벡터 저장
+      const vectorText = `${news.title} ${publishedStr} ${analysis.summary}`;
+      const embedding = await getEmbedding(vectorText);
+
+      const newsVector: NewsVector = {
+        id: news.news_link,
+        values: embedding,
+        metadata: {
+          published_at: publishedStr,
+          title_ko: analysis.title_ko,
+          summary: analysis.summary,
+          news_link: news.news_link,
+        },
+      };
+      await upsertNewsVector(newsVector);
+      console.log("뉴스 임베딩 & 벡터 저장 완료.");
+      console.log("---------------------------------------------------");
     }
+
+    console.log("모든 US Stock 뉴스 처리 완료.");
   } catch (error) {
-    console.error("Alpha Vantage 뉴스 처리 중 오류:", error);
+    console.error("US Stock 뉴스 처리 중 오류:", error);
+    throw error;
   }
 };
