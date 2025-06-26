@@ -5,6 +5,8 @@ import Icons from "../components/Icons";
 import axios from "axios";
 
 
+
+
 // 타입 선언
 interface Reply {
   id: number;
@@ -66,6 +68,7 @@ function FileInputWithPreview({
     </>
   );
 }
+
 
 // 댓글 입력폼
 const CommentInput: React.FC<{
