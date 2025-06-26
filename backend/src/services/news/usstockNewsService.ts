@@ -1,7 +1,7 @@
 // /backend/src/services/news/usstockNewsService.ts
 import pool from "../../config/db";
 import { mapStockNews } from "../../utils/news/usstockNewsMapper";
-import { extractFullContent } from "../../utils/newsContentExtractor";
+import { extractFullContent } from "../../utils/news/newsContentExtractor";
 import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
 import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
 import { findStockAssets } from "../../../src/models/assetModel";
