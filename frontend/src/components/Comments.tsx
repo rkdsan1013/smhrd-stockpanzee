@@ -1,6 +1,6 @@
-import React, { useState, useContext } from "react";
+import React, { useState, /*useContext*/ } from "react";
 import Icons from "./Icons"; // 상대경로 확인
-import { AuthContext } from "../providers/AuthProvider";
+//import { AuthContext } from "../providers/AuthProvider";
 
 interface Reply {
   id: number;

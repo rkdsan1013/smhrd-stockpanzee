@@ -4,7 +4,6 @@ import * as communityService from "../services/communityService";
 import * as communityModel from "../models/communityModel";
 import pool from "../config/db";
 
-
 // multer 적용 시에만 req.file 사용하기 위한 인터페이스 확장
 export interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -34,7 +33,6 @@ export async function isPostLikedByUser(postId: number, userUuid: Buffer): Promi
 export async function getCommunityLikesCount(postId: number): Promise<number> {
   return communityModel.getLikeCount("post", postId);
 }
-
 
 // 게시글 상세 조회 (조회수 1 증가)
 export const getCommunityPost = async (
@@ -81,7 +79,6 @@ export const getCommunityPost = async (
   }
 };
 
-
 // 게시글 등록 
 export const createCommunityPost = async (
   req: Request,
@@ -121,7 +118,6 @@ export const createCommunityPost = async (
   }
 };
 
-
 // 게시글 수정
 export const updateCommunityPost = async (
   req: Request,
@@ -143,46 +139,88 @@ export const updateCommunityPost = async (
   }
 };
 
-// 댓글 트리 가져오기
+// 댓글 가져오기
 export const getComments = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+  req: Request, res: Response, next: NextFunction
+) => {
   try {
     const comm_id = Number(req.params.id);
-    const user_uuid = (req as any).user?.uuid;
-    const comments = await communityService.getComments(comm_id, user_uuid);
+    const comments = await communityService.fetchComments("community", comm_id);
     res.json(comments);
+  } catch (err) { next(err); }
+};
+
+// 댓글 등록 (parent_id는 대댓글일 때만 넘어옴)
+export const createComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // ---[추가]-----------------
+  console.log('댓글 등록 req.user:', (req as any).user);
+  console.log('댓글 등록 req.body:', req.body);
+  // -------------------------
+
+  try {
+    const uuid = (req as any).user?.uuid;
+    const content = req.body.content;
+    const parent_id = req.body.parent_id ? Number(req.body.parent_id) : null;
+    const comm_id = Number(req.params.id);
+
+    if (!uuid || !content) {
+      res.status(400).json({ message: "필수값 누락" });
+      return;
+    }
+
+    const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
+    const result = await communityService.createComment({
+      uuid: uuidBuffer,
+      target_type: "community",
+      target_id: comm_id,
+      parent_id,
+      content,
+    });
+    res.status(201).json({ id: result.insertId });
   } catch (err) {
     next(err);
   }
 };
 
-// 댓글/대댓글 등록
-export const createComment = async (
+
+export const updateComment = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { content, parent_id, uuid } = req.body;
-    const comm_id = Number(req.params.id);
-    if (!content) {
-      res.status(400).json({ message: "내용 누락" });
+    const uuid = (req as any).user?.uuid;
+    const id = Number(req.params.commentId);
+    const content = req.body.content;
+    if (!uuid || !content) {
+      res.status(400).json({ message: "필수값 누락" });
       return;
     }
-    const img = (req as MulterRequest).file?.buffer ?? null;
-    // uuid는 로그인시 req.user에서 가져오는 게 보통이지만, 미로그인 대응 시 프론트에서 받아도 됨
-    const uuidBuffer = Buffer.from(uuid?.replace(/-/g, ""), "hex");
-    const result = await communityService.createComment({
-      comm_id,
-      uuid: uuidBuffer,
-      comm_contents: content,
-      comm_img: img,
-      parent_id: parent_id ? Number(parent_id) : null,
-    });
-    res.status(201).json({ id: result.insertId });
+    await communityService.updateComment(id, content, Buffer.from(uuid.replace(/-/g, ""), "hex"));
+    res.json({ message: "수정 성공" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const uuid = (req as any).user?.uuid;
+    const id = Number(req.params.commentId);
+    if (!uuid) {
+      res.status(400).json({ message: "필수값 누락" });
+      return;
+    }
+    await communityService.deleteComment(id, Buffer.from(uuid.replace(/-/g, ""), "hex"));
+    res.json({ message: "삭제 성공" });
   } catch (err) {
     next(err);
   }
@@ -211,7 +249,6 @@ export const toggleCommunityLike = async (
   }
 };
 
-
 // 댓글 좋아요/취소
 export const toggleCommentLike = async (
   req: Request,
@@ -222,8 +259,8 @@ export const toggleCommentLike = async (
     const commentId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
-    res.status(401).json({ message: "로그인 필요" });
-    return;
+      res.status(401).json({ message: "로그인 필요" });
+      return;
     }
 
     const uuidBuffer = Buffer.from(user_uuid, "hex");
@@ -245,8 +282,8 @@ export const toggleReplyLike = async (
     const replyId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
-    res.status(401).json({ message: "로그인 필요" });
-    return;
+      res.status(401).json({ message: "로그인 필요" });
+      return;
     }
 
     const uuidBuffer = Buffer.from(user_uuid, "hex");
@@ -257,7 +294,6 @@ export const toggleReplyLike = async (
     next(err);
   }
 };
-
 
 // 게시글 삭제
 export const deleteCommunityPost = async (

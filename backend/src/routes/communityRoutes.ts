@@ -41,17 +41,13 @@ router.post("/replies/:id/like", authenticate, communityController.toggleReplyLi
 router.delete("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 
 // 댓글 수정
-router.put(
-  "/comments/:id",
-  authenticate,
-  commentController.updateComment
-);
+router.put(  "/comments/:id",  authenticate,  commentController.updateComment);
 
 // 댓글 삭제
-router.delete(
-  "/comments/:id",
-  authenticate,
-  commentController.deleteComment
-);
+router.delete(  "/comments/:id",  authenticate,  commentController.deleteComment);
+
+
+router.get("/:id/comments", communityController.getComments);
+router.post("/:id/comments", authenticate, upload.none(), communityController.createComment);
 
 export default router;

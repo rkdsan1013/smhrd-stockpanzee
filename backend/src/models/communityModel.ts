@@ -97,3 +97,50 @@ export async function insertLikeOrUpdate(userUuid: Buffer, targetType: string, t
     [userUuid, targetType, targetId, value]
   );
 }
+
+
+
+export async function getComments(target_type: string, target_id: number) {
+  const [rows]: any = await pool.query(
+    `SELECT * FROM community_com WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC`,
+    [target_type, target_id]
+  );
+  return rows;
+}
+
+export async function insertComment(params: {
+  uuid: Buffer,
+  target_type: string,
+  target_id: number,
+  parent_id?: number | null,
+  content: string,
+}) {
+  const [result]: any = await pool.query(
+    `INSERT INTO community_com (uuid, target_type, target_id, parent_id, content)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      params.uuid,
+      params.target_type,
+      params.target_id,
+      params.parent_id ?? null,
+      params.content,
+    ]
+  );
+  return result;
+}
+
+export async function updateComment(id: number, content: string, uuid: Buffer) {
+  const [result]: any = await pool.query(
+    `UPDATE community_com SET content = ?, updated_at = NOW() WHERE id = ? AND uuid = ?`,
+    [content, id, uuid]
+  );
+  return result;
+}
+
+export async function deleteComment(id: number, uuid: Buffer) {
+  const [result]: any = await pool.query(
+    `DELETE FROM community_com WHERE id = ? AND uuid = ?`,
+    [id, uuid]
+  );
+  return result;
+}
