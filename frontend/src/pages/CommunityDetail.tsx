@@ -5,6 +5,24 @@ import Icons from "../components/Icons";
 import axios from "axios";
 import { AuthContext } from "../providers/AuthProvider";
 
+
+function timeAgo(dateString: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  // 9시간 더하기 (밀리초 기준)
+  date.setHours(date.getHours() - 9 );
+
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diff < 0) return "방금 전";
+  if (diff < 60) return `${diff}초 전`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
+}
+
+
 // 타입 선언
 interface Reply {
   id: number;
@@ -17,18 +35,6 @@ interface Reply {
 }
 interface Comment extends Reply {
   replies: Reply[];
-}
-
-// 시간 표시 함수
-function timeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 0) return "방금 전";
-  if (diff < 60) return `${diff}초 전`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-  return `${Math.floor(diff / 86400)}일 전`;
 }
 
 // 이미지 미리보기 및 파일 업로드 컴포넌트

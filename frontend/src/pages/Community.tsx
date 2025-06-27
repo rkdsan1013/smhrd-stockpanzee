@@ -8,16 +8,22 @@ import { AuthContext } from "../providers/AuthProvider"; // ★ context import
 
 const categoryList = ["전체", "국내", "해외", "암호화폐"];
 
-function timeAgo(dateString: string) {
+function timeAgo(dateString: string): string {
+  if (!dateString) return "";
   const date = new Date(dateString);
+  // 9시간 더하기 (밀리초 기준)
+  date.setHours(date.getHours() - 9 );
+
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 0) return '방금 전';
+
+  if (diff < 0) return "방금 전";
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
   return `${Math.floor(diff / 86400)}일 전`;
 }
+
 
 const Community: React.FC = () => {
   const [selectedSort, setSelectedSort] = useState("latest");
