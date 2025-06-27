@@ -26,11 +26,13 @@ interface StockItem {
 
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
-// 변동 기준 퍼센트 (예: 5% 이상은 '큰' 변동으로 분류)
+// “큰” 변동 임계값 (퍼센트)
 const BIG_CHANGE_THRESHOLD = 5;
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
+
+  // 탭 상태: "전체" | "국내" | "해외" | "암호화폐"
   const [selectedMarketTab, setSelectedMarketTab] = useState<StockItem["category"] | "전체">(
     "전체",
   );
@@ -49,7 +51,7 @@ const Market: React.FC = () => {
   const [, forceUpdate] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 데이터 로드 및 하이라이트
+  // 데이터 로드 및 변화 하이라이트
   useEffect(() => {
     const load = () =>
       fetchAssets()
@@ -92,12 +94,12 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // 탭/정렬 변경 시 페이지 복원
+  // 탭/정렬 변경 시 페이지 번호 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarketTab, viewMode, sortConfig]);
 
-  // 필터링 · 정렬 · 페이징
+  // 필터링 → 정렬 → 페이징
   const filtered = useMemo(
     () =>
       selectedMarketTab === "전체"
@@ -127,7 +129,7 @@ const Market: React.FC = () => {
     [finalList, currentPage],
   );
 
-  // 통계: 세부 변동 카테고리별 집계
+  // 변동 통계: 큰/작은 상승·하락 + 변동 없음
   const fallingLargeCount = finalList.filter((s) => s.priceChange < -BIG_CHANGE_THRESHOLD).length;
   const fallingSmallCount = finalList.filter(
     (s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE_THRESHOLD,
@@ -160,9 +162,11 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible, finalList]);
 
+  // 즐겨찾기 토글
   const toggleFavorite = (id: number) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+  // 컬럼 정렬 토글
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) =>
       prev.key === key
@@ -178,6 +182,9 @@ const Market: React.FC = () => {
     { key: "marketCap", label: "시가총액", width: "w-36 text-right" },
   ] as const;
 
+  // 요약 카드 제목: "전체 시장 현황", "국내 시장 현황" 등
+  const statusTitle = `${selectedMarketTab} 시장 현황`;
+
   return (
     <div className="min-h-screen bg-gray-900">
       <header className="py-4">
@@ -187,7 +194,7 @@ const Market: React.FC = () => {
       </header>
 
       <section className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* 탭 */}
+        {/* 상단 탭 */}
         <div className="flex flex-wrap justify-between gap-4 mb-4">
           <div className="flex space-x-2 bg-gray-800 p-2 rounded-full">
             {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
@@ -222,7 +229,7 @@ const Market: React.FC = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
-          {/* 좌측 리스트 */}
+          {/* 좌측 종목 리스트 */}
           <div className="w-full md:w-2/3 space-y-2">
             <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
               <div className="w-8" />
@@ -264,7 +271,12 @@ const Market: React.FC = () => {
                 <div
                   key={s.id}
                   onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                  className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-500 cursor-pointer hover:bg-gray-700 hover:scale-[1.005] ${borderClass}`}
+                  className={`
+                    flex items-center px-4 py-2 rounded-lg border-2
+                    transition-all duration-500 cursor-pointer
+                    hover:bg-gray-700 hover:scale-[1.005]
+                    ${borderClass}
+                  `}
                 >
                   <button
                     onClick={(e) => {
@@ -305,10 +317,11 @@ const Market: React.FC = () => {
             {visible.length < finalList.length && <div ref={loadMoreRef} className="h-2" />}
           </div>
 
-          {/* 우측 시장 현황 */}
+          {/* 우측 요약 카드 */}
           <div className="w-full md:w-1/3">
             <div className="sticky top-20 bg-gray-800 rounded-lg shadow p-6 space-y-4">
-              <h2 className="text-lg font-bold text-white text-center">시장 현황</h2>
+              {/* 동적으로 탭 문자열을 붙인 제목 */}
+              <h2 className="text-lg font-bold text-white text-center">{statusTitle}</h2>
 
               {/* 5단계 스택형 바 차트 with Tooltip */}
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
