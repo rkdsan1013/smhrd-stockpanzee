@@ -34,11 +34,9 @@ const GoogleCallback: React.FC = () => {
             tries++;
           }
         }
-        alert("유저 인증 정보 불러오기 실패");
         navigate("/auth/login");
       })
       .catch(() => {
-        alert("구글 로그인 실패");
         navigate("/auth/login");
       });
 
