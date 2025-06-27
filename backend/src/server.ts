@@ -8,6 +8,8 @@ import cookieParser from "cookie-parser";
 import { setupSocket } from "./socket";
 import { startPolygonPriceStream } from "./services/polygonPriceStream";
 import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
+// 추가: KRX 주가 emit 함수
+import { emitStockPrices } from "./services/emitStockPrices";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -56,10 +58,16 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
-  // Polygon 스트림
-  // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon stream:", err));
+  // 실시간 폴리곤 주가 스트림 (주석 해제하면 실행됩니다)
+  // startPolygonPriceStream(io).catch(err => console.error("Failed to start Polygon:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  // updateCryptoAssetInfoPeriodically();
   // setInterval(updateCryptoAssetInfoPeriodically, 5000);
+
+  // ────────────────────────────────────
+  // 추가: KRX 종목 실시간 emit 시작
+  // emitStockPrices(io)
+  //   .then(() => console.log("🟢 emitStockPrices started"))
+  //   .catch((err) => console.error("❌ emitStockPrices failed:", err));
+  // ────────────────────────────────────
 });

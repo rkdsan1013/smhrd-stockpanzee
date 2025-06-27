@@ -53,7 +53,7 @@ export async function analyzeNews(
 {"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["..."], "news_negative": ["..."], "tags": ["..."]}
 
 - news_sentiment: 1 = 매우부정, 2 = 부정, 3 = 중립, 4 = 긍정, 5 = 매우긍정.
-- tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA).
+- tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA, 005930, 000660, ...).
 - summary: 뉴스의 전체 내용을 자세하게 요약하십시오. 반드시 한글로 번역하여 작성.
 - brief_summary: 뉴스 내용의 핵심을 한 줄로 간결하게 요약하십시오.
 - title_ko: 뉴스 제목의 한글 번역본.

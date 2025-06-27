@@ -5,58 +5,41 @@ dotenv.config();
 import axios from "axios";
 import WebSocket from "ws";
 import type { Server as IOServer } from "socket.io";
-import mysql from "mysql2/promise";
-import * as model from "../models/assetModel";
 import { upsertAssetInfo, findStockAssets } from "../models/assetModel";
-import pool from "../config/db"; // MySQL 연결 풀
+import { getExchangeRate } from "../utils/exchangeRate";
 
-// 환경변수에서 FMP_API_KEY 도 읽음
-const { FMP_API_KEY } = process.env;
+// env 체크
+const { FMP_API_KEY, POLYGON_API_KEY } = process.env;
 if (!FMP_API_KEY) {
   console.error("❌ FMP_API_KEY가 설정되어 있지 않습니다.");
   process.exit(1);
 }
+if (!POLYGON_API_KEY) {
+  console.error("❌ POLYGON_API_KEY가 설정되어 있지 않습니다.");
+  process.exit(1);
+}
 
-// 환율 상수: 1 USD = 1400 KRW (한 번만 곱함)
-const DOLLAR_EXCHANGE_RATE = 1400;
-console.log(`[환율 로그] 1 USD = ${DOLLAR_EXCHANGE_RATE} KRW`);
-
-// 폴리곤 관련 상수
-const POLYGON_API_KEY: string = process.env.POLYGON_API_KEY!;
 const POLYGON_BASE_URL = "https://api.polygon.io";
-const POLYGON_WS_URL = `wss://delayed.polygon.io/stocks`;
+const POLYGON_WS_URL = "wss://delayed.polygon.io/stocks";
 
-// 실시간 주가 관련 인터페이스
-export interface PriceData {
-  price: number;
-  timestamp: number;
-}
-export const priceMap = new Map<string, PriceData>();
-export function getPriceFromMemory(symbol: string): PriceData | null {
-  return priceMap.get(symbol) ?? null;
-}
-
-// ──────────────────────────────────────────────
-// 폴리곤 그룹화된 전일 집계 API 응답 타입
+// —————— Helper Interfaces ——————
 interface GroupedAgg {
   T: string; // 심볼
-  o: number; // 시가 (달러)
-  c: number; // 종가 (달러)
+  o: number; // 시가
+  c: number; // 종가
 }
 interface GroupedAggsResponse {
   status: string;
   results: GroupedAgg[];
 }
 
-// ──────────────────────────────────────────────
-// FMP API 응답 타입 – 시가총액 정보
 interface QuoteItem {
   symbol: string;
   marketCap: number;
 }
 
-// ──────────────────────────────────────────────
-// 배열을 지정한 크기만큼 분할하는 유틸 함수 (FMP API용)
+// —————— Helper Functions ——————
+/** 배열을 size만큼 분할 */
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -65,169 +48,150 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-// ──────────────────────────────────────────────
-// 최근 거래일(Trading Day) 계산 함수 (토, 일일 경우 전 거래일인 금요일 반환)
+/** 전 거래일(영업일) yyyy-MM-dd */
 function getLastTradingDay(): string {
-  const date = new Date();
-  date.setDate(date.getDate() - 1); // 기본적으로 어제 날짜
-  const day = date.getDay();
-  if (day === 0) {
-    // 일요일
-    date.setDate(date.getDate() - 2);
-  } else if (day === 6) {
-    // 토요일
-    date.setDate(date.getDate() - 1);
-  }
-  return date.toISOString().slice(0, 10);
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const day = d.getDay();
+  if (day === 0) d.setDate(d.getDate() - 2);
+  if (day === 6) d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
-// ──────────────────────────────────────────────
-// FMP API를 이용하여, 주어진 심볼 배열에 대해 시가총액(USD) 정보를 배치로 가져와 매핑 객체(symbol => marketCap)
-// 최대 1000개씩 처리 (FMP Batch Quote API)
+/** FMP로 심볼별 시가총액(USD) 조회 */
 async function fetchMarketCapsForSymbols(symbols: string[]): Promise<Map<string, number>> {
-  const marketCapMap = new Map<string, number>();
-  const chunks = chunkArray(symbols, 1000);
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    const url = `https://financialmodelingprep.com/api/v3/quote/${chunk.join(
+  const map = new Map<string, number>();
+  const batches = chunkArray(symbols, 1000);
+  for (const [i, batch] of batches.entries()) {
+    const url = `https://financialmodelingprep.com/api/v3/quote/${batch.join(
       ",",
     )}?apikey=${FMP_API_KEY}`;
     try {
-      const resp = await axios.get<QuoteItem[]>(url);
-      const data = resp.data;
+      const { data } = await axios.get<QuoteItem[]>(url);
       console.log(
-        `\n[시총 로그] ${i + 1}/${chunks.length}차 배치: 요청 심볼 ${chunk.length}개, 반환 항목 ${data.length}`,
+        `[시총] ${i + 1}/${batches.length} 배치, 요청 ${batch.length}개, 응답 ${data.length}개`,
       );
       data.forEach((item) => {
-        if (item.marketCap > 0) {
-          marketCapMap.set(item.symbol.toUpperCase(), item.marketCap);
-        }
+        if (item.marketCap > 0) map.set(item.symbol.toUpperCase(), item.marketCap);
       });
-    } catch (error: any) {
-      console.warn(
-        `[시총 로그] ${i + 1}/${chunks.length}차 배치 호출 실패: ${error.message || error}`,
-      );
+    } catch (e: any) {
+      console.warn(`[시총] ${i + 1}번째 호출 실패: ${e.message}`);
     }
   }
-  return marketCapMap;
+  return map;
 }
 
-// ──────────────────────────────────────────────
-// 전일 종가 업데이트 함수
-/**
- * 전일 종가 데이터를 폴리곤 API에서 받아와,
- * 동시에 FMP API를 통해 해당 종목의 시가총액(USD)을 불러온 후,
- * 둘 다 환율 1400을 한 번만 곱해 KRW 단위로 변환하여 DB에 저장합니다.
- */
+// —————— 전일 종가 + 시총 업데이트 ——————
 export async function updatePreviousCloses(): Promise<void> {
-  const lastTradingDay = getLastTradingDay();
-  console.log(`[전일 종가 로그] Fetching data for last trading day: ${lastTradingDay}`);
-  const url = `${POLYGON_BASE_URL}/v2/aggs/grouped/locale/us/market/stocks/${lastTradingDay}?adjusted=true&apiKey=${POLYGON_API_KEY}`;
-  const resp = await axios.get<GroupedAggsResponse>(url);
-  const results = resp.data.results ?? [];
-  console.log(
-    `[전일 종가 로그] Polygon API 응답 결과 (${results.length} 건): ${JSON.stringify(results)}`,
-  );
+  const lastDay = getLastTradingDay();
+  console.log(`[전일] ${lastDay} 데이터 가져오는 중…`);
 
-  // assets 테이블에서 관련 데이터를 가져옴
+  // 1) 폴리곤 전일 집계
+  const urlAggs = `${POLYGON_BASE_URL}/v2/aggs/grouped/locale/us/market/stocks/${lastDay}?adjusted=true&apiKey=${POLYGON_API_KEY}`;
+  const resp = await axios.get<GroupedAggsResponse>(urlAggs);
+  const aggs: GroupedAgg[] = resp.data.results ?? [];
+
+  // 2) 시총(USD) 조회
+  const symbols = aggs.map((g) => g.T.toUpperCase());
+  const marketCapMap = await fetchMarketCapsForSymbols([...new Set(symbols)]);
+
+  // 3) 환율
+  const usdToKrw = await getExchangeRate("USD", "KRW");
+  console.log(`[환율] 1 USD = ${usdToKrw} KRW`);
+
+  // 4) DB upsert
   const assets = await findStockAssets();
-  const mapId = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));
-
-  // 폴리곤 API 결과에서 업데이트할 심볼 리스트 (대문자로 변환)
-  const symbolsToUpdate = Array.from(new Set(results.map((r) => r.T.toUpperCase())));
-  // FMP API를 이용해 시가총액(USD) 정보 가져오기
-  const marketCapMap = await fetchMarketCapsForSymbols(symbolsToUpdate);
+  const idMap = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));
 
   await Promise.all(
-    results.map(async (r) => {
-      const symbol = r.T.toUpperCase();
-      const id = mapId.get(symbol);
+    aggs.map(async (g: GroupedAgg) => {
+      const sym = g.T.toUpperCase();
+      const id = idMap.get(sym);
       if (!id) return;
-      // 주가 데이터 변환 (달러 원본 값에 환율 1400 한 번만 곱함)
-      const closeKRW = r.c * DOLLAR_EXCHANGE_RATE;
-      const openKRW = r.o * DOLLAR_EXCHANGE_RATE;
-      const change = r.o === 0 ? 0 : Number((((closeKRW - openKRW) / openKRW) * 100).toFixed(2));
-      // FMP API에서 가져온 시가총액(USD)이 있으면 환율 곱해서 사용, 없으면 0
-      const marketCapUSD = marketCapMap.get(symbol) || 0;
-      const marketCapKRW = marketCapUSD * DOLLAR_EXCHANGE_RATE;
 
-      await upsertAssetInfo(id, closeKRW, change, marketCapKRW);
-      // DB 저장 로그는 주석처리 → 시총 값만 별도 로그로 출력
-      console.log(`[시총 로그] 자산 ID: ${id}, 심볼: ${symbol} | 시총 (KRW): ${marketCapKRW}`);
+      const openKRW = g.o * usdToKrw;
+      const closeKRW = g.c * usdToKrw;
+      const change = g.o === 0 ? 0 : Number((((closeKRW - openKRW) / openKRW) * 100).toFixed(2));
+
+      const capUSD = marketCapMap.get(sym) ?? 0;
+      const capKRW = capUSD * usdToKrw;
+
+      await upsertAssetInfo(id, closeKRW, change, capKRW);
+      console.log(`[업데이트] ${sym} 시총 KRW ${capKRW.toLocaleString()}`);
     }),
   );
 
-  console.log("[전일 종가 로그] 전일 종가 업데이트 완료.");
+  console.log("[전일] 업데이트 완료");
 }
 
-// ──────────────────────────────────────────────
-// 실시간 주가 업데이트 (폴리곤 WebSocket 이용)
-/**
- * WebSocket을 통해 실시간 주가 데이터를 받아 DB에 업데이트합니다.
- * - 실시간 주가(현재가)는 달러 원본 값에 환율 1400을 한 번만 곱해 KRW 단위로 변환합니다.
- * - 시가총액은 전일 업데이트된 값을 그대로 사용합니다.
- */
+// —————— 실시간 스트림 ——————
 export async function startPolygonPriceStream(io: IOServer) {
-  // 전일 종가 업데이트 먼저 수행(시가총액 업데이트 포함)
+  // 1) 전일 종가 먼저
   await updatePreviousCloses();
 
-  // 이후 실시간 업데이트에서는 시가총액은 업데이트된 값 그대로 사용
+  // 2) 자산·ID 맵
   const assets = await findStockAssets();
   const idMap = new Map(assets.map((a) => [a.symbol.toUpperCase(), a.id]));
 
   let reconnect = 1000;
   priceMap.clear();
+
   async function connect() {
     const ws = new WebSocket(POLYGON_WS_URL);
 
     ws.on("open", () => {
       ws.send(JSON.stringify({ action: "auth", params: POLYGON_API_KEY }));
-      const params = assets.map((a) => `AM.${a.symbol}`).join(",");
-      ws.send(JSON.stringify({ action: "subscribe", params }));
+      const param = assets.map((a) => `AM.${a.symbol}`).join(",");
+      ws.send(JSON.stringify({ action: "subscribe", params: param }));
       reconnect = 1000;
     });
 
-    ws.on("message", (data) => {
+    ws.on("message", async (buf: WebSocket.Data) => {
       let msgs: any[];
       try {
-        msgs = JSON.parse(data.toString());
+        msgs = JSON.parse(buf.toString());
       } catch {
         return;
       }
+      const usdToKrw = await getExchangeRate("USD", "KRW");
+
       for (const m of msgs) {
-        if (m.ev === "AM" && m.sym && m.c != null) {
-          const symbol = m.sym.toUpperCase();
-          // 실시간 주가 데이터: 달러 원본에 환율 1400 곱함
-          const priceKRW = (m.c as number) * DOLLAR_EXCHANGE_RATE;
-          const timestamp = m.s as number;
-          priceMap.set(symbol, { price: priceKRW, timestamp });
-          io.emit("priceUpdate", { symbol, price: priceKRW, timestamp });
+        if (m.ev === "AM" && m.sym && typeof m.c === "number") {
+          const sym = m.sym.toUpperCase();
+          const priceKRW = m.c * usdToKrw;
+          priceMap.set(sym, { price: priceKRW, timestamp: m.s });
+          io.emit("priceUpdate", { symbol: sym, price: priceKRW, timestamp: m.s });
         }
       }
     });
 
     ws.on("close", async () => {
-      for (const [symbol, pd] of priceMap) {
-        const aid = idMap.get(symbol);
+      for (const [sym, pd] of priceMap) {
+        const aid = idMap.get(sym);
         if (!aid) continue;
         const asset = assets.find((a) => a.id === aid)!;
-        const dbP = asset.current_price ?? pd.price;
-        const change = dbP === 0 ? 0 : Number((((pd.price - dbP) / dbP) * 100).toFixed(2));
-        // 시총은 전일 업데이트된 값을 그대로 사용
-        const marketCap = asset.market_cap ?? 0;
-        await upsertAssetInfo(aid, pd.price, change, marketCap);
-        // DB 저장 로그 주석 처리, 대신 시총 로그 출력
-        console.log(`[시총 로그] 자산 ID: ${aid} | 실시간 시가총액 (KRW): ${marketCap}`);
+        const prev = asset.current_price ?? pd.price;
+        const change = prev === 0 ? 0 : Number((((pd.price - prev) / prev) * 100).toFixed(2));
+        const cap = asset.market_cap ?? 0;
+        await upsertAssetInfo(aid, pd.price, change, cap);
       }
-      console.log("[실시간 로그] 실시간 주가 업데이트 완료.");
+      console.log("[실시간] 연결 종료, 재접속 시도 중…");
       setTimeout(connect, reconnect);
       reconnect = Math.min(reconnect * 2, 30000);
     });
 
-    ws.on("error", (err) => {
-      ws.close();
-    });
+    ws.on("error", () => ws.close());
   }
 
-  connect().catch((err) => {});
+  connect().catch(console.error);
+}
+
+// 메모리 캐시
+export interface PriceData {
+  price: number;
+  timestamp: number;
+}
+export const priceMap = new Map<string, PriceData>();
+export function getPriceFromMemory(symbol: string): PriceData | null {
+  return priceMap.get(symbol) ?? null;
 }
