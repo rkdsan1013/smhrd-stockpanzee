@@ -20,7 +20,7 @@ const parseTimePublished = (raw: string): Date => {
   return new Date(`${Y}-${Mo}-${Da}T${h}:${mi}:${s}Z`);
 };
 
-export const fetchAndProcessOneStockNews = async (): Promise<void> => {
+export const fetchAndProcessUsStockNews = async (): Promise<void> => {
   try {
     // 1) NASDAQ/NYSE 심볼 조회 (제네릭으로 RowDataPacket[] 지정)
     const [rows] = await pool.query<RowDataPacket[] & { symbol: string }[]>(
