@@ -5,8 +5,8 @@ dotenv.config();
 import axios from "axios";
 import WebSocket from "ws";
 import type { Server as IOServer } from "socket.io";
-import { upsertAssetInfo, findStockAssets } from "../models/assetModel";
-import { getExchangeRate } from "../utils/exchangeRate";
+import { upsertAssetInfo, findStockAssets } from "../../models/assetModel";
+import { getExchangeRate } from "../../utils/exchangeRate";
 
 // env 체크
 const { FMP_API_KEY, POLYGON_API_KEY } = process.env;

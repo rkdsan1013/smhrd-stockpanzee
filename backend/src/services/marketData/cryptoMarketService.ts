@@ -3,9 +3,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import axios from "axios";
-import { upsertCryptoInfo, findCryptoAssets } from "../models/assetModel";
-import pool from "../config/db";
-import { getExchangeRate } from "../utils/exchangeRate";
+import { upsertCryptoInfo, findCryptoAssets } from "../../models/assetModel";
+import pool from "../../config/db";
+import { getExchangeRate } from "../../utils/exchangeRate";
 
 const BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr";
 const COINLORE_URL = "https://api.coinlore.net/api/tickers/";

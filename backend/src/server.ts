@@ -6,10 +6,10 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import { setupSocket } from "./socket";
-import { startPolygonPriceStream } from "./services/polygonPriceStream";
-import { updateCryptoAssetInfoPeriodically } from "./services/binanceService";
+import { startPolygonPriceStream } from "./services/marketData/usStockMarketService";
+import { updateCryptoAssetInfoPeriodically } from "./services/marketData/cryptoMarketService";
 // 추가: KRX 주가 emit 함수
-import { emitStockPrices } from "./services/emitStockPrices";
+import { emitStockPrices } from "./services/marketData/krxMarketService";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";

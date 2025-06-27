@@ -1,7 +1,7 @@
 // /backend/src/services/assetService.ts
 import * as model from "../models/assetModel";
 import type { Asset } from "../models/assetModel";
-import { getPriceFromMemory } from "./polygonPriceStream";
+import { getPriceFromMemory } from "./marketData/usStockMarketService";
 
 export interface AssetWithPrice extends Asset {
   currentPrice: number;

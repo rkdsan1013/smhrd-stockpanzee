@@ -5,7 +5,7 @@ dotenv.config();
 
 import axios from "axios";
 import { RowDataPacket } from "mysql2";
-import pool from "../config/db";
+import pool from "../../config/db";
 import type { Server as IOServer } from "socket.io";
 
 let accessToken = "";
