@@ -1,4 +1,4 @@
-// frontend/src/pages/AssetDetail.tsx
+// /frontend/src/pages/AssetDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchAssetById } from "../services/assetService";
