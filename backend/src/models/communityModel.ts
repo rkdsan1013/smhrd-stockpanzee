@@ -10,17 +10,21 @@ interface CommunityPost {
 
 
 // community_img는 BLOB, 없으면 null
-export async function createCommunityPost(post: CommunityPost) {
+export async function createCommunityPost(post: {
+  uuid: Buffer;
+  community_title: string;
+  community_contents: string;
+  category: string;
+}) {
   const [result]: any = await pool.query(
-    `INSERT INTO community 
-      (uuid, community_title, community_contents, category)
+    `INSERT INTO community (uuid, community_title, community_contents, category)
      VALUES (?, ?, ?, ?)`,
     [
       post.uuid,
       post.community_title,
       post.community_contents,
       post.category,
-    ],
+    ]
   );
   return result;
 }
