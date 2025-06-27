@@ -17,7 +17,7 @@ interface RawAlphaNewsItem {
   ticker_sentiment: { ticker: string }[];
 }
 
-export const mapStockNews = (data: any, validSymbols: Set<string>): IStockNews[] => {
+export const mapUsStockNews = (data: any, validSymbols: Set<string>): IStockNews[] => {
   if (!data?.feed) return [];
 
   return data.feed

@@ -1,7 +1,7 @@
 // /backend/src/controllers/newsController.ts
 import { RequestHandler } from "express";
 import { fetchAndProcessNews } from "../services/news/cryptoNewsService";
-import { fetchAndProcessOneStockNews } from "../services/news/usstockNewsService";
+import { fetchAndProcessOneStockNews } from "../services/news/usStockNewsService";
 import { fetchAndProcessSmartKrxNews } from "../services/news/krxNewsService";
 import { getAllNews } from "../models/newsTransactions";
 import * as newsService from "../services/newsService";
