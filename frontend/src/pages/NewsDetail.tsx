@@ -58,6 +58,7 @@ const NewsDetailPage: React.FC = () => {
       return;
     }
     setStatus("loading");
+
     fetchNewsDetail(+id)
       .then((data) => {
         setNews(data);
@@ -99,6 +100,9 @@ const NewsDetailPage: React.FC = () => {
   const positives = parseList(news.news_positive);
   const negatives = parseList(news.news_negative);
 
+  // 태그 배열 파싱
+  const parsedTags = parseList(news.tags);
+
   return (
     <div className="w-full bg-gray-900 px-6 py-8">
       <div className="max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -132,7 +136,7 @@ const NewsDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Sentiment Bars */}
+          {/* Sentiment Bars & Tags */}
           <div className="bg-gray-800 rounded-xl p-4 flex flex-col md:flex-row justify-between gap-6">
             <div>
               <div className="text-gray-300 text-xs mb-1">AI 감정평가</div>
@@ -145,11 +149,15 @@ const NewsDetailPage: React.FC = () => {
             <div>
               <div className="text-gray-300 text-xs mb-1">태그</div>
               <div className="flex flex-wrap gap-2">
-                {(news.tags || []).map((t) => (
-                  <span key={t} className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs">
-                    {t}
-                  </span>
-                ))}
+                {parsedTags.length > 0 ? (
+                  parsedTags.map((t) => (
+                    <span key={t} className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs">
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 text-sm">태그 없음</span>
+                )}
               </div>
             </div>
           </div>
