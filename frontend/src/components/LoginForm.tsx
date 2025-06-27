@@ -7,9 +7,9 @@ import TermsAgreement from "./TermsAgreement";
 import { AuthContext } from "../providers/AuthProvider";
 import { getGoogleAuthUrl } from "../utils/googleAuth";
 
-const handleGoogleLoginClick = () => {
-  window.location.href = getGoogleAuthUrl();
-};
+//const handleGoogleLoginClick = () => {
+//  window.location.href = getGoogleAuthUrl();
+//};
 
 
 const LoginForm: React.FC = () => {
