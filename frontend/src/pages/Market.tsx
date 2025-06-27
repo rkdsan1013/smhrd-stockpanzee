@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
+import socket from "../socket";
 
 const formatCurrency = (value: number): string => {
   if (value >= 1e12) return (value / 1e12).toFixed(1) + "조";
@@ -27,9 +28,7 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedMarketTab, setSelectedMarketTab] = useState<StockItem["category"] | "전체">(
-    "전체",
-  );
+  const [selectedMarketTab, setSelectedMarketTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [stockData, setStockData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
@@ -57,13 +56,14 @@ const Market: React.FC = () => {
             priceChange: a.priceChange,
             marketCap: a.marketCap,
             logo: "/panzee.webp",
-            category: ["KOSPI", "KOSDAQ"].includes(a.market)
-              ? "국내"
-              : ["NASDAQ", "NYSE"].includes(a.market)
+            category:
+              ["KOSPI", "KOSDAQ"].includes(a.market)
+                ? "국내"
+                : ["NASDAQ", "NYSE"].includes(a.market)
                 ? "해외"
                 : a.market === "Binance"
-                  ? "암호화폐"
-                  : "기타",
+                ? "암호화폐"
+                : "기타",
           }));
 
           list.forEach((s) => {
@@ -90,6 +90,26 @@ const Market: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    socket.on("stockPrice", (data: { symbol: string; price: any; rate: any; marketCap: any; }) => {
+      setStockData((prev) =>
+        prev.map((stock) =>
+          stock.symbol === data.symbol
+            ? {
+                ...stock,
+                currentPrice: data.price,
+                priceChange: Number(data.rate),
+                marketCap: data.marketCap,
+              }
+            : stock
+        )
+      );
+    });
+    return () => {
+      socket.off("stockPrice");
+    };
+  }, []);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [selectedMarketTab, viewMode, sortConfig]);
 
@@ -98,7 +118,7 @@ const Market: React.FC = () => {
       selectedMarketTab === "전체"
         ? stockData
         : stockData.filter((s) => s.category === selectedMarketTab),
-    [stockData, selectedMarketTab],
+    [stockData, selectedMarketTab]
   );
 
   const sorted = useMemo(() => {
@@ -107,20 +127,20 @@ const Market: React.FC = () => {
     return [...filtered].sort((a, b) =>
       key === "name"
         ? a.name.localeCompare(b.name) * factor
-        : ((a as any)[key] - (b as any)[key]) * factor,
+        : ((a as any)[key] - (b as any)[key]) * factor
     );
   }, [filtered, sortConfig]);
 
   const finalList = useMemo(() => {
     const withFavorites = [...sorted].sort((a, b) =>
-      favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1,
+      favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1
     );
     return viewMode === "전체" ? withFavorites : sorted.filter((s) => favorites.includes(s.id));
   }, [sorted, viewMode, favorites]);
 
   const visible = useMemo(
     () => finalList.slice(0, currentPage * itemsPerPage),
-    [finalList, currentPage],
+    [finalList, currentPage]
   );
 
   const risingCount = finalList.filter((s) => s.priceChange > 0).length;
@@ -135,30 +155,29 @@ const Market: React.FC = () => {
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visible.length < finalList.length) {
           setCurrentPage((p) => p + 1);
         }
       },
-      { threshold: 1 },
+      { threshold: 1 }
     );
-
     observer.observe(el);
-
-    return () => observer.unobserve(el); // ✅ 반드시 void 반환
+    return () => observer.unobserve(el);
   }, [visible, finalList]);
 
   const toggleFavorite = (id: number) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) =>
       prev.key === key
         ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "desc" },
+        : { key, direction: "desc" }
     );
   };
 
@@ -176,14 +195,13 @@ const Market: React.FC = () => {
           <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
         </div>
       </header>
-
       <section className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex flex-wrap justify-between gap-4 mb-4">
           <div className="flex space-x-2 bg-gray-800 p-2 rounded-full">
             {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setSelectedMarketTab(tab === "전체" ? "전체" : tab)}
+                onClick={() => setSelectedMarketTab(tab)}
                 className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
                   selectedMarketTab === tab
                     ? "bg-blue-600 text-white"
@@ -247,8 +265,8 @@ const Market: React.FC = () => {
                 hl === "up"
                   ? "border-green-400"
                   : hl === "down"
-                    ? "border-red-400"
-                    : "border-transparent";
+                  ? "border-red-400"
+                  : "border-transparent";
               return (
                 <div
                   key={s.id}
@@ -264,7 +282,9 @@ const Market: React.FC = () => {
                   >
                     <Icons
                       name="banana"
-                      className={`w-5 h-5 ${favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"}`}
+                      className={`w-5 h-5 ${
+                        favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"
+                      }`}
                     />
                   </button>
                   <div className="flex-1 ml-2">
