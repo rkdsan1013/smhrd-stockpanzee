@@ -4,12 +4,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainPage from "./pages/MainPage";
 import AuthTemplate from "./pages/AuthTemplate";
 import LoginForm from "./components/LoginForm";
+import GoogleCallback from "./pages/GoogleCallback";
 import RegisterForm from "./components/RegisterForm";
 import Home from "./pages/Home";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
 import Market from "./pages/Market";
-import AssetDetail from "./pages/assetDetail";
+import AssetDetail from "./pages/AssetDetail";
 import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
 import AppProvider from "./providers/AppProvider"; // 전역 프로바이더 예시
@@ -39,6 +40,7 @@ const App: React.FC = () => {
           <Route path="/auth" element={<AuthTemplate />}>
             <Route index element={<LoginForm />} />
             <Route path="login" element={<LoginForm />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
             <Route path="register" element={<RegisterForm />} />
           </Route>
         </Routes>

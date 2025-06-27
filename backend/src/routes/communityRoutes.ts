@@ -3,6 +3,7 @@ import { Router } from "express";
 import * as communityController from "../controllers/communityController";
 import multer from "multer";
 import { authenticate } from "../middlewares/auth";
+import * as commentController from "../controllers/commentController";
 
 const upload = multer();
 const router = Router();
@@ -38,5 +39,19 @@ router.delete("/comments/:id/like", authenticate, communityController.toggleComm
 // 대댓글 좋아요
 router.post("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 router.delete("/replies/:id/like", authenticate, communityController.toggleReplyLike);
+
+// 댓글 수정
+router.put(
+  "/comments/:id",
+  authenticate,
+  commentController.updateComment
+);
+
+// 댓글 삭제
+router.delete(
+  "/comments/:id",
+  authenticate,
+  commentController.deleteComment
+);
 
 export default router;

@@ -20,14 +20,34 @@ export async function findUserByEmail(email: string): Promise<DbUser[]> {
   return rows as DbUser[];
 }
 
+// 예시: user_profiles 쿼리 함수에 avatar_url도 인자로 받게
 export async function registerUser(
   userUuid: Buffer,
   email: string,
   hashedPassword: string,
   username: string,
+  avatar_url?: string | null
 ) {
-  await registerUserTransaction(userUuid, email, hashedPassword, username);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query(
+      "INSERT INTO users (uuid, email, password) VALUES (?, ?, ?)",
+      [userUuid, email, hashedPassword]
+    );
+    await conn.query(
+      "INSERT INTO user_profiles (uuid, name, avatar_url) VALUES (?, ?, ?)",
+      [userUuid, username, avatar_url ?? null]
+    );
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
+
 
 export async function findUserByUuid(uuid: Buffer): Promise<UserProfile[]> {
   const [rows] = await pool.query(SELECT_USER_BY_UUID, [uuid]);
