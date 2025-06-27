@@ -1,11 +1,11 @@
 // /backend/src/services/news/usstockNewsService.ts
 import pool from "../../config/db";
-import { mapStockNews } from "../../utils/news/usstockNewsMapper";
+import { mapUsStockNews } from "../../utils/news/usstockNewsMapper";
 import { extractFullContent } from "../../utils/news/newsContentExtractor";
-import { findNewsByLink, createNewsWithAnalysis } from "../../../src/models/newsTransactions";
-import { analyzeNews } from "../../../src/ai/gptNewsAnalysis";
-import { findStockAssets } from "../../../src/models/assetModel";
-import { getEmbedding } from "../../../src/ai/embeddingService";
+import { findNewsByLink, createNewsWithAnalysis } from "../../models/newsTransactions";
+import { analyzeNews } from "../../ai/gptNewsAnalysis";
+import { findStockAssets } from "../../models/assetModel";
+import { getEmbedding } from "../../ai/embeddingService";
 import { upsertNewsVector, NewsVector } from "./storeNewsVector";
 
 const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY!;
@@ -31,7 +31,7 @@ export const fetchAndProcessOneStockNews = async (): Promise<void> => {
     const rawData = await response.json();
 
     // 2) 매핑 & published_at 설정
-    const newsItems = mapStockNews(rawData, validSymbols).map((item) => {
+    const newsItems = mapUsStockNews(rawData, validSymbols).map((item) => {
       const feed = rawData.feed.find((f: any) => f.url === item.news_link);
       item.published_at = parseTimePublished(feed?.time_published ?? "");
       return item;

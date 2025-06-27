@@ -62,7 +62,7 @@ server.listen(PORT, () => {
   // startPolygonPriceStream(io).catch(err => console.error("Failed to start Polygon:", err));
 
   // Binance 암호화폐 5초 주기 DB 업데이트
-  // setInterval(updateCryptoAssetInfoPeriodically, 5000);
+  setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
   // ────────────────────────────────────
   // 추가: KRX 종목 실시간 emit 시작
