@@ -4,39 +4,29 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export interface AnalysisResult {
-  summary: string;
-  brief_summary: string;
-  title_ko: string;
-  news_sentiment: number;
-  news_positive: string[];
-  news_negative: string[];
-  tags: string[];
+  success: boolean;
+  summary?: string;
+  brief_summary?: string;
+  title_ko?: string;
+  news_sentiment?: number;
+  news_positive?: string[];
+  news_negative?: string[];
+  tags?: string[];
 }
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
 interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "assistant" | "user";
   content: string;
 }
 
 interface ChatCompletionChoice {
-  index: number;
   message: ChatMessage;
-  finish_reason: string;
 }
-
 interface ChatCompletionResponse {
-  id: string;
-  object: string;
-  created: number;
   choices: ChatCompletionChoice[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
 }
 
 export async function analyzeNews(
@@ -44,44 +34,92 @@ export async function analyzeNews(
   newsContent: string,
   publishedDate: string,
 ): Promise<AnalysisResult> {
-  const prompt = `뉴스 제목: ${newsTitle}
+  const systemPrompt = `
+당신은 금융 뉴스 분석 전문가입니다.
+아래 지침을 절대 어기지 말고, 오직 순수 JSON만 반환하세요.
+
+1) 이 기사가 '주식·증권시장' 관련 뉴스인지 판단:
+   • 관련(기업공시·주가·시총·증권이슈·투자전략 등): KEEP  
+   • 광고·홍보·이벤트·프로모션·혜택 안내·구매유도·일반생활정보 등: REJECT
+
+2) REJECT 시 즉시:
+{"success": false}
+
+3) KEEP 시, 반드시 아래 형식으로만:
+{
+  "success": true,
+  "summary": "...",
+  "brief_summary": "...",
+  "title_ko": "...",
+  "news_sentiment": n,
+  "news_positive": ["..."],
+  "news_negative": ["..."],
+  "tags": ["..."]
+}
+
+■ summary 작성 규칙:
+- Who, What, When, Where, Why, How 의 핵심 사실 모두 포함  
+- 해설·추측·추가 배경 금지  
+- 정보 완결성 우선 (문장 수 제한 없음)  
+- 반드시 한글로 작성
+
+■ brief_summary 작성 규칙:
+- summary를 더 압축해, 핵심 키워드+결과만 한 줄로 요약
+
+■ 필드 정의:
+- title_ko      : 뉴스 제목의 한글 번역  
+- news_sentiment: 1=매우부정,2=부정,3=중립,4=긍정,5=매우긍정  
+- tags          : 뉴스에 언급된 ‘종목 티커’만 포함 (예: BTC, ETH, AAPL, TSLA, 005930, 000660 ...)
+
+---- 예시 1: 관련 뉴스 ----
+입력:
+  title: "삼성전자, 분기 실적 호조"
+  content: "삼성전자가 2025년 2분기 매출 70조원, 영업이익 15조원을 기록하며 시장 예상치를 상회했습니다..."
+반환:
+{
+  "success": true,
+  "summary": "삼성전자는 2025년 2분기 매출 70조원, 영업이익 15조원을 기록하며 시장 예상치를 상회했습니다.",
+  "brief_summary": "2분기 실적 컨센서스 상회",
+  "title_ko": "삼성전자, 분기 실적 호조",
+  "news_sentiment": 4,
+  "news_positive": ["매출 70조원","영업이익 15조원"],
+  "news_negative": [],
+  "tags": ["005930"]
+}
+
+---- 예시 2: 광고성 뉴스 ----
+입력:
+  title: "이 달의 추천 건강 식품!"
+  content: "지금 주문하시면 특별 할인 혜택을 드립니다..."
+반환:
+{"success": false}
+`;
+
+  const userPrompt = `
+뉴스 제목: ${newsTitle}
 게시일: ${publishedDate}
-뉴스 내용: ${newsContent}
+뉴스 내용:
+${newsContent}
 
-아래 JSON 형식만 반환하십시오. 추가 설명이나 주석은 포함하지 마십시오.
-형식:
-{"summary": "...", "brief_summary": "...", "title_ko": "...", "news_sentiment": n, "news_positive": ["..."], "news_negative": ["..."], "tags": ["..."]}
-
-- news_sentiment: 1 = 매우부정, 2 = 부정, 3 = 중립, 4 = 긍정, 5 = 매우긍정.
-- tags: 종목 티커만 포함 (예: BTC, ETH, AAPL, TSLA, 005930, 000660, ...).
-- summary: 뉴스의 전체 내용을 자세하게 요약하십시오. 반드시 한글로 번역하여 작성.
-- brief_summary: 뉴스 내용의 핵심을 한 줄로 간결하게 요약하십시오.
-- title_ko: 뉴스 제목의 한글 번역본.
+위 지침에 따라 JSON으로만 응답하십시오.
 `;
 
   const messages: ChatMessage[] = [
-    {
-      role: "system",
-      content: "당신은 뉴스 분석 전문가입니다. 반드시 오직 순수 JSON만 반환하십시오.",
-    },
-    { role: "user", content: prompt },
+    { role: "system", content: systemPrompt.trim() },
+    { role: "assistant", content: "분석 준비 완료." },
+    { role: "user", content: userPrompt.trim() },
   ];
 
-  console.log("====== 입력 메시지 ======");
-  messages.forEach((msg, idx) => {
-    console.log(`[${idx + 1}] [${msg.role.toUpperCase()}]: ${msg.content}`);
-  });
-  console.log("====== 입력 메시지 끝 ======");
-
+  // OpenAI API 호출
+  let raw: string;
   try {
-    const response = await axios.post<ChatCompletionResponse>(
+    const resp = await axios.post<ChatCompletionResponse>(
       CHAT_COMPLETIONS_URL,
       {
         model: "gpt-4.1-mini",
-        messages: messages,
-        max_tokens: 2000,
+        messages,
         temperature: 0,
-        n: 1,
+        max_tokens: 2000,
       },
       {
         headers: {
@@ -90,22 +128,63 @@ export async function analyzeNews(
         },
       },
     );
-    const resultText = response.data.choices[0].message.content.trim();
-    console.log("====== GPT API 원본 응답 ======");
-    console.log(resultText);
-    console.log("====== GPT API 원본 응답 끝 ======");
-
-    let result: AnalysisResult;
-    try {
-      result = JSON.parse(resultText);
-    } catch (parseError) {
-      console.error("JSON 파싱 실패:", parseError);
-      console.error("파싱에 실패한 응답 문자열:", resultText);
-      throw parseError;
-    }
-    return result;
-  } catch (error) {
-    console.error("OpenAI GPT API 호출 실패", error);
-    throw error;
+    raw = resp.data.choices[0].message.content.trim();
+  } catch (err: any) {
+    console.error("OpenAI GPT API 호출 실패:", err.message || err);
+    throw err;
   }
+
+  console.log("====== GPT 응답 원본 ======");
+  console.log(raw);
+  console.log("====== 응답 끝 ======");
+
+  // JSON 파싱
+  let parsed: AnalysisResult;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e: any) {
+    console.error("JSON 파싱 오류:", e, raw);
+    throw e;
+  }
+
+  // 관련 없는 뉴스 바로 REJECT
+  if (parsed.success === false) {
+    return { success: false };
+  }
+
+  // 광고 키워드 필터
+  const adPattern = /이벤트|혜택|프로모션|할인|무료/;
+  if (parsed.summary && adPattern.test(parsed.summary)) {
+    console.warn("광고성 뉴스 키워드 감지, REJECT 처리:", parsed.summary);
+    return { success: false };
+  }
+
+  // 필수 필드 검증
+  const { summary, brief_summary, title_ko, news_sentiment, news_positive, news_negative, tags } =
+    parsed;
+
+  if (
+    typeof summary !== "string" ||
+    typeof brief_summary !== "string" ||
+    typeof title_ko !== "string" ||
+    typeof news_sentiment !== "number" ||
+    !Array.isArray(news_positive) ||
+    !Array.isArray(news_negative) ||
+    !Array.isArray(tags)
+  ) {
+    console.error("분석 결과 형식 오류:", parsed);
+    throw new Error("분석 결과 형식이 올바르지 않습니다.");
+  }
+
+  // 최종 반환
+  return {
+    success: true,
+    summary,
+    brief_summary,
+    title_ko,
+    news_sentiment,
+    news_positive,
+    news_negative,
+    tags,
+  };
 }

@@ -8,7 +8,7 @@ import { extractFullContent } from "../../utils/news/newsContentExtractor";
 import { mapKrxNews, INews, NaverNewsApiItem } from "../../utils/news/krxNewsMapper";
 import { findAllAssets } from "../../models/assetModel";
 import { findNewsByLink, createNewsWithAnalysis } from "../../models/newsTransactions";
-import { analyzeNews } from "../../ai/gptNewsAnalysis";
+import { analyzeNews, AnalysisResult } from "../../ai/gptNewsAnalysis";
 import { getEmbedding } from "../../ai/embeddingService";
 import { upsertNewsVector, NewsVector } from "./storeNewsVector";
 
@@ -34,10 +34,8 @@ async function getThumbnail(url: string): Promise<string | null> {
 
 // 2) 본문·제목 추출: extractFullContent() + JSDOM
 async function getArticleTitleAndContent(url: string): Promise<{ title: string; content: string }> {
-  // 본문만 뽑아냄
   const content = (await extractFullContent(url)) || "";
 
-  // <title> 태그에서 제목을 파싱
   let title = "";
   try {
     const html = await axios
@@ -46,7 +44,6 @@ async function getArticleTitleAndContent(url: string): Promise<{ title: string; 
     const dom = new JSDOM(html);
     title = dom.window.document.querySelector("title")?.textContent?.trim() || "";
   } catch {
-    // 실패 시 빈 문자열
     title = "";
   }
 
@@ -54,7 +51,7 @@ async function getArticleTitleAndContent(url: string): Promise<{ title: string; 
 }
 
 /**
- * 3) 암호화폐 뉴스 처리과 동일한 이름 유지
+ * 3) 국내 뉴스 처리 (success 플래그 적용)
  */
 export async function fetchAndProcessSmartKrxNews(): Promise<void> {
   console.log("📢 국내 뉴스 파이프라인 시작");
@@ -82,10 +79,10 @@ export async function fetchAndProcessSmartKrxNews(): Promise<void> {
     const titles = crawled.map((c) => c.title);
     const contents = crawled.map((c) => c.content);
 
-    // 3-4) mapper 호출 (5개 인자 필수)
-    let newsItems: INews[] = mapKrxNews(newItems, thumbnails, contents, titles, crawled);
-    // 본문 없는 뉴스 제거
-    newsItems = newsItems.filter((n) => n.content.trim().length > 0);
+    // 3-4) mapper 호출
+    let newsItems: INews[] = mapKrxNews(newItems, thumbnails, contents, titles, crawled).filter(
+      (n) => n.content.trim().length > 0,
+    );
     console.log(`▶️ 처리 대상 뉴스: ${newsItems.length}건`);
 
     // 3-5) 자산 심볼 집합 생성
@@ -95,25 +92,34 @@ export async function fetchAndProcessSmartKrxNews(): Promise<void> {
 
     // 3-6) 뉴스별 파이프라인
     for (const news of newsItems) {
-      // 이미 DB에 저장된 뉴스는 스킵
       if (await findNewsByLink(news.news_link)) {
         console.log(`이미 처리됨, 스킵: ${news.news_link}`);
         continue;
       }
 
-      // published_at을 ISO 문자열로 통일
       const publishedAt =
         news.published_at instanceof Date ? news.published_at.toISOString() : news.published_at;
 
-      // 3-6-1) GPT 분석
-      const analysis = await analyzeNews(news.title, news.content, publishedAt);
+      // GPT 분석
+      const analysis: AnalysisResult = await analyzeNews(news.title, news.content, publishedAt);
+
+      // success 플래그 검사
+      if (!analysis.success) {
+        console.log("❌ 관련 없는 뉴스(또는 광고)로 판단되어 스킵");
+        continue;
+      }
       console.log("🔍 GPT 분석:", {
         sentiment: analysis.news_sentiment,
         tags: analysis.tags,
       });
 
+      // 태그·긍부정 기본값
+      const positives = analysis.news_positive || [];
+      const negatives = analysis.news_negative || [];
+      const tagsList = analysis.tags || [];
+
       // 3-6-2) 국내 자산 심볼만 필터링
-      const filteredTags = analysis.tags.filter((t) => symbolSet.has(t.toUpperCase()));
+      const filteredTags = tagsList.filter((t) => symbolSet.has(t.toUpperCase()));
       if (filteredTags.length === 0) {
         console.log("연관 종목 없음, 스킵");
         continue;
@@ -125,15 +131,15 @@ export async function fetchAndProcessSmartKrxNews(): Promise<void> {
         news_category: "domestic",
       };
       const analysisData = {
-        news_sentiment: analysis.news_sentiment,
-        news_positive: JSON.stringify(analysis.news_positive),
-        news_negative: JSON.stringify(analysis.news_negative),
-        community_sentiment: 0, // 기본값
-        summary: analysis.summary,
-        brief_summary: analysis.brief_summary,
+        news_sentiment: analysis.news_sentiment!,
+        news_positive: JSON.stringify(positives),
+        news_negative: JSON.stringify(negatives),
+        community_sentiment: 3,
+        summary: analysis.summary!,
+        brief_summary: analysis.brief_summary!,
         tags: JSON.stringify(filteredTags),
       };
-      const newsId = await createNewsWithAnalysis(preparedNews, analysisData, analysis.title_ko);
+      const newsId = await createNewsWithAnalysis(preparedNews, analysisData, analysis.title_ko!);
       console.log(`✅ DB 저장 완료 (ID=${newsId})`);
 
       // 3-6-4) 임베딩 → 벡터 스토어 업데이트
@@ -144,8 +150,8 @@ export async function fetchAndProcessSmartKrxNews(): Promise<void> {
         values,
         metadata: {
           published_at: publishedAt,
-          title_ko: analysis.title_ko,
-          summary: analysis.summary,
+          title_ko: analysis.title_ko!,
+          summary: analysis.summary!,
           news_link: news.news_link,
         },
       };
