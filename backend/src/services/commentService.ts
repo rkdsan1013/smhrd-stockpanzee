@@ -38,18 +38,21 @@ export async function deleteComment(commentId: number) {
 export async function getComments(target_id: number, user_uuid?: Buffer) {
   // target_type 'community'로 고정(커뮤니티 댓글만)
   const [rows]: any = await pool.query(
-    `SELECT cc.*, 
-            p.name AS name,
-            CASE WHEN l.is_liked = 1 THEN 1 ELSE 0 END as isLiked
-       FROM community_com cc
-  LEFT JOIN users u ON u.uuid = cc.uuid
-  LEFT JOIN user_profiles p ON u.uuid = p.uuid
-  LEFT JOIN likes l 
-         ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
-      WHERE cc.target_type='community' AND cc.target_id=?
-   ORDER BY cc.created_at ASC`,
-    [user_uuid ?? Buffer.alloc(16), target_id]
-  );
+  `SELECT cc.*, 
+          p.name AS name,
+          (SELECT COUNT(*) FROM likes WHERE target_type='community_comment' AND target_id=cc.id AND is_liked=1) as likes,
+          CASE WHEN l.is_liked = 1 THEN 1 ELSE 0 END as isLiked
+   FROM community_com cc
+   LEFT JOIN users u ON u.uuid = cc.uuid
+   LEFT JOIN user_profiles p ON u.uuid = p.uuid
+   LEFT JOIN likes l 
+          ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
+   WHERE cc.target_type='community' AND cc.target_id=?
+   ORDER BY cc.created_at ASC
+  `,
+  [user_uuid ?? Buffer.alloc(16), target_id]
+);
+
 
   // 댓글/대댓글 트리로 변환
   const comments = rows

@@ -1,3 +1,4 @@
+// frontend/src/components/Comments.tsx
 import React, { useState, useContext } from "react";
 import Icons from "./Icons";
 import { AuthContext } from "../providers/AuthProvider";
@@ -21,8 +22,6 @@ export interface Comment extends Reply {
 // 시간 표시 함수
 function timeAgo(dateString: string) {
   if (!dateString) return "";
-  // ※ DB에서 ISO 형식(UTC)로 내려오면 toLocaleString 보정만 해도 됨.
-  //    이미 한국시간이면 보정 불필요. (new Date만 사용)
   const date = new Date(dateString);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -139,21 +138,18 @@ const CommentItem: React.FC<{
     );
     fetchComments();
   };
-  // 좋아요
+  // 좋아요(댓글/대댓글 동일)
   const handleLike = async () => {
-    if (comment.isLiked) {
-      await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}/like`,
-        { withCredentials: true }
-      );
-    } else {
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}/like`,
-        {},
-        { withCredentials: true }
-      );
+    try {
+      const method = comment.isLiked ? "delete" : "post";
+      const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}/like`;
+      // 콘솔 로그 추가
+      console.log(`[댓글 좋아요] id=${comment.id}, isLiked=${comment.isLiked}, method=${method}`);
+      await axios({ method, url, withCredentials: true });
+      fetchComments();
+    } catch {
+      alert("로그인 필요!");
     }
-    fetchComments();
   };
   // 대댓글 등록
   const handleReply = async (replyContent: string) => {
@@ -169,7 +165,6 @@ const CommentItem: React.FC<{
   return (
     <div className="rounded p-0 bg-transparent" style={{ backgroundColor: "transparent" }}>
       <div className="flex items-center text-sm text-gray-400 mb-1 relative">
-        {/* ... (더보기) 아이콘: 좋아요 왼쪽(닉네임 오른쪽에 위치) */}
         <span className="font-bold text-white">{comment.name || "익명"}</span>
         <span className="ml-2">{timeAgo(comment.createdAt)}</span>
         {user?.uuid === comment.uuid && (
@@ -252,7 +247,7 @@ const ReplyItem: React.FC<{
   const [content, setContent] = useState(reply.content);
   const { user } = useContext(AuthContext);
 
-  // 수정/삭제/좋아요 (댓글과 거의 동일)
+  // 수정/삭제/좋아요 (댓글과 동일)
   const handleEdit = async () => {
     await axios.put(
       `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}`,
@@ -270,23 +265,20 @@ const ReplyItem: React.FC<{
     fetchComments();
   };
   const handleLike = async () => {
-    if (reply.isLiked) {
-      await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}/like`,
-        { withCredentials: true }
-      );
-    } else {
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}/like`,
-        {},
-        { withCredentials: true }
-      );
+    try {
+      const method = reply.isLiked ? "delete" : "post";
+      const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}/like`;
+      // 콘솔 로그 추가
+      console.log(`[대댓글 좋아요] id=${reply.id}, isLiked=${reply.isLiked}, method=${method}`);
+      await axios({ method, url, withCredentials: true });
+      fetchComments();
+    } catch {
+      alert("로그인 필요!");
     }
-    fetchComments();
   };
 
   return (
-    <div className=" p-0 bg-transparent" style={{ backgroundColor: "transparent" }}>
+    <div className="p-0 bg-transparent" style={{ backgroundColor: "transparent" }}>
       <div className="flex items-center text-sm text-gray-400 mb-1 relative">
         <span className="font-bold text-white">{reply.name || "익명"}</span>
         <span className="ml-2">{timeAgo(reply.createdAt)}</span>

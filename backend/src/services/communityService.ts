@@ -61,6 +61,8 @@ export async function toggleLike(
   }
 }
 
+
+
 export async function isPostLikedByUser(postId: number, userUuid: Buffer) {
   return communityModel.isLiked("post", postId, userUuid);
 }
@@ -155,4 +157,9 @@ export async function updateComment(id: number, content: string, uuid: Buffer) {
 // 댓글 삭제
 export async function deleteComment(id: number, uuid: Buffer) {
   return communityModel.deleteComment(id, uuid);
+}
+
+// 댓글 좋아요 카운트 함수 추가
+export async function getCommentLikesCount(commentId: number) {
+  return communityModel.getLikeCount("community_comment", commentId);
 }

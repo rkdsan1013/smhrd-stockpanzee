@@ -31,13 +31,9 @@ router.post("/:id/comments", authenticate, upload.single("image"), communityCont
 router.post("/:id/like", authenticate, communityController.toggleCommunityLike);
 router.delete("/:id/like", authenticate, communityController.toggleCommunityLike);
 
-// 댓글 좋아요
+// 댓글/대댓글 좋아요 라우트
 router.post("/comments/:id/like", authenticate, communityController.toggleCommentLike);
 router.delete("/comments/:id/like", authenticate, communityController.toggleCommentLike);
-
-// 대댓글 좋아요
-router.post("/replies/:id/like", authenticate, communityController.toggleReplyLike);
-router.delete("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 
 // 댓글 수정/삭제
 router.put("/comments/:id", authenticate, commentController.updateComment);

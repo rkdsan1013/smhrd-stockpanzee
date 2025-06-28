@@ -271,12 +271,17 @@ export const toggleCommentLike = async (
 
     const uuidBuffer = Buffer.from(user_uuid, "hex");
     const isLike = req.method === "POST";
+    // ===> 여기 로그 찍어보세요
+    console.log(`[BACKEND 댓글 좋아요] commentId=${commentId}, uuid=${user_uuid}, method=${req.method}`);
+
     await communityService.toggleLike(uuidBuffer, "community_comment", commentId);
     res.json({ message: isLike ? "댓글 좋아요 완료" : "댓글 좋아요 취소" });
   } catch (err) {
     next(err);
   }
 };
+
+
 
 // 대댓글 좋아요/취소
 export const toggleReplyLike = async (
