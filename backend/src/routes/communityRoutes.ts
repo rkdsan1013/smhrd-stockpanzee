@@ -15,10 +15,10 @@ router.get("/", communityController.getCommunityPosts);
 router.get("/:id", communityController.getCommunityPost);
 
 // 커뮤니티 글 작성
-router.post("/", authenticate, communityController.createCommunityPost);
+router.post("/", authenticate, upload.single("image"), communityController.createCommunityPost);
 
 // 커뮤니티 글 수정
-router.put("/:id", communityController.updateCommunityPost);
+router.put("/:id", authenticate, upload.single("image"), communityController.updateCommunityPost);
 
 // 커뮤니티 글 삭제
 router.delete("/:id", authenticate, communityController.deleteCommunityPost);

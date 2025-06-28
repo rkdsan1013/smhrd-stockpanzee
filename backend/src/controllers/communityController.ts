@@ -89,10 +89,9 @@ export const createCommunityPost = async (
   next: NextFunction,
 ): Promise<void> => {
   const r = req as MulterRequest;
-
   try {
     const { community_title, community_contents, category } = r.body;
-    const uuid = (r as any).user?.uuid; // 인증 미들웨어에서 유저 정보 받아옴
+    const uuid = (r as any).user?.uuid;
 
     if (!uuid || !community_title || !community_contents || !category) {
       res.status(400).json({ message: "필수값 누락" });
@@ -100,11 +99,14 @@ export const createCommunityPost = async (
     }
 
     const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
+    const img_url: string | undefined = r.file ? `/uploads/img/${r.file.filename}` : undefined;
+
     const result = await communityService.createCommunityPost({
       uuid: uuidBuffer,
       community_title,
       community_contents,
       category,
+      img_url,
     });
 
     if (!result.insertId) {
@@ -127,14 +129,36 @@ export const updateCommunityPost = async (
   res: Response,
   next: NextFunction
 ) => {
+  const r = req as MulterRequest;
   try {
     const id = Number(req.params.id);
-    const { community_title, community_contents, category } = req.body;
+    const { community_title, community_contents, category } = r.body;
 
-    await pool.query(
-      `UPDATE community SET community_title=?, community_contents=?, category=?, updated_at=NOW() WHERE id=?`,
-      [community_title, community_contents, category, id]
-    );
+    // 기존 게시글 조회 (이미지 변경시 기존 파일 삭제)
+    const [rows]: any = await pool.query(`SELECT img_url FROM community WHERE id=?`, [id]);
+    const oldImgUrl = rows?.[0]?.img_url;
+
+    let img_url = oldImgUrl;
+    if (r.file) {
+      img_url = `/uploads/img/${r.file.filename}`;
+      // 기존 이미지 삭제
+      if (oldImgUrl) {
+        let relPath = oldImgUrl;
+        if (relPath.startsWith('/')) relPath = relPath.slice(1);
+        const filePath = path.join(__dirname, "../../", relPath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    }
+
+    await communityService.updateCommunityPost(id, {
+      community_title,
+      community_contents,
+      category,
+      img_url,
+    });
+
     res.json({ success: true });
   } catch (err) {
     next(err);

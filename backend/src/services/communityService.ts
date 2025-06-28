@@ -21,8 +21,19 @@ export async function createCommunityPost(post: {
   community_title: string;
   community_contents: string;
   category: string;
+  img_url?: string;
 }) {
   return await communityModel.createCommunityPost(post);
+}
+
+// 글 수정
+export async function updateCommunityPost(id: number, post: {
+  community_title: string;
+  community_contents: string;
+  category: string;
+  img_url?: string | null;
+}) {
+  return await communityModel.updateCommunityPost(id, post);
 }
 
 export async function incrementCommunityViews(postId: number) {

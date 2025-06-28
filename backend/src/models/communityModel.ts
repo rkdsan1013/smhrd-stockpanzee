@@ -10,20 +10,42 @@ interface CommunityPost {
 
 
 // community_img는 BLOB, 없으면 null
+
 export async function createCommunityPost(post: {
   uuid: Buffer;
   community_title: string;
   community_contents: string;
   category: string;
+  img_url?: string;
 }) {
   const [result]: any = await pool.query(
-    `INSERT INTO community (uuid, community_title, community_contents, category)
-     VALUES (?, ?, ?, ?)`,
+    `INSERT INTO community (uuid, community_title, community_contents, category, img_url)
+     VALUES (?, ?, ?, ?, ?)`,
     [
       post.uuid,
       post.community_title,
       post.community_contents,
       post.category,
+      post.img_url ?? null,
+    ]
+  );
+  return result;
+}
+
+export async function updateCommunityPost(id: number, post: {
+  community_title: string;
+  community_contents: string;
+  category: string;
+  img_url?: string | null;
+}) {
+  const [result]: any = await pool.query(
+    `UPDATE community SET community_title=?, community_contents=?, category=?, img_url=?, updated_at=NOW() WHERE id=?`,
+    [
+      post.community_title,
+      post.community_contents,
+      post.category,
+      post.img_url ?? null,
+      id
     ]
   );
   return result;

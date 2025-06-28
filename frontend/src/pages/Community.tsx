@@ -18,6 +18,7 @@ interface CommunityPost {
   nickname?: string;
   name?: string;
   comment_count?: number; // ← 댓글 수 (없으면 클라에서 fetch)
+  img_url?: string;
 }
 
 const categoryList = ["전체", "국내", "해외", "암호화폐"];
@@ -291,8 +292,10 @@ const Community: React.FC = () => {
                 {/* 썸네일 */}
                 <img
                   src={
-                    post.community_img
-                      ? `data:image/jpeg;base64,${post.community_img}`
+                    post.img_url
+                      ? (post.img_url.startsWith("/uploads/")
+                          ? `http://localhost:5000${post.img_url}`
+                          : post.img_url)
                       : "/panzee.webp"
                   }
                   alt="썸네일"

@@ -21,6 +21,7 @@ interface Post {
   nickname?: string;
   name?: string;
   isLiked?: boolean;
+  img_url?: string;
 }
 
 function timeAgo(dateString: string): string {
@@ -173,7 +174,13 @@ const CommunityDetail: React.FC = () => {
       </div>
       <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
       <img
-        src={post.community_img ? `data:image/jpeg;base64,${post.community_img}` : "/panzee.webp"}
+        src={
+          post.img_url
+            ? (post.img_url.startsWith("/uploads/")
+                ? `http://localhost:5000${post.img_url}`
+                : post.img_url)
+            : "/panzee.webp"
+        }
         alt={post.community_title}
         className="w-full aspect-video object-contain rounded mb-3"
       />
