@@ -22,6 +22,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./backend/uploads:/app/uploads 
     env_file:
       - ./backend/.env
     ports:

@@ -145,9 +145,11 @@ export async function createComment(params: {
   target_id: number,
   parent_id?: number | null,
   content: string,
+  img_url?: string
 }) {
   return communityModel.insertComment(params);
 }
+
 
 // 댓글 수정
 export async function updateComment(id: number, content: string, uuid: Buffer) {

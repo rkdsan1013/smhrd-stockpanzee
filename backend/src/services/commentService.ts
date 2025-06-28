@@ -65,6 +65,7 @@ export async function getComments(target_id: number, user_uuid?: Buffer) {
       likes: row.likes || 0,
       createdAt: row.created_at,
       isLiked: !!row.isLiked,
+      img_url: row.img_url || null,  
       replies: rows
         .filter((r: any) => r.parent_id === row.id)
         .map((reply: any) => ({
@@ -75,6 +76,7 @@ export async function getComments(target_id: number, user_uuid?: Buffer) {
           likes: reply.likes || 0,
           createdAt: reply.created_at,
           isLiked: !!reply.isLiked,
+          img_url: reply.img_url || null,
         })),
     }));
 

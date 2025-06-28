@@ -16,6 +16,7 @@ import communityRoutes from "./routes/communityRoutes";
 import redditRoutes from "./routes/redditRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import userRoutes from "./routes/userRoutes";
+import path from "path";
 
 dotenv.config();
 
@@ -37,6 +38,10 @@ app.use("/api/community", communityRoutes);
 app.use("/api/reddit", redditRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/user", userRoutes);
+console.log("STATIC PATH:", path.resolve(__dirname, "../uploads"));
+
+app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
+
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");

@@ -1,10 +1,11 @@
 // frontend/src/components/Comments.tsx
+
 import React, { useState, useContext } from "react";
 import Icons from "./Icons";
 import { AuthContext } from "../providers/AuthProvider";
 import axios from "axios";
 
-// 타입 정의
+// ---------- 타입 정의 ----------
 export interface Reply {
   id: number;
   uuid?: string;
@@ -14,12 +15,13 @@ export interface Reply {
   createdAt: string;
   isLiked?: boolean;
   replies?: Reply[];
+  img_url?: string;
 }
 export interface Comment extends Reply {
   replies: Reply[];
 }
 
-// 시간 표시 함수
+// ---------- 시간 표시 함수 ----------
 function timeAgo(dateString: string) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -32,21 +34,37 @@ function timeAgo(dateString: string) {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
-// 댓글 컴포넌트
+// ---------- 이미지 url 합성 ----------
+function getFullImgUrl(img_url?: string) {
+  if (!img_url) return undefined;
+  const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
+  const ORIGIN = API_BASE.replace("/api", "");
+  return ORIGIN + img_url;
+}
+
+// ---------- 메인 Comments 컴포넌트 ----------
 const Comments: React.FC<{
   comments: Comment[];
   fetchComments: () => void;
   postId: string;
 }> = ({ comments, fetchComments, postId }) => {
-  // 댓글 등록
-  const handleCommentSubmit = async (content: string) => {
+  // 댓글 등록 (이미지 포함)
+  const handleCommentSubmit = async (content: string, file?: File) => {
+    const formData = new FormData();
+    formData.append("content", content);
+    if (file) formData.append("image", file);
+
     await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/community/${postId}/comments`,
-      { content },
-      { withCredentials: true }
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" }
+      }
     );
     fetchComments();
   };
+
   return (
     <div>
       <div className="text-lg font-bold mb-2">{comments.length} 코멘트</div>
@@ -67,18 +85,22 @@ const Comments: React.FC<{
   );
 };
 
-// 댓글 입력창
-const CommentInput: React.FC<{ onSubmit: (content: string) => void }> = ({ onSubmit }) => {
+// ---------- 댓글 입력 ----------
+const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void }> = ({ onSubmit }) => {
   const [content, setContent] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+
   return (
     <form
       className="flex flex-col gap-2"
       onSubmit={e => {
         e.preventDefault();
         if (!content.trim()) return;
-        onSubmit(content.trim());
+        onSubmit(content.trim(), file || undefined);
         setContent("");
+        setFile(null);
       }}
+      encType="multipart/form-data"
     >
       <textarea
         className="flex-1 p-3 rounded bg-gray-800 border border-gray-700 text-white"
@@ -87,6 +109,12 @@ const CommentInput: React.FC<{ onSubmit: (content: string) => void }> = ({ onSub
         rows={3}
         placeholder="도움이 되는 코멘트를 남기세요."
       />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={e => setFile(e.target.files?.[0] ?? null)}
+      />
+      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-24 h-24 object-cover rounded" />}
       <button className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" type="submit">
         포스트
       </button>
@@ -94,7 +122,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string) => void }> = ({ onSub
   );
 };
 
-// ...메뉴 (수정/삭제)
+// ---------- ... 메뉴(수정/삭제) ----------
 const CommentMenu: React.FC<{
   onEdit: () => void;
   onDelete: () => void;
@@ -108,7 +136,7 @@ const CommentMenu: React.FC<{
   </div>
 );
 
-// 댓글 1개
+// ---------- 댓글 1개 ----------
 const CommentItem: React.FC<{
   comment: Comment;
   fetchComments: () => void;
@@ -138,13 +166,11 @@ const CommentItem: React.FC<{
     );
     fetchComments();
   };
-  // 좋아요(댓글/대댓글 동일)
+  // 좋아요
   const handleLike = async () => {
     try {
       const method = comment.isLiked ? "delete" : "post";
       const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}/like`;
-      // 콘솔 로그 추가
-      console.log(`[댓글 좋아요] id=${comment.id}, isLiked=${comment.isLiked}, method=${method}`);
       await axios({ method, url, withCredentials: true });
       fetchComments();
     } catch {
@@ -152,11 +178,19 @@ const CommentItem: React.FC<{
     }
   };
   // 대댓글 등록
-  const handleReply = async (replyContent: string) => {
+  const handleReply = async (replyContent: string, file?: File) => {
+    const formData = new FormData();
+    formData.append("content", replyContent);
+    formData.append("parent_id", String(comment.id));
+    if (file) formData.append("image", file);
+
     await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/community/${postId}/comments`,
-      { content: replyContent, parent_id: comment.id },
-      { withCredentials: true }
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" }
+      }
     );
     setShowReply(false);
     fetchComments();
@@ -205,6 +239,17 @@ const CommentItem: React.FC<{
           </button>
         </div>
       </div>
+      
+      {/* 첨부 이미지 표시 */}
+      {comment.img_url && (
+        <img
+          src={getFullImgUrl(comment.img_url)}
+          alt="첨부이미지"
+          className="max-h-40 my-2 rounded"
+          onError={e => { e.currentTarget.style.display = "none"; }}
+        />
+      )}
+
       {!editing ? (
         <div className="text-white whitespace-pre-wrap px-3 pb-2">
           {comment.content?.trim() ? comment.content : "(내용 없음)"}
@@ -237,7 +282,43 @@ const CommentItem: React.FC<{
   );
 };
 
-// 대댓글 UI/동작
+// ---------- 대댓글 입력 ----------
+const ReplyInput: React.FC<{
+  onSubmit: (content: string, file?: File) => void;
+  onCancel: () => void;
+}> = ({ onSubmit, onCancel }) => {
+  const [content, setContent] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const handleRegister = () => {
+    if (!content.trim()) return;
+    onSubmit(content.trim(), file || undefined);
+    setContent("");
+    setFile(null);
+  };
+  return (
+    <div className="flex flex-col gap-2 mt-2 ml-4">
+      <textarea
+        className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
+        value={content}
+        onChange={e => setContent(e.target.value)}
+        rows={2}
+        placeholder="대댓글을 입력하세요"
+      />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={e => setFile(e.target.files?.[0] ?? null)}
+      />
+      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-20 h-20 object-cover rounded" />}
+      <div className="flex items-center gap-2">
+        <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" onClick={handleRegister} type="button">등록</button>
+        <button className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm" onClick={onCancel} type="button">취소</button>
+      </div>
+    </div>
+  );
+};
+
+// ---------- 대댓글 아이템 ----------
 const ReplyItem: React.FC<{
   reply: Reply;
   fetchComments: () => void;
@@ -247,7 +328,6 @@ const ReplyItem: React.FC<{
   const [content, setContent] = useState(reply.content);
   const { user } = useContext(AuthContext);
 
-  // 수정/삭제/좋아요 (댓글과 동일)
   const handleEdit = async () => {
     await axios.put(
       `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}`,
@@ -268,8 +348,6 @@ const ReplyItem: React.FC<{
     try {
       const method = reply.isLiked ? "delete" : "post";
       const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}/like`;
-      // 콘솔 로그 추가
-      console.log(`[대댓글 좋아요] id=${reply.id}, isLiked=${reply.isLiked}, method=${method}`);
       await axios({ method, url, withCredentials: true });
       fetchComments();
     } catch {
@@ -316,6 +394,15 @@ const ReplyItem: React.FC<{
           </button>
         </div>
       </div>
+      {/* 첨부 이미지 표시 */}
+      {reply.img_url && (
+        <img
+          src={getFullImgUrl(reply.img_url)}
+          alt="첨부이미지"
+          className="max-h-32 my-2 rounded"
+          onError={e => { e.currentTarget.style.display = "none"; }}
+        />
+      )}
       {editing ? (
         <div className="mb-1 px-3">
           <textarea
@@ -332,34 +419,6 @@ const ReplyItem: React.FC<{
       ) : (
         <div className="text-white whitespace-pre-wrap px-3 pb-2">{reply.content?.trim() ? reply.content : "(내용 없음)"}</div>
       )}
-    </div>
-  );
-};
-
-// 대댓글 입력폼
-const ReplyInput: React.FC<{
-  onSubmit: (content: string) => void;
-  onCancel: () => void;
-}> = ({ onSubmit, onCancel }) => {
-  const [content, setContent] = useState("");
-  const handleRegister = () => {
-    if (!content.trim()) return;
-    onSubmit(content.trim());
-    setContent("");
-  };
-  return (
-    <div className="flex flex-col gap-2 mt-2 ml-4">
-      <textarea
-        className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        rows={2}
-        placeholder="대댓글을 입력하세요"
-      />
-      <div className="flex items-center gap-2">
-        <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" onClick={handleRegister} type="button">등록</button>
-        <button className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm" onClick={onCancel} type="button">취소</button>
-      </div>
     </div>
   );
 };

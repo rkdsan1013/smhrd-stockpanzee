@@ -1,11 +1,11 @@
 // /backend/src/routes/communityRoutes.ts
 import { Router } from "express";
 import * as communityController from "../controllers/communityController";
-import multer from "multer";
+import { upload } from "../middlewares/upload";
 import { authenticate } from "../middlewares/auth";
 import * as commentController from "../controllers/commentController";
 
-const upload = multer();
+
 const router = Router();
 
 // 커뮤니티 전체보기
@@ -23,7 +23,7 @@ router.put("/:id", communityController.updateCommunityPost);
 // 커뮤니티 글 삭제
 router.delete("/:id", authenticate, communityController.deleteCommunityPost);
 
-// 댓글 라우트 (중복 제거!! 아래 2개만)
+// 댓글 라우트 
 router.get("/:id/comments", communityController.getComments);
 router.post("/:id/comments", authenticate, upload.single("image"), communityController.createComment);
 

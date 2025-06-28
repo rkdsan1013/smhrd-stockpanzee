@@ -113,20 +113,23 @@ export async function insertComment(params: {
   target_id: number,
   parent_id?: number | null,
   content: string,
+  img_url?: string
 }) {
   const [result]: any = await pool.query(
-    `INSERT INTO community_com (uuid, target_type, target_id, parent_id, content)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO community_com (uuid, target_type, target_id, parent_id, content, img_url)
+     VALUES (?, ?, ?, ?, ?, ?)`,
     [
       params.uuid,
       params.target_type,
       params.target_id,
       params.parent_id ?? null,
       params.content,
+      params.img_url ?? null
     ]
   );
   return result;
 }
+
 
 export async function updateComment(id: number, content: string, uuid: Buffer) {
   const [result]: any = await pool.query(
