@@ -69,35 +69,43 @@ export async function getCommunityLikesCount(postId: number) {
   return communityModel.getLikeCount("post", postId);
 }
 
+
 export async function deleteCommunityPost(postId: number) {
+  // 1. 해당 게시글의 모든 댓글 id 가져오기
   const [commentRows]: any = await pool.query(
-    `SELECT id FROM community_com WHERE comm_id = ?`,
+    `SELECT id FROM community_com WHERE target_type='community' AND target_id=?`,
     [postId]
   );
   const commentIds = commentRows.map((row: any) => row.id);
 
+  // 2. 트랜잭션 시작
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
+    // 3. 댓글 좋아요 삭제 (댓글 있을 때만)
     if (commentIds.length > 0) {
       await conn.query(
-        `DELETE FROM likes WHERE target_type='community_com' AND target_id IN (${commentIds.map(() => '?').join(',')})`,
+        `DELETE FROM likes WHERE target_type='community_comment' AND target_id IN (${commentIds.map(() => '?').join(',')})`,
         commentIds
       );
     }
+    // 4. 게시글 좋아요 삭제
     await conn.query(
       `DELETE FROM likes WHERE target_type='post' AND target_id=?`,
       [postId]
     );
+    // 5. 댓글/대댓글 삭제
     await conn.query(
-      `DELETE FROM community_com WHERE comm_id=?`,
+      `DELETE FROM community_com WHERE target_type='community' AND target_id=?`,
       [postId]
     );
+    // 6. 게시글 삭제
     await conn.query(
       `DELETE FROM community WHERE id=?`,
       [postId]
     );
+
     await conn.commit();
   } catch (err) {
     await conn.rollback();
