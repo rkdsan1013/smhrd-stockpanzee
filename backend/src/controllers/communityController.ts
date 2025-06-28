@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import * as communityService from "../services/communityService";
 import * as communityModel from "../models/communityModel";
 import pool from "../config/db";
+import * as commentService from "../services/commentService";
 
 // multer 적용 시에만 req.file 사용하기 위한 인터페이스 확장
 export interface MulterRequest extends Request {
@@ -145,10 +146,15 @@ export const getComments = async (
 ) => {
   try {
     const comm_id = Number(req.params.id);
-    const comments = await communityService.fetchComments("community", comm_id);
+    const user_uuid = (req as any).user?.uuid
+      ? Buffer.from((req as any).user.uuid, "hex")
+      : undefined;
+    const comments = await commentService.getComments(comm_id, user_uuid);
     res.json(comments);
   } catch (err) { next(err); }
 };
+
+
 
 // 댓글 등록 (parent_id는 대댓글일 때만 넘어옴)
 export const createComment = async (

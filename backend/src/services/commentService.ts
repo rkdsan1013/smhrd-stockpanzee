@@ -34,47 +34,47 @@ export async function deleteComment(commentId: number) {
 }
 
 
-
 // 댓글/대댓글 트리 반환
-export async function getComments(comm_id: number, user_uuid?: string) {
+export async function getComments(target_id: number, user_uuid?: Buffer) {
+  // target_type 'community'로 고정(커뮤니티 댓글만)
   const [rows]: any = await pool.query(
-    `SELECT cc.*, p.name AS nickname, 
-        CASE WHEN l.is_liked = 1 THEN 1 ELSE 0 END as isLiked
-     FROM community_com cc
-     LEFT JOIN users u ON u.uuid = cc.uuid
-     LEFT JOIN user_profiles p ON u.uuid = p.uuid
-     LEFT JOIN likes l ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
-     WHERE cc.comm_id=? ORDER BY cc.created_at ASC`,
-    [user_uuid ?? Buffer.alloc(16), comm_id],
+    `SELECT cc.*, 
+            p.name AS name,
+            CASE WHEN l.is_liked = 1 THEN 1 ELSE 0 END as isLiked
+       FROM community_com cc
+  LEFT JOIN users u ON u.uuid = cc.uuid
+  LEFT JOIN user_profiles p ON u.uuid = p.uuid
+  LEFT JOIN likes l 
+         ON l.user_uuid = ? AND l.target_type='community_comment' AND l.target_id=cc.id
+      WHERE cc.target_type='community' AND cc.target_id=?
+   ORDER BY cc.created_at ASC`,
+    [user_uuid ?? Buffer.alloc(16), target_id]
   );
 
-  // 1차: 댓글, 2차: 대댓글로 분류
+  // 댓글/대댓글 트리로 변환
   const comments = rows
     .filter((r: any) => !r.parent_id)
     .map((row: any) => ({
       id: row.id,
-      nickname: row.nickname,
+      uuid: row.uuid?.toString('hex'),
+      name: row.name,
+      content: row.content,
+      likes: row.likes || 0,
       createdAt: row.created_at,
-      content: row.comm_contents,
-      likes: row.comm_likes,
-      imgUrl: row.comm_img
-        ? `data:image/jpeg;base64,${row.comm_img.toString("base64")}`
-        : undefined,
       isLiked: !!row.isLiked,
       replies: rows
         .filter((r: any) => r.parent_id === row.id)
         .map((reply: any) => ({
           id: reply.id,
-          nickname: reply.nickname,
+          uuid: reply.uuid?.toString('hex'),
+          name: reply.name,
+          content: reply.content,
+          likes: reply.likes || 0,
           createdAt: reply.created_at,
-          content: reply.comm_contents,
-          likes: reply.comm_likes,
-          imgUrl: reply.comm_img
-            ? `data:image/jpeg;base64,${reply.comm_img.toString("base64")}`
-            : undefined,
           isLiked: !!reply.isLiked,
         })),
     }));
+
   return comments;
 }
 

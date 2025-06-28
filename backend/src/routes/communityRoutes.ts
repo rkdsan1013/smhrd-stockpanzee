@@ -23,10 +23,9 @@ router.put("/:id", communityController.updateCommunityPost);
 // 커뮤니티 글 삭제
 router.delete("/:id", authenticate, communityController.deleteCommunityPost);
 
-
-// 댓글 라우트
+// 댓글 라우트 (중복 제거!! 아래 2개만)
 router.get("/:id/comments", communityController.getComments);
-router.post("/:id/comments", upload.single("image"), communityController.createComment);
+router.post("/:id/comments", authenticate, upload.single("image"), communityController.createComment);
 
 // 게시글 좋아요
 router.post("/:id/like", authenticate, communityController.toggleCommunityLike);
@@ -40,14 +39,8 @@ router.delete("/comments/:id/like", authenticate, communityController.toggleComm
 router.post("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 router.delete("/replies/:id/like", authenticate, communityController.toggleReplyLike);
 
-// 댓글 수정
-router.put(  "/comments/:id",  authenticate,  commentController.updateComment);
-
-// 댓글 삭제
-router.delete(  "/comments/:id",  authenticate,  commentController.deleteComment);
-
-
-router.get("/:id/comments", communityController.getComments);
-router.post("/:id/comments", authenticate, upload.none(), communityController.createComment);
+// 댓글 수정/삭제
+router.put("/comments/:id", authenticate, commentController.updateComment);
+router.delete("/comments/:id", authenticate, commentController.deleteComment);
 
 export default router;

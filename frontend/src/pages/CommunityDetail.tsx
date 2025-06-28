@@ -3,28 +3,30 @@ import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import Comments from "../components/Comments";
+import type { Comment } from "../components/Comments";
 import axios from "axios";
 import { AuthContext } from "../providers/AuthProvider";
 
-// 타입 선언 (Comment, Reply는 Comments 컴포넌트와 동일하게 유지)
-interface Reply {
+interface Post {
   id: number;
-  nickname: string;
-  createdAt: string;
-  content: string;
-  likes: number;
-  imgUrl?: string;
+  uuid: string;
+  community_title: string;
+  community_contents: string;
+  category: string;
+  community_views: number;
+  community_likes: number;
+  created_at: string;
+  updated_at: string;
+  community_img?: string;
+  nickname?: string;
+  name?: string;
   isLiked?: boolean;
 }
-interface Comment extends Reply {
-  replies: Reply[];
-}
 
-// 시간 표시 함수
 function timeAgo(dateString: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
-  date.setHours(date.getHours() - 9); // 필요 시, 타임존 보정
+  date.setHours(date.getHours() - 9);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
   if (diff < 0) return "방금 전";
@@ -36,26 +38,24 @@ function timeAgo(dateString: string): string {
 
 const CommunityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // 게시글 상세 및 조회수
   const fetchPost = useCallback(() => {
     setLoading(true);
     axios
-      .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
+      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
       .then(res => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
   }, [id]);
 
-  // 댓글/대댓글 목록 불러오기
   const fetchComments = useCallback(() => {
     axios
-      .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
+      .get<Comment[]>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
       .then(res => setComments(res.data))
       .catch(() => setComments([]));
   }, [id]);
@@ -65,7 +65,6 @@ const CommunityDetail: React.FC = () => {
     fetchComments();
   }, [id, fetchPost, fetchComments]);
 
-  // 게시글 좋아요
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   useEffect(() => {
@@ -85,42 +84,6 @@ const CommunityDetail: React.FC = () => {
     }
   };
 
-  // 댓글/대댓글 좋아요
-  const handleCommentLike = (commentId: number, isLiked: boolean) => {
-    const url = `${import.meta.env.VITE_API_BASE_URL}/community/comments/${commentId}/like`;
-    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
-  };
-  const handleReplyLike = (replyId: number, isLiked: boolean) => {
-    const url = `${import.meta.env.VITE_API_BASE_URL}/community/replies/${replyId}/like`;
-    (isLiked ? axios.delete(url) : axios.post(url)).then(() => fetchComments());
-  };
-
-  // 댓글 등록
-  const handleCommentSubmit = (content: string, img: File | null) => {
-    const formData = new FormData();
-    formData.append("content", content);
-    if (img) formData.append("image", img);
-    axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      .then(() => fetchComments());
-  };
-
-  // 대댓글 등록
-  const handleReply = (commentId: number, content: string, img: File | null) => {
-    const formData = new FormData();
-    formData.append("content", content);
-    formData.append("parent_id", commentId.toString());
-    if (img) formData.append("image", img);
-    axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      .then(() => fetchComments());
-  };
-
-  // 게시글 수정/삭제 더보기 메뉴
   const [showMenu, setShowMenu] = useState(false);
   useEffect(() => {
     if (!showMenu) return;
@@ -129,25 +92,27 @@ const CommunityDetail: React.FC = () => {
     return () => window.removeEventListener("click", closeMenu);
   }, [showMenu]);
 
-  // 게시글 삭제
   const handleDelete = async () => {
-    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
-      alert("작성자가 아닙니다.");
-      return;
-    }
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}`, {
-        withCredentials: true,
-      });
-      alert("삭제되었습니다.");
-      navigate("/community");
-    } catch (err: any) {
+  if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+    alert("작성자가 아닙니다.");
+    return;
+  }
+  if (!window.confirm("정말 삭제하시겠습니까?")) return;
+  try {
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}`, {
+      withCredentials: true,
+    });
+    alert("삭제되었습니다.");
+    navigate("/community");
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
       alert(err.response?.data?.message || "삭제 실패");
+    } else {
+      alert("삭제 실패(알 수 없는 오류)");
     }
-  };
+  }
+};
 
-  // 게시글 수정 이동
   const handleEdit = () => {
     if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
       alert("작성자가 아닙니다.");
@@ -160,7 +125,6 @@ const CommunityDetail: React.FC = () => {
 
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
-      {/* 카테고리+시간+더보기 */}
       <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
         <span>{post.category}</span>
         <span className="mx-2 text-gray-500">·</span>
@@ -207,15 +171,12 @@ const CommunityDetail: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* 제목 */}
       <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
       <img
         src={post.community_img ? `data:image/jpeg;base64,${post.community_img}` : "/panzee.webp"}
         alt={post.community_title}
         className="w-full aspect-video object-contain rounded mb-3"
       />
-
       <div className="flex items-center mb-2">
         <div className="text-base text-white font-semibold">
           {post.nickname || post.name || "익명"}
@@ -240,18 +201,14 @@ const CommunityDetail: React.FC = () => {
           </span>
         </div>
       </div>
-
       <div className="text-gray-200 mb-8 whitespace-pre-wrap">{post.community_contents}</div>
       <hr className="border-black opacity-60 my-6" />
-
       {/* 댓글 영역 */}
       <div className="mb-6">
         <Comments
           comments={comments}
-          onCommentSubmit={handleCommentSubmit}
-          onReply={handleReply}
-          onLike={handleCommentLike}
-          onReplyLike={handleReplyLike}
+          fetchComments={fetchComments}
+          postId={id!}
         />
       </div>
     </div>

@@ -1,22 +1,34 @@
-// /frontend/src/pages/Community.tsx
+// frontend/src/pages/Community.tsx
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import Icons from "../components/Icons";
-import { Link } from "react-router-dom";
-import { AuthContext } from "../providers/AuthProvider"; // ★ context import
+import { AuthContext } from "../providers/AuthProvider";
+
+// 게시글 타입 정의
+interface CommunityPost {
+  id: number;
+  category: string;
+  community_title: string;
+  community_contents: string;
+  community_img?: string | null;
+  community_likes: number;
+  community_views: number;
+  created_at: string;
+  nickname?: string;
+  name?: string;
+  comment_count?: number; // ← 댓글 수 (없으면 클라에서 fetch)
+}
 
 const categoryList = ["전체", "국내", "해외", "암호화폐"];
 
+// 시간 표시 함수 (DB가 UTC면 -9, 이미 KST면 삭제)
 function timeAgo(dateString: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
-  // 9시간 더하기 (밀리초 기준)
-  date.setHours(date.getHours() - 9 );
-
+  date.setHours(date.getHours() - 9); // DB가 UTC면 -9, KST면 삭제!
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-
   if (diff < 0) return "방금 전";
   if (diff < 60) return `${diff}초 전`;
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
@@ -24,17 +36,16 @@ function timeAgo(dateString: string): string {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
-
 const Community: React.FC = () => {
-  const [selectedSort, setSelectedSort] = useState("latest");
-  const [selectedTab, setSelectedTab] = useState("전체");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSort, setSelectedSort] = useState<"latest" | "popular">("latest");
+  const [selectedTab, setSelectedTab] = useState<string>("전체");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const postsPerPage = 12;
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext); // ★ context로 로그인 판별
+  const { user } = useContext(AuthContext);
 
   // 글쓰기 버튼 클릭 핸들러
   const handleWriteClick = () => {
@@ -45,15 +56,33 @@ const Community: React.FC = () => {
     navigate("/post");
   };
 
-  // 게시글 불러오기
+  // 게시글 불러오기 (comment_count가 없으면 직접 fetch)
   useEffect(() => {
     setLoading(true);
     axios
-      .get(`${import.meta.env.VITE_API_BASE_URL}/community`)
-      .then((res) => {
-        if (Array.isArray(res.data)) setPosts(res.data);
-        else if (Array.isArray(res.data.posts)) setPosts(res.data.posts);
-        else setPosts([]);
+      .get<{ posts: CommunityPost[] } | CommunityPost[]>(`${import.meta.env.VITE_API_BASE_URL}/community`)
+      .then(async (res) => {
+        let loadedPosts: CommunityPost[];
+        if (Array.isArray(res.data)) loadedPosts = res.data;
+        else if (Array.isArray(res.data.posts)) loadedPosts = res.data.posts;
+        else loadedPosts = [];
+
+        // comment_count가 없는 경우 직접 fetch
+        const postsWithCounts = await Promise.all(
+          loadedPosts.map(async (post) => {
+            if (typeof post.comment_count === "number") return post;
+            try {
+              const res = await axios.get(
+                `${import.meta.env.VITE_API_BASE_URL}/community/${post.id}/comments`
+              );
+              const count = Array.isArray(res.data) ? res.data.length : 0;
+              return { ...post, comment_count: count };
+            } catch {
+              return { ...post, comment_count: 0 };
+            }
+          })
+        );
+        setPosts(postsWithCounts);
         setLoading(false);
       })
       .catch((err) => {
@@ -66,9 +95,13 @@ const Community: React.FC = () => {
   // 정렬/필터/페이지네이션
   let sortedPosts = posts;
   if (selectedSort === "latest") {
-    sortedPosts = posts.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    sortedPosts = posts.slice().sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   } else if (selectedSort === "popular") {
-    sortedPosts = posts.slice().sort((a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0));
+    sortedPosts = posts.slice().sort(
+      (a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0)
+    );
   }
 
   const filteredPosts =
@@ -82,7 +115,7 @@ const Community: React.FC = () => {
     currentPage * postsPerPage,
   );
 
-  // 페이지네이션 표시
+  // 페이지네이션
   const getDisplayPages = (totalPages: number, currentPage: number): (number | string)[] => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -91,15 +124,9 @@ const Community: React.FC = () => {
     pages.push(1);
     const start = Math.max(2, currentPage - 2);
     const end = Math.min(totalPages - 1, currentPage + 2);
-    if (start > 2) {
-      pages.push("...");
-    }
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    if (end < totalPages - 1) {
-      pages.push("...");
-    }
+    if (start > 2) pages.push("...");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push("...");
     pages.push(totalPages);
     return pages;
   };
@@ -134,7 +161,6 @@ const Community: React.FC = () => {
     <div className="p-6 bg-gray-900 min-h-screen">
       {/* 데스크탑 컨트롤 */}
       <div className="hidden md:flex items-center justify-between mb-6">
-        {/* 정렬 */}
         <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
           <button
             onClick={() => {
@@ -163,7 +189,6 @@ const Community: React.FC = () => {
             <Icons name="fire" className="w-5 h-5" />
           </button>
         </div>
-        {/* 카테고리 탭 (md 이상) */}
         <div className="hidden md:flex bg-gray-800 p-1 rounded-full space-x-2">
           {categoryList.map((tab) => (
             <button
@@ -182,7 +207,6 @@ const Community: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* 글쓰기 */}
         <div>
           <button
             className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700"
@@ -196,7 +220,6 @@ const Community: React.FC = () => {
       {/* 모바일 컨트롤 */}
       <div className="flex md:hidden flex-col mb-6 space-y-4">
         <div className="flex items-center justify-between w-full">
-          {/* 최신/인기 */}
           <div className="flex bg-gray-800 p-1 rounded-md border border-gray-600 space-x-2">
             <button
               onClick={() => {
@@ -225,7 +248,6 @@ const Community: React.FC = () => {
               <Icons name="fire" className="w-5 h-5" />
             </button>
           </div>
-          {/* 카테고리 드롭다운 - 중앙정렬 */}
           <div className="flex-1 flex justify-center">
             <select
               value={selectedTab}
@@ -242,7 +264,6 @@ const Community: React.FC = () => {
               ))}
             </select>
           </div>
-          {/* 글쓰기 */}
           <div>
             <button
               className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-full transition-colors duration-200 hover:from-blue-600 hover:to-blue-700"
@@ -282,7 +303,9 @@ const Community: React.FC = () => {
                   {post.community_title}
                 </h3>
                 {/* 본문요약 */}
-                <p className="text-sm text-gray-300 mb-3 line-clamp-2">{post.community_contents}</p>
+                <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+                  {post.community_contents}
+                </p>
                 {/* 카테고리 | 닉네임 */}
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-base text-white font-bold">{post.category}</span>
@@ -342,7 +365,7 @@ const Community: React.FC = () => {
             <div key={index} className="w-10 h-10 flex items-center justify-center text-gray-500">
               {page}
             </div>
-          ),
+          )
         )}
         <button
           onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
