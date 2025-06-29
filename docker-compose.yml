@@ -1,3 +1,4 @@
+# /docker-compose.yml
 version: "3.9"
 
 services:
@@ -10,6 +11,7 @@ services:
     volumes:
       - stockpanzee_pgdata:/var/lib/postgresql/data
       - ./_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./_db:/backup # ← 백업 파일 저장용 마운트
     ports:
       - "5432:5432"
     networks:
@@ -23,6 +25,8 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads 
+      - ./_db:/backup
+
     env_file:
       - ./backend/.env
     ports:
