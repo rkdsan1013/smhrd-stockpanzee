@@ -3,9 +3,9 @@ import { Router } from "express";
 import {
   getNews,
   getNewsDetail,
-  testNewsProcessing,
-  testNewsProcessing2,
-  testStockNewsProcessing,
+  testCryptoNewsProcessing,
+  testKrxNewsProcessing,
+  testUSStockNewsProcessing,
 } from "../controllers/newsController";
 
 const router = Router();
@@ -14,13 +14,13 @@ const router = Router();
 router.get("/", getNews);
 
 // 테스트: 암호화폐 뉴스 파이프라인 실행
-router.get("/test-news", testNewsProcessing);
+// router.get("/test-crypto", testCryptoNewsProcessing);
 
-// 테스트: KRX 뉴스 파이프라인 실행
-router.get("/test-news2", testNewsProcessing2);
+// 테스트: KRX(국내) 뉴스 파이프라인 실행
+// router.get("/test-krx", testKrxNewsProcessing);
 
-// 테스트: 해외주식 뉴스 파이프라인 실행
-router.get("/test-stock-news", testStockNewsProcessing);
+// 테스트: US 주식 뉴스 파이프라인 실행
+// router.get("/test-usstock", testUSStockNewsProcessing);
 
 // 뉴스 상세 조회 (/:id)
 router.get("/:id", getNewsDetail);

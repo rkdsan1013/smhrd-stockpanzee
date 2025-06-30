@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { fetchNews } from "../services/newsService";
 import type { NewsItem } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
+import Tooltip from "../components/Tooltip";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -11,8 +12,6 @@ const TABS = [
   { key: "crypto", label: "암호화폐" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
-
-/** 고정: 최근 일주일(7일) */
 const RECENT_DAYS = 7;
 
 const Home: React.FC = () => {
@@ -24,10 +23,11 @@ const Home: React.FC = () => {
   useEffect(() => {
     fetchNews()
       .then((data) => {
-        const sorted = data.sort(
-          (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
+        setNewsItems(
+          data.sort(
+            (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
+          ),
         );
-        setNewsItems(sorted);
       })
       .catch((e) => setError(e.message || "뉴스 로드 실패"))
       .finally(() => setLoading(false));
@@ -38,7 +38,7 @@ const Home: React.FC = () => {
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
   // 2) 히어로 + 서브 뉴스
-  const hero = filtered[0]!;
+  const hero = filtered[0];
   const subNews = filtered.slice(1, 5);
 
   // 3) 최근 7일 필터
@@ -46,9 +46,9 @@ const Home: React.FC = () => {
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  // 4) 뉴스 감정 분포 및 평균
-  const LEVELS = [1, 2, 3, 4, 5] as const;
-  type Level = (typeof LEVELS)[number];
+  // 4) 감정 분포 계산
+  type Level = 1 | 2 | 3 | 4 | 5;
+  const LEVELS: Level[] = [1, 2, 3, 4, 5];
 
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
@@ -60,8 +60,8 @@ const Home: React.FC = () => {
 
   let sumWeighted = 0;
   recent.forEach((n) => {
-    const v = Math.min(5, Math.max(1, Number(n.sentiment) || 3));
-    dist[v as Level] += 1;
+    const v = Math.min(5, Math.max(1, Number(n.sentiment) || 3)) as Level;
+    dist[v] += 1;
     sumWeighted += v;
   });
 
@@ -76,15 +76,23 @@ const Home: React.FC = () => {
     {} as Record<Level, number>,
   );
 
-  // 5) 키워드 트렌드 (recent)
+  const levelLabels: Record<Level, string> = {
+    1: "매우 부정",
+    2: "부정",
+    3: "중립",
+    4: "긍정",
+    5: "매우 긍정",
+  };
+
+  // 5) 키워드 트렌드
   const tagCounts: Record<string, number> = {};
   recent.forEach((item) => {
     let tags: string[] = [];
     if (Array.isArray(item.tags)) tags = item.tags;
     else if (typeof item.tags === "string") {
       try {
-        const p = JSON.parse(item.tags);
-        if (Array.isArray(p)) tags = p;
+        const parsed = JSON.parse(item.tags);
+        if (Array.isArray(parsed)) tags = parsed;
       } catch {}
     }
     tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1));
@@ -118,11 +126,15 @@ const Home: React.FC = () => {
               <li key={t.key}>
                 <button
                   onClick={() => setSelectedTab(t.key)}
-                  className={`px-4 py-2 whitespace-nowrap rounded-full text-sm font-medium transition-colors ${
-                    selectedTab === t.key
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-blue-500 hover:text-white"
-                  }`}
+                  className={`
+                    px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
+                    transition-colors
+                    ${
+                      selectedTab === t.key
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                    }
+                  `}
                 >
                   {t.label}
                 </button>
@@ -145,14 +157,15 @@ const Home: React.FC = () => {
 
           {/* 사이드바 (1/3) */}
           <aside className="space-y-6">
-            {/* 뉴스 감정 분석 (고정: 최근 7일) */}
+            {/* 뉴스 감정 분석 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
               </h3>
-              {/* 1) 스택형 바 차트 */}
+              {/* rounded + overflow-hidden 유지 */}
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                 {LEVELS.map((lvl) => {
+                  const pct = distPct[lvl].toFixed(1);
                   const color =
                     lvl <= 2
                       ? lvl === 1
@@ -163,34 +176,41 @@ const Home: React.FC = () => {
                         : lvl === 4
                           ? "bg-green-400"
                           : "bg-green-600";
+
+                  // 툴팁을 위한 폭만 style 로 전달
                   return (
-                    <div
+                    <Tooltip
                       key={lvl}
-                      className={`${color} h-full`}
-                      style={{ width: `${distPct[lvl]}%` }}
-                      title={`${lvl}점: ${distPct[lvl].toFixed(1)}%`}
-                    />
+                      label={`${levelLabels[lvl]}: ${pct}%`}
+                      style={{ width: `${pct}%` }}
+                    >
+                      <div className={`${color} w-full h-full`} />
+                    </Tooltip>
                   );
                 })}
               </div>
-              {/* 2) 평균 감정 */}
+
+              {/* 평균 감정 */}
               <div className="mt-3 text-white flex items-center justify-between">
                 <span className="text-sm">평균 감정</span>
                 <span
-                  className={`text-lg font-semibold ${
-                    avgSentiment >= 3.5
-                      ? "text-green-300"
-                      : avgSentiment <= 2.5
-                        ? "text-red-300"
-                        : "text-gray-300"
-                  }`}
+                  className={`
+                    text-lg font-semibold
+                    ${
+                      avgSentiment >= 3.5
+                        ? "text-green-300"
+                        : avgSentiment <= 2.5
+                          ? "text-red-300"
+                          : "text-gray-300"
+                    }
+                  `}
                 >
                   {avgSentiment.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            {/* 키워드 트렌드 (고정: 최근 7일) */}
+            {/* 키워드 트렌드 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 키워드 트렌드 (최근 {RECENT_DAYS}일)

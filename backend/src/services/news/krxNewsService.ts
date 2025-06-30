@@ -53,7 +53,7 @@ async function getArticleTitleAndContent(url: string): Promise<{ title: string; 
 /**
  * 3) 국내 뉴스 처리 (success 플래그 적용)
  */
-export async function fetchAndProcessSmartKrxNews(): Promise<void> {
+export async function fetchAndProcessKrxNews(): Promise<void> {
   console.log("📢 국내 뉴스 파이프라인 시작");
 
   try {
@@ -164,12 +164,4 @@ export async function fetchAndProcessSmartKrxNews(): Promise<void> {
     console.error("❌ 국내 뉴스 처리 오류:", err);
     throw err;
   }
-}
-
-/** 4) 매시 정각 스케줄러 */
-export function startSmartKrxNewsScheduler(): void {
-  cron.schedule("0 * * * *", () => {
-    console.log("⏰ 국내 뉴스 스케줄러 실행");
-    fetchAndProcessSmartKrxNews().catch((err) => console.error("스케줄러 실행 오류:", err));
-  });
 }

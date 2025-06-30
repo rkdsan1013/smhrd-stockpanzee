@@ -1,8 +1,10 @@
-// /backend/src/controllers/communityController.ts
 import { Request, Response, NextFunction } from "express";
 import * as communityService from "../services/communityService";
 import * as communityModel from "../models/communityModel";
 import pool from "../config/db";
+import * as commentService from "../services/commentService";
+import fs from "fs";
+import path from "path";
 
 
 // multer 적용 시에만 req.file 사용하기 위한 인터페이스 확장
@@ -34,7 +36,6 @@ export async function isPostLikedByUser(postId: number, userUuid: Buffer): Promi
 export async function getCommunityLikesCount(postId: number): Promise<number> {
   return communityModel.getLikeCount("post", postId);
 }
-
 
 // 게시글 상세 조회 (조회수 1 증가)
 export const getCommunityPost = async (
@@ -81,7 +82,6 @@ export const getCommunityPost = async (
   }
 };
 
-
 // 게시글 등록 
 export const createCommunityPost = async (
   req: Request,
@@ -89,10 +89,9 @@ export const createCommunityPost = async (
   next: NextFunction,
 ): Promise<void> => {
   const r = req as MulterRequest;
-
   try {
     const { community_title, community_contents, category } = r.body;
-    const uuid = (r as any).user?.uuid; // 인증 미들웨어에서 유저 정보 받아옴
+    const uuid = (r as any).user?.uuid;
 
     if (!uuid || !community_title || !community_contents || !category) {
       res.status(400).json({ message: "필수값 누락" });
@@ -100,11 +99,14 @@ export const createCommunityPost = async (
     }
 
     const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
+    const img_url: string | undefined = r.file ? `/uploads/img/${r.file.filename}` : undefined;
+
     const result = await communityService.createCommunityPost({
       uuid: uuidBuffer,
       community_title,
       community_contents,
       category,
+      img_url,
     });
 
     if (!result.insertId) {
@@ -121,68 +123,171 @@ export const createCommunityPost = async (
   }
 };
 
-
 // 게시글 수정
 export const updateCommunityPost = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  const r = req as MulterRequest;
   try {
     const id = Number(req.params.id);
-    const { community_title, community_contents, category } = req.body;
-    // ★ 작성자 본인 확인 필요! (생략 시 주석)
+    const { community_title, community_contents, category } = r.body;
 
-    await pool.query(
-      `UPDATE community SET community_title=?, community_contents=?, category=?, updated_at=NOW() WHERE id=?`,
-      [community_title, community_contents, category, id]
-    );
+    // 기존 게시글 조회 (이미지 변경시 기존 파일 삭제)
+    const [rows]: any = await pool.query(`SELECT img_url FROM community WHERE id=?`, [id]);
+    const oldImgUrl = rows?.[0]?.img_url;
+
+    let img_url = oldImgUrl;
+    if (r.file) {
+      img_url = `/uploads/img/${r.file.filename}`;
+      // 기존 이미지 삭제
+      if (oldImgUrl) {
+        let relPath = oldImgUrl;
+        if (relPath.startsWith('/')) relPath = relPath.slice(1);
+        const filePath = path.join(__dirname, "../../", relPath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    }
+
+    await communityService.updateCommunityPost(id, {
+      community_title,
+      community_contents,
+      category,
+      img_url,
+    });
+
     res.json({ success: true });
-  } catch (err) {
-    next(err); // 에러 핸들링 미들웨어로 전달
-  }
-};
-
-// 댓글 트리 가져오기
-export const getComments = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const comm_id = Number(req.params.id);
-    const user_uuid = (req as any).user?.uuid;
-    const comments = await communityService.getComments(comm_id, user_uuid);
-    res.json(comments);
   } catch (err) {
     next(err);
   }
 };
 
-// 댓글/대댓글 등록
+// 댓글 가져오기
+export const getComments = async (
+  req: Request, res: Response, next: NextFunction
+) => {
+  try {
+    const comm_id = Number(req.params.id);
+    const user_uuid = (req as any).user?.uuid
+      ? Buffer.from((req as any).user.uuid, "hex")
+      : undefined;
+    const comments = await commentService.getComments(comm_id, user_uuid);
+    res.json(comments);
+  } catch (err) { next(err); }
+};
+
+
+// 댓글 등록 (parent_id는 대댓글일 때만 넘어옴)
+// 댓글 등록 (이미지 포함)
 export const createComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const uuid = (req as any).user?.uuid;
+    const content = req.body.content;
+    const parent_id = req.body.parent_id ? Number(req.body.parent_id) : undefined;
+    const comm_id = Number(req.params.id);
+
+    // ⭐️ 파일 저장시 경로 저장 (없으면 undefined)
+    const img_url = (req as MulterRequest).file
+      ? `/uploads/img/${(req as MulterRequest).file?.filename}`
+      : undefined;
+
+    // 디버깅용 콘솔
+    console.log("⭐️ [CREATE COMMENT]", {
+      uuid,
+      content,
+      parent_id,
+      comm_id,
+      img_url,
+    });
+
+    if (!uuid || !content) {
+      res.status(400).json({ message: "필수값 누락" });
+      return;
+    }
+
+    const uuidBuffer = Buffer.from(uuid.replace(/-/g, ""), "hex");
+    const result = await communityService.createComment({
+      uuid: uuidBuffer,
+      target_type: "community",
+      target_id: comm_id,
+      parent_id,
+      content,
+      img_url, // 저장!
+    });
+
+    res.status(201).json({ id: result.insertId });
+  } catch (err) {
+    console.error("🚨 [CREATE COMMENT ERROR]", err);
+    next(err);
+  }
+};
+
+
+
+
+export const updateComment = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { content, parent_id, uuid } = req.body;
-    const comm_id = Number(req.params.id);
-    if (!content) {
-      res.status(400).json({ message: "내용 누락" });
+    const uuid = (req as any).user?.uuid;
+    const id = Number(req.params.id); // params.commentId → params.id로 통일
+    const content = req.body.content;
+    if (!uuid || !content) {
+      res.status(400).json({ message: "필수값 누락" });
       return;
     }
-    const img = (req as MulterRequest).file?.buffer ?? null;
-    // uuid는 로그인시 req.user에서 가져오는 게 보통이지만, 미로그인 대응 시 프론트에서 받아도 됨
-    const uuidBuffer = Buffer.from(uuid?.replace(/-/g, ""), "hex");
-    const result = await communityService.createComment({
-      comm_id,
-      uuid: uuidBuffer,
-      comm_contents: content,
-      comm_img: img,
-      parent_id: parent_id ? Number(parent_id) : null,
-    });
-    res.status(201).json({ id: result.insertId });
+    await communityService.updateComment(id, content, Buffer.from(uuid.replace(/-/g, ""), "hex"));
+    res.json({ message: "수정 성공" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 댓글 삭제 (commentController.ts)
+
+export const deleteComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const commentId = Number(req.params.id);
+
+    // 1. 삭제할 댓글/대댓글의 img_url을 모두 조회
+    const [rows]: any = await pool.query(
+      `SELECT img_url FROM community_com WHERE (id=? OR parent_id=?) AND img_url IS NOT NULL`,
+      [commentId, commentId]
+    );
+
+    // 2. 파일 시스템에서 이미지 삭제
+    for (const row of rows) {
+      if (row.img_url) {
+        let relPath = row.img_url;
+        if (relPath.startsWith('/')) relPath = relPath.slice(1); // 슬래시 삭제
+        const filePath = path.join(__dirname, "../../", relPath);
+        console.log("[파일 삭제 시도]", filePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log("[삭제됨]", filePath);
+        } else {
+          console.log("[존재하지 않음]", filePath);
+        }
+      }
+    }
+
+    // 3. DB에서 댓글/대댓글 삭제
+    await commentService.deleteComment(commentId);
+
+    res.json({ message: "댓글(및 대댓글, 이미지) 삭제 완료" });
   } catch (err) {
     next(err);
   }
@@ -204,13 +309,12 @@ export const toggleCommunityLike = async (
     const uuidBuffer = Buffer.from(user_uuid, "hex");
     // 좋아요 상태 토글하고 결과를 받음
     const isLiked = await communityService.toggleLike(uuidBuffer, "post", postId);
-    const likes = await communityService.getCommunityLikesCount(postId); // <- 좋아요 수도 같이 응답
+    const likes = await communityService.getCommunityLikesCount(postId);
     res.json({ isLiked, likes, message: isLiked ? "좋아요" : "좋아요 취소" });
   } catch (err) {
     next(err);
   }
 };
-
 
 // 댓글 좋아요/취소
 export const toggleCommentLike = async (
@@ -222,12 +326,14 @@ export const toggleCommentLike = async (
     const commentId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
-    res.status(401).json({ message: "로그인 필요" });
-    return;
+      res.status(401).json({ message: "로그인 필요" });
+      return;
     }
 
     const uuidBuffer = Buffer.from(user_uuid, "hex");
     const isLike = req.method === "POST";
+    console.log(`[BACKEND 댓글 좋아요] commentId=${commentId}, uuid=${user_uuid}, method=${req.method}`);
+
     await communityService.toggleLike(uuidBuffer, "community_comment", commentId);
     res.json({ message: isLike ? "댓글 좋아요 완료" : "댓글 좋아요 취소" });
   } catch (err) {
@@ -235,7 +341,7 @@ export const toggleCommentLike = async (
   }
 };
 
-// 대댓글 좋아요/취소
+// 대댓글 좋아요/취소 (실제로는 별도 처리 필요할 수 있음)
 export const toggleReplyLike = async (
   req: Request,
   res: Response,
@@ -245,8 +351,8 @@ export const toggleReplyLike = async (
     const replyId = Number(req.params.id);
     const user_uuid = (req as any).user?.uuid;
     if (!user_uuid) {
-    res.status(401).json({ message: "로그인 필요" });
-    return;
+      res.status(401).json({ message: "로그인 필요" });
+      return;
     }
 
     const uuidBuffer = Buffer.from(user_uuid, "hex");
@@ -257,7 +363,6 @@ export const toggleReplyLike = async (
     next(err);
   }
 };
-
 
 // 게시글 삭제
 export const deleteCommunityPost = async (
@@ -272,18 +377,15 @@ export const deleteCommunityPost = async (
       res.status(401).json({ message: "로그인 필요" });
       return;
     }
-    // 1. 해당 게시글의 작성자 uuid 가져오기
     const post = await communityService.getCommunityPost(postId);
     if (!post) {
       res.status(404).json({ message: "게시글 없음" });
       return;
     }
     if (Buffer.from(user_uuid, "hex").toString("hex") !== post.uuid.toString("hex")) {
-      // 작성자가 아님
       res.status(403).json({ message: "작성자가 아닙니다." });
       return;
     }
-    // 2. 삭제 쿼리 실행
     await communityService.deleteCommunityPost(postId);
     res.json({ message: "게시글 삭제 완료" });
   } catch (err) {

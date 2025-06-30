@@ -68,6 +68,7 @@
 
 ### 사전 준비
 - `.env` 파일에 API 키, DB 정보 등을 등록
+- docker.desktop 설치
 
 ### 로컬 실행
 VSCode로 실행시
@@ -78,10 +79,8 @@ npm install
 cd ../
 cd frontend/
 npm install
-npm run dev
 cd ../
-cd backend/
-npm run dev
+docker-compose up -d --build
 ```
 ---
 ```
