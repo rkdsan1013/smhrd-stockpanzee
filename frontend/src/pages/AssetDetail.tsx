@@ -30,18 +30,16 @@ const AssetDetail: React.FC = () => {
   }, [id]);
 
   // 최신 뉴스 1건 + 다음 5건 로드
-  useEffect(() => {
-    if (!asset) return;
+ useEffect(() => {
+  if (!asset) return;
 
-    // Determine category based on asset market
-    const determineCategory = (market: string): "domestic" | "international" | "crypto" => {
-      if (market.includes("KRX")) return "domestic";
-      if (market.includes("NASDAQ") || market.includes("NYSE")) return "international";
-      return "crypto"; // Default for crypto assets
-    };
+  const determineCategory = (market: string): "domestic" | "international" | "crypto" => {
+    if (market.includes("KRX")) return "domestic";
+    if (market.includes("NASDAQ") || market.includes("NYSE")) return "international";
+    return "crypto";
+  };
 
-    const assetCategory = determineCategory(asset.market);
-
+  const assetCategory = determineCategory(asset.market);
     fetchLatestNewsByAsset(asset.symbol)
       .then((list) => {
         if (list.length === 0) {
@@ -49,9 +47,14 @@ const AssetDetail: React.FC = () => {
           setNewsList([]);
         } else {
           const [first, ...rest] = list;
-          // Override category based on asset market
-          setDetailNews({ ...first, category: assetCategory });
-          setNewsList(rest.slice(0, 5).map((item) => ({ ...item, category: assetCategory })));
+          // 여기서 news_sentiment → sentiment로 강제 매핑
+          const fixField = (item: any) => ({
+            ...item,
+            category: assetCategory,
+            sentiment: item.news_sentiment ?? item.sentiment, // 둘 다 없는 경우는 undefined
+          });
+          setDetailNews(fixField(first));
+          setNewsList(rest.slice(0, 5).map(fixField));
         }
       })
       .catch(console.error);
