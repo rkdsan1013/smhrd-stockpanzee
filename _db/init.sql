@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS news_vectors (
   news_link TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_news_vectors_embedding 
+CREATE INDEX IF NOT EXISTS idx_news_vectors_embedding
   ON news_vectors USING hnsw (embedding vector_cosine_ops);

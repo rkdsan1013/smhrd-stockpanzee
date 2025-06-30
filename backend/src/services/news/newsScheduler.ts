@@ -1,7 +1,6 @@
 // /backend/src/services/news/newsScheduler.ts
 import cron from "node-cron";
 import { spawn } from "child_process";
-import fs from "fs";
 import dotenv from "dotenv";
 
 import { fetchAndProcessKrxNews } from "./krxNewsService";
@@ -10,11 +9,6 @@ import { fetchAndProcessCryptoNews } from "./cryptoNewsService";
 
 dotenv.config();
 
-/**
- * 벡터 전용 덤프
- *  • PG_VECTOR_TABLES=table1,table2 식으로 .env에 설정
- *  • /backup/vectordata.dump 에 압축 포맷 덤프 (기존 덮어쓰기)
- */
 function backupVectorData() {
   const {
     PG_HOST = "db",
@@ -32,44 +26,44 @@ function backupVectorData() {
     return;
   }
 
-  // 테이블 이름 배열화
   const tables = PG_VECTOR_TABLES.split(",").map((t) => t.trim());
   if (tables.length === 0) {
     console.error("❌ PG_VECTOR_TABLES에 백업할 테이블을 지정하세요.");
     return;
   }
 
-  // pg_dump 인자 구성
-  const args = ["-h", PG_HOST, "-p", PG_PORT, "-U", PG_USER];
-  tables.forEach((tbl) => {
-    args.push("-t", tbl);
-  });
-  args.push("-Fc", PG_NAME);
-
   const dumpPath = "/backup/vectordata.dump";
+  const args = [
+    "-h",
+    PG_HOST,
+    "-p",
+    PG_PORT,
+    "-U",
+    PG_USER,
+    "-Fc", // custom-format
+    "-Z",
+    "9", // optional: 최대 압축
+    "-f",
+    dumpPath, // stdout 대신 파일 직접 쓰기
+    ...tables.flatMap((t) => ["-t", t]),
+    PG_NAME,
+  ];
+
   const env = { ...process.env, PGPASSWORD: PG_PASS };
 
-  console.log("🛠️  pg_dump (벡터) 실행:", ["pg_dump", ...args].join(" "));
-  const child = spawn("pg_dump", args, { env });
+  console.log("🛠️  pg_dump 실행:", ["pg_dump", ...args].join(" "));
+  const child = spawn("pg_dump", args, { env, stdio: "inherit" });
 
-  // stdout → 덤프 파일
-  const outStream = fs.createWriteStream(dumpPath);
-  child.stdout.pipe(outStream);
-
-  // stderr & lifecycle 로깅
-  child.stderr.on("data", (buf) => console.error("❌ pg_dump stderr:", buf.toString()));
-  child.on("error", (err) => console.error("❌ pg_dump 실행 오류:", err));
   child.on("close", (code) => {
     if (code === 0) {
       console.log(`✅ 벡터 데이터 백업 완료: ${dumpPath}`);
     } else {
-      console.error(`❌ 벡터 데이터 백업 비정상 종료 코드: ${code}`);
+      console.error(`❌ pg_dump 비정상 종료 코드: ${code}`);
     }
   });
 }
 
-// ─────────────────────────────────────────────
-// 00분 스케줄: 국내 + 암호화폐 + US 수집 → 벡터 백업
+// 00분: 전 뉴스 수집 → 벡터 백업
 cron.schedule(
   "0 * * * *",
   async () => {
@@ -89,8 +83,7 @@ cron.schedule(
   { timezone: "Asia/Seoul" },
 );
 
-// ─────────────────────────────────────────────
-// 10,20,30,40,50분 스케줄: 국내 + 암호화폐 수집 → 벡터 백업
+// 10,20,30,40,50분: 국내+암호화폐 수집 → 벡터 백업
 cron.schedule(
   "10,20,30,40,50 * * * *",
   async () => {
