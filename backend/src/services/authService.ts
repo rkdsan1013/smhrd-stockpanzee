@@ -11,6 +11,14 @@ export interface UserProfile {
   avatar_url: string | null;
 }
 
+export interface User {
+  uuid: string;
+  username: string;
+  email: string;
+  avatar_url?: string | null;
+  google_id?: string;
+}
+
 /**
  * 회원가입: 이메일 중복 → 해시 → users+profiles 트랜잭션 → JWT 반환
  */
@@ -83,4 +91,52 @@ export async function getProfileService(uuidHex: string): Promise<UserProfile> {
   }
   const row = profiles[0];
   return { uuid: uuidHex, username: row.username, avatar_url: row.avatar_url };
+}
+
+// 구글 계정으로 회원가입 or 로그인
+export async function findOrCreateGoogleUser(data: {
+  email: string;
+  username: string;
+  avatar_url?: string;
+  google_id: string;
+}): Promise<User> {
+  // 1. 먼저 users 테이블에서 email로 조회
+  const existingUsers = await authModel.findUserByEmail(data.email);
+  if (existingUsers && existingUsers.length > 0) {
+    // users 테이블의 uuid(BUFFER)와 user_profiles의 name/avatar_url 등 조회
+    const bufUuid = existingUsers[0].uuid;
+    const uuidHex = bufUuid.toString("hex");
+    const profiles = await authModel.findUserByUuid(bufUuid);
+    return {
+      uuid: uuidHex,
+      username: profiles[0]?.username ?? data.username,
+      email: data.email,
+      avatar_url: profiles[0]?.avatar_url ?? data.avatar_url,
+      google_id: data.google_id,
+    };
+  }
+
+  // 2. 신규 유저면 uuid 생성, password에 구글임을 나타내는 임의값 저장
+  const rawUuid = uuidv4();
+  const uuidBuf = Buffer.from(uuidParse(rawUuid));
+  const uuidHex = uuidBuf.toString("hex");
+  const googlePass = await bcrypt.hash(`google-oauth2:${data.google_id}`, 10);
+
+  await authModel.registerUser(uuidBuf, data.email, googlePass, data.username, data.avatar_url);
+
+  return {
+    uuid: uuidHex,
+    username: data.username,
+    email: data.email,
+    avatar_url: data.avatar_url ?? null,
+    google_id: data.google_id,
+  };
+}
+
+export async function generateJwtForUser(uuid: string): Promise<string> {
+  return await new SignJWT({ uuid })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(jwtSecret);
 }

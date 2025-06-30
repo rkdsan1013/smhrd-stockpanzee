@@ -5,6 +5,12 @@ import type { LoginData } from "../services/authService";
 import Icons from "./Icons";
 import TermsAgreement from "./TermsAgreement";
 import { AuthContext } from "../providers/AuthProvider";
+import { getGoogleAuthUrl } from "../utils/googleAuth";
+
+//const handleGoogleLoginClick = () => {
+//  window.location.href = getGoogleAuthUrl();
+//};
+
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -29,7 +35,7 @@ const LoginForm: React.FC = () => {
   const handleGoogleLoginClick = () => setGoogleStep(true);
   const handleAgreeForGoogle = () => {
     setGoogleStep(false);
-    navigate("/");
+    window.location.href = getGoogleAuthUrl(); // 동의 버튼에서 바로 이동!
   };
   const handleCancelGoogleTerms = () => setGoogleStep(false);
 
@@ -41,7 +47,6 @@ const LoginForm: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div>
       <h2 className="text-center text-3xl font-bold mb-6">로그인</h2>

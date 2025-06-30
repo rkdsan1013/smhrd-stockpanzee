@@ -1,13 +1,14 @@
 // /backend/src/controllers/newsController.ts
 import { RequestHandler } from "express";
-import { fetchAndProcessNews } from "../services/news/cryptoNewsService";
-import { fetchAndProcessOneStockNews } from "../services/news/usstockNewsService";
-import { fetchAndProcessSmartKrxNews } from "../services/news/krxNewsService";
 import { getAllNews } from "../models/newsTransactions";
 import * as newsService from "../services/newsService";
 
+import { fetchAndProcessCryptoNews } from "../services/news/cryptoNewsService";
+import { fetchAndProcessKrxNews } from "../services/news/krxNewsService";
+import { fetchAndProcessUsStockNews } from "../services/news/usStockNewsService";
+
 // GET /api/news
-export const getNews: RequestHandler = async (req, res, next) => {
+export const getNews: RequestHandler = async (req, res) => {
   const { asset, exclude } = req.query;
   try {
     if (asset) {
@@ -27,7 +28,7 @@ export const getNews: RequestHandler = async (req, res, next) => {
 };
 
 // GET /api/news/:id
-export const getNewsDetail: RequestHandler = async (req, res, next) => {
+export const getNewsDetail: RequestHandler = async (req, res) => {
   const newsId = Number(req.params.id);
   if (isNaN(newsId)) {
     res.status(400).json({ error: "잘못된 뉴스 ID" });
@@ -47,10 +48,10 @@ export const getNewsDetail: RequestHandler = async (req, res, next) => {
   }
 };
 
-// GET /api/news/test-news
-export const testNewsProcessing: RequestHandler = async (req, res, next) => {
+// GET /api/news/test-crypto
+export const testCryptoNewsProcessing: RequestHandler = async (req, res) => {
   try {
-    await fetchAndProcessNews();
+    await fetchAndProcessCryptoNews();
     res.status(200).json({ ok: true, message: "암호화폐 뉴스 처리 완료." });
   } catch (err: any) {
     console.error("암호화폐 뉴스 처리 중 오류:", err);
@@ -58,24 +59,24 @@ export const testNewsProcessing: RequestHandler = async (req, res, next) => {
   }
 };
 
-// GET /api/news/test-news2
-export const testNewsProcessing2: RequestHandler = async (req, res, next) => {
+// GET /api/news/test-krx
+export const testKrxNewsProcessing: RequestHandler = async (req, res) => {
   try {
-    await fetchAndProcessSmartKrxNews();
-    res.status(200).json({ ok: true, message: "KRX 뉴스 처리 완료." });
+    await fetchAndProcessKrxNews();
+    res.status(200).json({ ok: true, message: "국내(KRX) 뉴스 처리 완료." });
   } catch (err: any) {
-    console.error("KRX 뉴스 처리 중 오류:", err);
+    console.error("국내(KRX) 뉴스 처리 중 오류:", err);
     res.status(500).json({ error: err.message || "서버 오류" });
   }
 };
 
-// GET /api/news/test-stock-news
-export const testStockNewsProcessing: RequestHandler = async (req, res, next) => {
+// GET /api/news/test-usstock
+export const testUSStockNewsProcessing: RequestHandler = async (req, res) => {
   try {
-    await fetchAndProcessOneStockNews();
-    res.status(200).json({ ok: true, message: "해외주식 뉴스 처리 완료." });
+    await fetchAndProcessUsStockNews();
+    res.status(200).json({ ok: true, message: "해외주식(US) 뉴스 처리 완료." });
   } catch (err: any) {
-    console.error("해외주식 뉴스 처리 중 오류:", err);
+    console.error("해외주식(US) 뉴스 처리 중 오류:", err);
     res.status(500).json({ error: err.message || "서버 오류" });
   }
 };

@@ -428,6 +428,20 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
+
+      more: (
+      <svg
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="5" cy="12" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="19" cy="12" r="2" />
+      </svg>
+    ),
+    
   };
 
   if (!iconMap[name]) {

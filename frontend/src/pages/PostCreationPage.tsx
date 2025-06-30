@@ -1,4 +1,3 @@
-// /frontend/src/pages/PostCreationPage.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -7,37 +6,51 @@ const PostCreationPage: React.FC = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("국내");
   const [content, setContent] = useState("");
+  const [image, setImage] = useState<File | null>(null);
 
   const navigate = useNavigate();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImage(e.target.files?.[0] ?? null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 입력해주세요.");
       return;
     }
     try {
-      // 환경변수에서 API 주소 읽어와서 사용
+      const formData = new FormData();
+      formData.append("community_title", title);
+      formData.append("community_contents", content);
+      formData.append("category", category);
+      if (image) formData.append("image", image);
+
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/community`,
-        {
-          community_title: title,
-          community_contents: content,
-          category,
-        },
+        formData,
         { withCredentials: true }
       );
       alert("글이 성공적으로 작성되었습니다.");
       navigate("/community"); // 작성 후 목록으로 이동
-    } catch (err: any) {
-      alert("작성 실패: " + (err.response?.data?.message || err.message));
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        alert("작성 실패: " + (err.response?.data?.message || err.message));
+      } else {
+        alert("작성 실패: " + (err as Error).message);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="text-4xl font-bold mb-8 text-center">글 작성</h1>
-      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-3xl mx-auto space-y-6"
+        encType="multipart/form-data"
+      >
         {/* 제목 입력 */}
         <div>
           <label htmlFor="title" className="block text-sm font-medium mb-1">
@@ -85,10 +98,10 @@ const PostCreationPage: React.FC = () => {
           ></textarea>
         </div>
 
-        {/* 이미지 업로드 - 일단 보류/숨김 */}
-        {/* <div>
+        {/* 이미지 업로드 */}
+        <div>
           <label htmlFor="image" className="block text-sm font-medium mb-1">
-            이미지 업로드
+            이미지 업로드 (선택)
           </label>
           <input
             id="image"
@@ -97,7 +110,14 @@ const PostCreationPage: React.FC = () => {
             onChange={handleImageChange}
             className="w-full text-white"
           />
-        </div> */}
+          {image && (
+            <img
+              src={URL.createObjectURL(image)}
+              alt="미리보기"
+              className="w-32 h-32 object-cover my-2 rounded"
+            />
+          )}
+        </div>
 
         {/* 제출 버튼 */}
         <div className="flex justify-end">
