@@ -25,7 +25,7 @@ const ITEMS_PER_PAGE = 12;
 const Market: React.FC = () => {
   const navigate = useNavigate();
 
-  // State
+  // state
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [search, setSearch] = useState("");
@@ -37,11 +37,12 @@ const Market: React.FC = () => {
   });
   const [page, setPage] = useState(1);
 
+  // refs for highlight
   const prevPrices = useRef<Map<number, number>>(new Map());
   const highlight = useRef<Map<number, "up" | "down">>(new Map());
   const [, forceR] = useState(0);
 
-  // Fetch & highlight
+  // fetch & highlight effect
   useEffect(() => {
     const load = () =>
       fetchAssets()
@@ -83,18 +84,18 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // Reset page on filters/search
+  // reset page
   useEffect(() => {
     setPage(1);
   }, [tab, viewMode, sortConfig, search]);
 
-  // Filter by tab
+  // filter by tab
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
   );
 
-  // Apply viewMode
+  // apply view mode
   const byView = useMemo(() => {
     if (viewMode === "즐겨찾기") {
       return byTab.filter((s) => favorites.includes(s.id));
@@ -104,30 +105,27 @@ const Market: React.FC = () => {
     );
   }, [byTab, viewMode, favorites]);
 
-  // Sort (skip if searching)
+  // sort
   const sorted = useMemo(() => {
     if (search.trim()) return byView;
-    const f = sortConfig.dir === "asc" ? 1 : -1;
+    const factor = sortConfig.dir === "asc" ? 1 : -1;
     return [...byView].sort((a, b) =>
       sortConfig.key === "name"
-        ? a.name.localeCompare(b.name) * f
-        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * f,
+        ? a.name.localeCompare(b.name) * factor
+        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * factor,
     );
   }, [byView, sortConfig, search]);
 
-  // Fuzzy search
+  // search
   const searched = useMemo(
     () =>
       search.trim()
-        ? fuzzySearch(sorted, search, {
-            keys: ["name", "symbol"],
-            threshold: 0.3,
-          })
+        ? fuzzySearch(sorted, search, { keys: ["name", "symbol"], threshold: 0.3 })
         : sorted,
     [sorted, search],
   );
 
-  // Pagination + infinite scroll
+  // paginate + infinite scroll
   const finalList = searched;
   const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -142,20 +140,18 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // Handlers
+  // handlers
   const toggleFav = (id: number) =>
     setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-
   const sortCol = (key: SortKey) => {
     if (search.trim()) return;
     setSortConfig((p) =>
       p.key === key ? { key, dir: p.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
     );
   };
-
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // Summary metrics
+  // summary metrics
   const summary = byTab;
   const total = summary.length;
   const cLargeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
@@ -196,9 +192,9 @@ const Market: React.FC = () => {
       </header>
 
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-4">
-        {/* Nav */}
-        <div className="bg-gray-800 rounded-full">
-          <div className="container mx-auto flex items-center px-4 py-2 space-x-2">
+        {/* Nav (container width) */}
+        <div className="container mx-auto px-4">
+          <div className="bg-gray-800 rounded-full flex items-center px-2 py-1 space-x-2">
             <button onClick={toggleView} className="p-2 rounded-full">
               <Icons
                 name="banana"
@@ -224,9 +220,8 @@ const Market: React.FC = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
-          {/* List */}
+          {/* Stock list */}
           <div className="w-full md:w-2/3 space-y-2">
-            {/* Header */}
             <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
               <div className="w-8" />
               {headerCols.map((col) => (
@@ -257,18 +252,22 @@ const Market: React.FC = () => {
 
             {visible.map((s) => {
               const hl = highlight.current.get(s.id);
-              const bd =
+              const borderColor =
                 hl === "up"
                   ? "border-green-400"
                   : hl === "down"
                     ? "border-red-400"
                     : "border-transparent";
+
               return (
                 <div
                   key={s.id}
                   onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                  className={`flex items-center px-4 py-2 rounded-lg border ${bd}
-                    transition-transform duration-200 cursor-pointer hover:bg-gray-700 hover:scale-[1.003]`}
+                  className={`
+                    flex items-center px-4 py-2 rounded-lg border-2 ${borderColor}
+                    transition-colors duration-500 ease-in-out cursor-pointer
+                    hover:bg-gray-700 hover:scale-[1.003]
+                  `}
                 >
                   <button
                     onClick={(e) => {
@@ -365,7 +364,7 @@ const Market: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Top 3 Momentum */}
+                {/* Top 3 */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-gray-300 mb-1">Top 3 상승</p>
