@@ -41,13 +41,14 @@ export const TradingViewMiniChart: React.FC<{ symbol?: string }> = ({ symbol }) 
     const script = document.createElement("script");
     script.type = "text/javascript";
     script.async = true;
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+    script.src =
+      "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
     script.innerHTML = JSON.stringify({
       symbol,
       width: 440,
       height: 220,
       locale: "kr",
-      dateRange: "D",
+      dateRange: "1H",
       colorTheme: "dark",
       isTransparent: false,
       autosize: false,

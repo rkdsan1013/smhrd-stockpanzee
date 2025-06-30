@@ -123,9 +123,12 @@ const Header: React.FC = () => {
                   <div className="px-4 py-2 border-b border-gray-200 font-semibold">
                     {user.username}
                   </div>
-                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                  <Link
+                    to="/profile/edit"
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                  >
                     프로필 수정
-                  </button>
+                  </Link>
                   <button
                     onClick={async () => {
                       await logout();

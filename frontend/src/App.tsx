@@ -11,6 +11,7 @@ import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
 import Market from "./pages/Market";
 import AssetDetail from "./pages/AssetDetail";
+import EditProfilePage from "./pages/EditProfilePage";
 import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
 import AppProvider from "./providers/AppProvider"; // 전역 프로바이더 예시
@@ -35,6 +36,7 @@ const App: React.FC = () => {
             {/* 포스팅 페이지: 글쓰기 버튼 눌렀을 때 이동 */}
             <Route path="post" element={<PostCreationPage />} />
             <Route path="/communitydetail/:id" element={<CommunityDetail />} />
+            <Route path="profile/edit" element={<EditProfilePage />} />
           </Route>
           {/* 인증 관련 페이지 */}
           <Route path="/auth" element={<AuthTemplate />}>

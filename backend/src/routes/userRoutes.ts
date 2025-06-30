@@ -4,5 +4,8 @@ import { authenticate } from "../middlewares/auth";
 import * as userController from "../controllers/userController";
 
 const router = express.Router();
+
 router.get("/me", authenticate, userController.getProfile);
+router.put("/me", authenticate, userController.updateProfile);
+
 export default router;

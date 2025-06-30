@@ -21,3 +21,24 @@ export const SELECT_USER_BY_UUID = `
   JOIN user_profiles p ON u.uuid = p.uuid
   WHERE u.uuid = ?
 `;
+
+/**
+ * 프로필 수정용 UPDATE 쿼리들
+ */
+export const UPDATE_USER_EMAIL = `
+  UPDATE users
+  SET email = ?
+  WHERE uuid = ?
+`;
+
+export const UPDATE_USER_PASSWORD = `
+  UPDATE users
+  SET password = ?
+  WHERE uuid = ?
+`;
+
+export const UPDATE_USER_PROFILE = `
+  UPDATE user_profiles
+  SET name = ?
+  WHERE uuid = ?
+`;

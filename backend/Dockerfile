@@ -10,7 +10,7 @@ RUN apk update && apk upgrade && \
       ca-certificates \
       ttf-freefont \
       dumb-init \
-      postgresql-client=16.8-r0    # <-- PostgreSQL 16.x client 고정
+      postgresql-client   # ← 버전 고정 없이 설치 (v16+ 사용됨)
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
