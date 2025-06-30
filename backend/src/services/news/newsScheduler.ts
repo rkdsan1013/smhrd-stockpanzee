@@ -90,18 +90,18 @@ cron.schedule(
 );
 
 // 10,20,30,40,50분: 일부 수집 + 백업
-cron.schedule(
-  "10,20,30,40,50 * * * *",
-  async () => {
-    console.log("⏰ 10분 간격: 국내+암호화폐 수집");
-    try {
-      await Promise.all([fetchAndProcessKrxNews(), fetchAndProcessCryptoNews()]);
-      backupVectorData();
-    } catch (err) {
-      console.error("❌ 수집 오류:", err);
-    }
-  },
-  { timezone: "Asia/Seoul" },
-);
+// cron.schedule(
+//   "10,20,30,40,50 * * * *",
+//   async () => {
+//     console.log("⏰ 10분 간격: 국내+암호화폐 수집");
+//     try {
+//       await Promise.all([fetchAndProcessKrxNews(), fetchAndProcessCryptoNews()]);
+//       backupVectorData();
+//     } catch (err) {
+//       console.error("❌ 수집 오류:", err);
+//     }
+//   },
+//   { timezone: "Asia/Seoul" },
+// );
 
 console.log("🔔 뉴스 스케줄러 및 벡터 백업 등록 완료");
