@@ -1,4 +1,4 @@
-// frontend/src/pages/CommunityDetail.tsx
+// /frontend/src/pages/CommunityDetail.tsx
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
@@ -49,7 +49,7 @@ const CommunityDetail: React.FC = () => {
     setLoading(true);
     axios
       .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
-      .then(res => setPost(res.data))
+      .then((res) => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
   }, [id]);
@@ -57,7 +57,7 @@ const CommunityDetail: React.FC = () => {
   const fetchComments = useCallback(() => {
     axios
       .get<Comment[]>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
-      .then(res => setComments(res.data))
+      .then((res) => setComments(res.data))
       .catch(() => setComments([]));
   }, [id]);
 
@@ -94,25 +94,25 @@ const CommunityDetail: React.FC = () => {
   }, [showMenu]);
 
   const handleDelete = async () => {
-  if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
-    alert("작성자가 아닙니다.");
-    return;
-  }
-  if (!window.confirm("정말 삭제하시겠습니까?")) return;
-  try {
-    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}`, {
-      withCredentials: true,
-    });
-    alert("삭제되었습니다.");
-    navigate("/community");
-  } catch (err: unknown) {
-    if (axios.isAxiosError(err)) {
-      alert(err.response?.data?.message || "삭제 실패");
-    } else {
-      alert("삭제 실패(알 수 없는 오류)");
+    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+      alert("작성자가 아닙니다.");
+      return;
     }
-  }
-};
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}`, {
+        withCredentials: true,
+      });
+      alert("삭제되었습니다.");
+      navigate("/community");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || "삭제 실패");
+      } else {
+        alert("삭제 실패(알 수 없는 오류)");
+      }
+    }
+  };
 
   const handleEdit = () => {
     if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
@@ -133,9 +133,9 @@ const CommunityDetail: React.FC = () => {
         <div className="ml-auto relative">
           <button
             className="ml-2 p-1 hover:bg-gray-700 rounded-full"
-            onClick={e => {
+            onClick={(e) => {
               e.stopPropagation();
-              setShowMenu(v => !v);
+              setShowMenu((v) => !v);
             }}
             type="button"
           >
@@ -148,7 +148,7 @@ const CommunityDetail: React.FC = () => {
           {showMenu && (
             <div
               className="absolute right-0 mt-2 w-28 bg-gray-900 border border-gray-700 rounded shadow-lg z-20"
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               <button
                 className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
@@ -176,9 +176,9 @@ const CommunityDetail: React.FC = () => {
       <img
         src={
           post.img_url
-            ? (post.img_url.startsWith("/uploads/")
-                ? `http://localhost:5000${post.img_url}`
-                : post.img_url)
+            ? post.img_url.startsWith("/uploads/")
+              ? `http://localhost:5000${post.img_url}`
+              : post.img_url
             : "/panzee.webp"
         }
         alt={post.community_title}
@@ -212,11 +212,7 @@ const CommunityDetail: React.FC = () => {
       <hr className="border-black opacity-60 my-6" />
       {/* 댓글 영역 */}
       <div className="mb-6">
-        <Comments
-          comments={comments}
-          fetchComments={fetchComments}
-          postId={id!}
-        />
+        <Comments comments={comments} fetchComments={fetchComments} postId={id!} />
       </div>
     </div>
   );
