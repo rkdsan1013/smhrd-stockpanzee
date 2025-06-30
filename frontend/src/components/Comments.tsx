@@ -108,7 +108,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
         value={content}
         onChange={e => setContent(e.target.value)}
         rows={3}
-        placeholder="도움이 되는 코멘트를 남기세요."
+        placeholder="자신의 의견을 남기세요."
       />
       <input
         type="file"
@@ -148,6 +148,7 @@ const CommentItem: React.FC<{
   const [content, setContent] = useState(comment.content);
   const [showReply, setShowReply] = useState(false);
   const { user } = useContext(AuthContext);
+  const [showReplies, setShowReplies] = useState(true);
 
   // 댓글 수정
   const handleEdit = async () => {
@@ -269,16 +270,27 @@ const CommentItem: React.FC<{
           </div>
         </div>
       )}
+      {/* 대댓글 토글 버튼 */}
+      {comment.replies.length > 0 && (
+        <button
+          className="ml-8 mb-1 text-xs text-blue-400 hover:underline"
+          onClick={() => setShowReplies(v => !v)}
+        >
+          {showReplies ? `▼ 대댓글 숨기기 (${comment.replies.length})` : `▶ 대댓글 보기 (${comment.replies.length})`}
+        </button>
+      )}
       {/* 대댓글 입력 */}
       {showReply && (
         <ReplyInput onSubmit={handleReply} onCancel={() => setShowReply(false)} />
       )}
       {/* 대댓글 목록 */}
-      <div className="mt-1 space-y-2 ml-8">
-        {comment.replies.map(reply => (
-          <ReplyItem key={reply.id} reply={reply} fetchComments={fetchComments} />
-        ))}
-      </div>
+      {showReplies && comment.replies.length > 0 && (
+        <div className="mt-1 space-y-2 ml-8">
+          {comment.replies.map(reply => (
+            <ReplyItem key={reply.id} reply={reply} fetchComments={fetchComments} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
