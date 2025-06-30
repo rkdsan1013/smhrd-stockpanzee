@@ -1,4 +1,4 @@
-// frontend/src/pages/Market.tsx
+// /frontend/src/pages/Market.tsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
@@ -292,13 +292,19 @@ const Market: React.FC = () => {
           {/* Search & summary */}
           <div className="w-full md:w-1/3">
             <div className="sticky top-20 space-y-4">
-              <input
-                type="text"
-                placeholder="종목명·심볼 검색"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full p-2 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none"
-              />
+              <div className="relative">
+                <Icons
+                  name="search"
+                  className="w-5 h-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2"
+                />
+                <input
+                  type="text"
+                  placeholder="종목명·심볼 검색"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 p-2 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none"
+                />
+              </div>
 
               <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6 text-white">
                 <h2 className="text-xl font-bold text-center">{statusTitle}</h2>
