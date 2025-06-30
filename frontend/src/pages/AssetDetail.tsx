@@ -1,11 +1,10 @@
-// frontend/src/pages/AssetDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { fetchAssetById } from "../services/assetService";
 import type { Asset } from "../services/assetService";
+import { fetchAssetById } from "../services/assetService";
+import type { NewsItem } from "../services/newsService";
+import { fetchLatestNewsByAsset } from "../services/newsService";
 import { renderTradingViewChart, getTradingViewSymbol } from "../services/tradingViewService";
-import { fetchLatestNewsByAsset, fetchNewsDetail } from "../services/newsService";
-import type { NewsItem, NewsDetail } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 
 const AssetDetail: React.FC = () => {
@@ -14,10 +13,11 @@ const AssetDetail: React.FC = () => {
   const [liveData, setLiveData] = useState<{ currentPrice: number; priceChange: number } | null>(
     null,
   );
+  const [detailNews, setDetailNews] = useState<NewsItem | null>(null);
+  const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<"chart" | "community">("chart");
-  const [latestNewsDetail, setLatestNewsDetail] = useState<NewsDetail | null>(null);
-  const [latestNewsList, setLatestNewsList] = useState<NewsItem[]>([]);
 
+  // 자산 정보 및 초기 실시간 데이터
   useEffect(() => {
     if (!id) return;
     fetchAssetById(Number(id))
@@ -28,43 +28,57 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [id]);
 
+  // 최신 뉴스 1건 + 다음 3건 로드
   useEffect(() => {
     if (!asset) return;
+
+    // Determine category based on asset market
+    const determineCategory = (market: string): "domestic" | "international" | "crypto" => {
+      if (market.includes("KRX")) return "domestic";
+      if (market.includes("NASDAQ") || market.includes("NYSE")) return "international";
+      return "crypto"; // Default for crypto assets
+    };
+
+    const assetCategory = determineCategory(asset.market);
+
     fetchLatestNewsByAsset(asset.symbol)
-      .then((news) => {
-        if (news.length === 0) {
-          setLatestNewsDetail(null);
-          setLatestNewsList([]);
-          return;
+      .then((list) => {
+        if (list.length === 0) {
+          setDetailNews(null);
+          setNewsList([]);
+        } else {
+          const [first, ...rest] = list;
+          // Override category based on asset market
+          setDetailNews({ ...first, category: assetCategory });
+          setNewsList(rest.slice(0, 5).map((item) => ({ ...item, category: assetCategory })));
         }
-        const [first, ...rest] = news;
-        fetchNewsDetail(first.id)
-          .then((detail) => setLatestNewsDetail(detail))
-          .catch(console.error);
-        setLatestNewsList(rest.slice(0, 3));
       })
       .catch(console.error);
   }, [asset]);
 
+  // TradingView 차트 렌더링
   useEffect(() => {
     if (!asset || selectedTab !== "chart") return;
     const containerId = `tv-chart-${asset.id}`;
     const tvSymbol = getTradingViewSymbol(asset.symbol, asset.market);
     const container = document.getElementById(containerId);
-    if (container) container.innerHTML = "";
-    renderTradingViewChart(containerId, tvSymbol);
-  }, [asset?.id, selectedTab]);
+    if (container) {
+      container.innerHTML = "";
+      renderTradingViewChart(containerId, tvSymbol);
+    }
+  }, [asset, selectedTab]);
 
+  // 5초마다 실시간 가격 업데이트
   useEffect(() => {
     if (!asset) return;
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       fetchAssetById(Number(id))
         .then((data) =>
           setLiveData({ currentPrice: data.currentPrice, priceChange: data.priceChange }),
         )
         .catch(console.error);
     }, 5000);
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [asset, id]);
 
   if (!asset || !liveData) {
@@ -72,62 +86,66 @@ const AssetDetail: React.FC = () => {
   }
 
   const { currentPrice, priceChange } = liveData;
-  const unit = "원";
   const containerId = `tv-chart-${asset.id}`;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 spacerust. space-y-6">
+      {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex flex-col">
-          <div className="flex items-baseline space-x-2">
-            <h1 className="text-2xl md:text-3xl font-bold">{asset.name}</h1>
-            <span className="text-base md:text-lg text-gray-400">({asset.symbol})</span>
-          </div>
-          <div className="mt-2 flex items-baseline space-x-4">
-            <span className="text-xl md:text-2xl font-semibold">
-              {currentPrice.toLocaleString()} {unit}
-            </span>
-            <span
-              className={`text-lg md:text-xl font-semibold ${priceChange >= 0 ? "text-green-400" : "text-red-400"}`}
-            >
-              {priceChange >= 0 && "+"}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            {asset.name} ({asset.symbol})
+          </h1>
+          <div className="mt-1 text-xl md:text-2xl font-semibold">
+            {currentPrice.toLocaleString()}원{" "}
+            <span className={priceChange >= 0 ? "text-green-400" : "text-red-400"}>
               {priceChange.toFixed(2)}%
             </span>
-            <span className="text-sm text-gray-500">전일 종가 대비</span>
           </div>
         </div>
         <nav className="flex space-x-6 border-b border-gray-700">
           <button
             onClick={() => setSelectedTab("chart")}
-            className={`pb-2 font-medium transition-colors ${selectedTab === "chart" ? "text-white border-b-2 border-blue-500" : "text-gray-400 hover:text-white"}`}
+            className={`pb-2 font-medium ${
+              selectedTab === "chart"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+            }`}
           >
             차트/호가
           </button>
           <button
             onClick={() => setSelectedTab("community")}
-            className={`pb-2 font-medium transition-colors ${selectedTab === "community" ? "text-white border-b-2 border-blue-500" : "text-gray-400 hover:text-white"}`}
+            className={`pb-2 font-medium ${
+              selectedTab === "community"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+            }`}
           >
             커뮤니티
           </button>
         </nav>
       </header>
 
+      {/* Content */}
       {selectedTab === "chart" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-gray-800 rounded-2xl shadow-lg p-4 space-y-4">
-            <div id={containerId} className="w-full h-80 md:h-[500px]" />
+          {/* Chart + Detail Summary */}
+          <div className="md:col-span-2 space-y-4">
+            <div className="bg-gray-800 rounded-2xl shadow-lg p-4">
+              <div id={containerId} className="w-full h-80 md:h-[500px]" />
+            </div>
             <div className="bg-gray-700 rounded-2xl shadow p-6">
-              {latestNewsDetail ? (
+              {detailNews ? (
                 <>
-                  <h2 className="text-xl font-semibold mb-2">{latestNewsDetail.title_ko}</h2>
+                  <h2 className="text-xl font-semibold mb-2">
+                    {detailNews.title_ko || detailNews.title}
+                  </h2>
                   <div className="text-gray-400 text-sm mb-4">
-                    {new Date(latestNewsDetail.published_at).toLocaleString()}
+                    {new Date(detailNews.published_at).toLocaleString()}
                   </div>
-                  <p className="text-gray-300">{latestNewsDetail.summary}</p>
-                  <Link
-                    to={`/news/${latestNewsDetail.id}`}
-                    className="text-blue-400 underline mt-2 inline-block"
-                  >
+                  <p className="text-gray-300 mb-4">{detailNews.summary}</p>
+                  <Link to={`/news/${detailNews.id}`} className="text-blue-400 underline">
                     자세히 보기
                   </Link>
                 </>
@@ -137,16 +155,13 @@ const AssetDetail: React.FC = () => {
             </div>
           </div>
 
+          {/* Side Latest News Cards */}
           <aside className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              {latestNewsList.length > 0 ? (
-                latestNewsList.map((item) => (
-                  <NewsCard key={item.id} newsItem={item} variant="compact" />
-                ))
-              ) : (
-                <p className="text-gray-400 text-sm">관련 뉴스 없음</p>
-              )}
-            </div>
+            {newsList.length > 0 ? (
+              newsList.map((item) => <NewsCard key={item.id} newsItem={item} variant="compact" />)
+            ) : (
+              <p className="text-gray-400 text-sm">관련 뉴스 없음</p>
+            )}
           </aside>
         </div>
       ) : (
