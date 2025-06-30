@@ -1,6 +1,7 @@
 # backend/Dockerfile
 FROM node:22-alpine
 
+# Alpine 패키지 + Docker CLI + PostgreSQL 클라이언트 설치
 RUN apk update && apk upgrade && \
     apk add --no-cache \
       chromium \
@@ -10,7 +11,8 @@ RUN apk update && apk upgrade && \
       ca-certificates \
       ttf-freefont \
       dumb-init \
-      postgresql-client   # ← 버전 고정 없이 설치 (v16+ 사용됨)
+      postgresql-client \
+      docker-cli           # ← Docker CLI 추가
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser

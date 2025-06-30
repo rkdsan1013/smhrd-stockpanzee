@@ -26,6 +26,7 @@ services:
       - /app/node_modules
       - ./backend/uploads:/app/uploads
       - ./_db:/backup
+      - /var/run/docker.sock:/var/run/docker.sock # ← 도커 소켓 마운트
     env_file:
       - ./backend/.env
     ports:
