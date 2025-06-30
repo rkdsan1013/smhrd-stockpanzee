@@ -25,6 +25,7 @@ export interface Comment extends Reply {
 function timeAgo(dateString: string) {
   if (!dateString) return "";
   const date = new Date(dateString);
+  date.setHours(date.getHours() - 9);
   const now = new Date();
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
   if (diff < 0) return "방금 전";

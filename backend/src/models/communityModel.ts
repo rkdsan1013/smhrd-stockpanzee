@@ -168,3 +168,12 @@ export async function deleteComment(id: number, uuid: Buffer) {
   );
   return result;
 }
+
+export async function getCommentsPaged(target_type: string, target_id: number, offset: number, limit: number) {
+  const [rows]: any = await pool.query(
+    `SELECT * FROM community_com WHERE target_type = ? AND target_id = ?
+     ORDER BY created_at DESC LIMIT ?, ?`,
+    [target_type, target_id, offset, limit]
+  );
+  return rows;
+}

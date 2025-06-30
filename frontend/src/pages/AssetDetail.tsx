@@ -6,6 +6,7 @@ import type { NewsItem } from "../services/newsService";
 import { fetchLatestNewsByAsset } from "../services/newsService";
 import { renderTradingViewChart, getTradingViewSymbol } from "../services/tradingViewService";
 import NewsCard from "../components/NewsCard";
+import AssetComments from "../components/AssetComments";
 
 const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +29,7 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [id]);
 
-  // 최신 뉴스 1건 + 다음 3건 로드
+  // 최신 뉴스 1건 + 다음 5건 로드
   useEffect(() => {
     if (!asset) return;
 
@@ -155,7 +156,7 @@ const AssetDetail: React.FC = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            커뮤니티
+            토론
           </button>
         </nav>
       </header>
@@ -214,9 +215,8 @@ const AssetDetail: React.FC = () => {
           </aside>
         </div>
       ) : (
-        <section className="bg-gray-800 rounded-2xl shadow p-6 text-center">
-          <h2 className="text-xl font-semibold mb-3">커뮤니티</h2>
-          <p className="text-gray-400">커뮤니티 기능은 개발 후 이용 가능합니다.</p>
+        <section className="bg-gray-800 rounded-2xl shadow p-6">
+          <AssetComments assetId={asset.id} />
         </section>
       )}
     </div>
