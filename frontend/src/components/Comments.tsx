@@ -236,7 +236,7 @@ const CommentItem: React.FC<{
             <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
             {comment.likes}
           </button>
-          <button className="text-xs text-blue-400 underline" onClick={() => setShowReply(v => !v)}>
+          <button className="text-xs text-white" onClick={() => setShowReply(v => !v)}>
             답글
           </button>
         </div>
@@ -273,7 +273,7 @@ const CommentItem: React.FC<{
       {/* 대댓글 토글 버튼 */}
       {comment.replies.length > 0 && (
         <button
-          className="ml-8 mb-1 text-xs text-blue-400 hover:underline"
+          className="ml-8 mb-1 text-xs text-white-400 hover:underline"
           onClick={() => setShowReplies(v => !v)}
         >
           {showReplies ? `▼ 대댓글 숨기기 (${comment.replies.length})` : `▶ 대댓글 보기 (${comment.replies.length})`}
