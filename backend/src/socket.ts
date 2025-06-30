@@ -1,7 +1,7 @@
 // ✅ socket.ts
 import { Server } from "socket.io";
 import http from "http";
-import { emitLiveStocks, updateDBStocks } from "./korStock";
+import { emitLiveStocks, updateMockStocks } from "./services/korStock";
 import fs from "fs";
 import path from "path";
 
@@ -42,6 +42,6 @@ export function setupSocket(server: http.Server) {
 
   // ✅ 나머지 종목들 5분마다 조회
   setInterval(() => {
-    updateDBStocks(); // DB 저장 없이 로그만 출력
+    updateMockStocks(); // DB 저장 없이 로그만 출력
   }, 5 * 60_000); // 5분 간격
 }
