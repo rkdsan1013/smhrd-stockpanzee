@@ -81,6 +81,39 @@ const AssetDetail: React.FC = () => {
     return () => clearInterval(timer);
   }, [asset, id]);
 
+  // Parse tags for detailNews
+  const parseTags = (tags: string | string[] | null): string[] => {
+    let parsedTags: string[] = [];
+    if (Array.isArray(tags)) {
+      parsedTags = tags;
+    } else if (typeof tags === "string") {
+      try {
+        const parsed = JSON.parse(tags);
+        if (Array.isArray(parsed)) {
+          parsedTags = parsed;
+        }
+      } catch {
+        // Handle invalid JSON gracefully
+      }
+    }
+    return parsedTags;
+  };
+
+  // Get sentiment label and style
+  const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
+  const getSentiment = (v: number | string | null): { label: string; style: string } => {
+    const x = Math.min(5, Math.max(1, Number(v) || 3));
+    return {
+      label: SENT_LABELS[x - 1],
+      style:
+        x <= 2
+          ? "bg-red-600 text-white"
+          : x === 3
+            ? "bg-gray-600 text-white"
+            : "bg-green-600 text-white",
+    };
+  };
+
   if (!asset || !liveData) {
     return <div className="text-white p-8 bg-gray-900 min-h-screen">로딩 중…</div>;
   }
@@ -89,7 +122,7 @@ const AssetDetail: React.FC = () => {
   const containerId = `tv-chart-${asset.id}`;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 spacerust. space-y-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-6">
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -141,8 +174,24 @@ const AssetDetail: React.FC = () => {
                   <h2 className="text-xl font-semibold mb-2">
                     {detailNews.title_ko || detailNews.title}
                   </h2>
-                  <div className="text-gray-400 text-sm mb-4">
+                  <div className="text-gray-400 text-sm mb-2">
                     {new Date(detailNews.published_at).toLocaleString()}
+                  </div>
+                  {/* Sentiment and Tags */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${getSentiment(detailNews.sentiment).style}`}
+                    >
+                      {getSentiment(detailNews.sentiment).label}
+                    </span>
+                    {parseTags(detailNews.tags).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                   <p className="text-gray-300 mb-4">{detailNews.summary}</p>
                   <Link to={`/news/${detailNews.id}`} className="text-blue-400 underline">
