@@ -10,7 +10,7 @@ import Home from "./pages/Home";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
 import Market from "./pages/Market";
-import AssetDetail from "./pages/assetDetail";
+import AssetDetail from "./pages/AssetDetail";
 import EditProfilePage from "./pages/EditProfilePage";
 import Community from "./pages/Community";
 import PostCreationPage from "./pages/PostCreationPage";
