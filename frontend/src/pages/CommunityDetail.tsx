@@ -48,7 +48,9 @@ const CommunityDetail: React.FC = () => {
   const fetchPost = useCallback(() => {
     setLoading(true);
     axios
-      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`)
+      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`,{
+        withCredentials: true
+      })
       .then(res => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
@@ -69,8 +71,9 @@ const CommunityDetail: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   useEffect(() => {
-    setIsLiked(post?.isLiked || false);
+    setIsLiked(Boolean(post?.isLiked));
     setLikeCount(post?.community_likes || 0);
+    console.log("post 응답 데이터:", post);
   }, [post]);
 
   const handleLikeToggle = async () => {

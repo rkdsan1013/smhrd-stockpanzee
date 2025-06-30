@@ -306,7 +306,7 @@ const Community: React.FC = () => {
                   {post.community_title}
                 </h3>
                 {/* 본문요약 */}
-                <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+                <p className="text-sm text-gray-300 mb-3 line-clamp-2 whitespace-pre-wrap">
                   {post.community_contents}
                 </p>
                 {/* 카테고리 | 닉네임 */}
