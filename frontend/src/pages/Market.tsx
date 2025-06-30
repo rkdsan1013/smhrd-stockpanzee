@@ -131,13 +131,16 @@ const Market: React.FC = () => {
   );
 
   const sorted = useMemo(() => {
-    const factor = sortConfig.direction === "asc" ? 1 : -1;
-    return [...filtered].sort((a, b) =>
-      sortConfig.key === "name"
-        ? a.name.localeCompare(b.name) * factor
-        : ((a as any)[key] - (b as any)[key]) * factor,
-    );
-  }, [filtered, sortConfig]);
+  const factor = sortConfig.direction === "asc" ? 1 : -1;
+  const key = sortConfig.key; // ✅ key를 변수로 선언!
+
+  return [...filtered].sort((a, b) =>
+    key === "name"
+      ? a.name.localeCompare(b.name) * factor
+      : ((a as any)[key] - (b as any)[key]) * factor
+  );
+}, [filtered, sortConfig]);
+
 
   const finalList = useMemo(() => {
     const withFavorites = [...sorted].sort((a, b) =>
