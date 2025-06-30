@@ -11,7 +11,7 @@ services:
     volumes:
       - stockpanzee_pgdata:/var/lib/postgresql/data
       - ./_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - ./_db:/backup # dump·스크립트 보관소
+      - ./_db:/backup
     ports:
       - "5432:5432"
     networks:
@@ -25,7 +25,7 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads
-      - ./_db:/backup # 백업 경로 공유
+      - ./_db:/backup
     env_file:
       - ./backend/.env
     ports:
