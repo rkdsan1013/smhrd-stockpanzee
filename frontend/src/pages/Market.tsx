@@ -25,7 +25,7 @@ const ITEMS_PER_PAGE = 12;
 const Market: React.FC = () => {
   const navigate = useNavigate();
 
-  // state
+  // State & refs
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [search, setSearch] = useState("");
@@ -37,12 +37,11 @@ const Market: React.FC = () => {
   });
   const [page, setPage] = useState(1);
 
-  // refs for highlight
   const prevPrices = useRef<Map<number, number>>(new Map());
   const highlight = useRef<Map<number, "up" | "down">>(new Map());
-  const [, forceR] = useState(0);
+  const [, rerender] = useState(0);
 
-  // fetch & highlight effect
+  // Fetch data & highlight
   useEffect(() => {
     const load = () =>
       fetchAssets()
@@ -69,12 +68,11 @@ const Market: React.FC = () => {
               highlight.current.set(item.id, item.currentPrice > prev ? "up" : "down");
               setTimeout(() => {
                 highlight.current.delete(item.id);
-                forceR((v) => v + 1);
+                rerender((v) => v + 1);
               }, 500);
             }
             prevPrices.current.set(item.id, item.currentPrice);
           });
-
           setData(list);
         })
         .catch(console.error);
@@ -84,40 +82,33 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // reset page
-  useEffect(() => {
-    setPage(1);
-  }, [tab, viewMode, sortConfig, search]);
+  // Reset page on filter/search change
+  useEffect(() => setPage(1), [tab, viewMode, sortConfig, search]);
 
-  // filter by tab
+  // Filter > sort > search > paginate
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
   );
 
-  // apply view mode
   const byView = useMemo(() => {
-    if (viewMode === "즐겨찾기") {
-      return byTab.filter((s) => favorites.includes(s.id));
-    }
+    if (viewMode === "즐겨찾기") return byTab.filter((s) => favorites.includes(s.id));
     return [...byTab].sort((a, b) =>
       favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1,
     );
   }, [byTab, viewMode, favorites]);
 
-  // sort
   const sorted = useMemo(() => {
     if (search.trim()) return byView;
-    const factor = sortConfig.dir === "asc" ? 1 : -1;
+    const f = sortConfig.dir === "asc" ? 1 : -1;
     return [...byView].sort((a, b) =>
       sortConfig.key === "name"
-        ? a.name.localeCompare(b.name) * factor
-        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * factor,
+        ? a.name.localeCompare(b.name) * f
+        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * f,
     );
   }, [byView, sortConfig, search]);
 
-  // search
-  const searched = useMemo(
+  const finalList = useMemo(
     () =>
       search.trim()
         ? fuzzySearch(sorted, search, { keys: ["name", "symbol"], threshold: 0.3 })
@@ -125,8 +116,6 @@ const Market: React.FC = () => {
     [sorted, search],
   );
 
-  // paginate + infinite scroll
-  const finalList = searched;
   const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -140,34 +129,33 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // handlers
+  // Handlers
   const toggleFav = (id: number) =>
-    setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const sortCol = (key: SortKey) => {
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const handleSort = (key: SortKey) => {
     if (search.trim()) return;
-    setSortConfig((p) =>
-      p.key === key ? { key, dir: p.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
+    setSortConfig((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
     );
   };
+
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // summary metrics
+  // Summary metrics
   const summary = byTab;
   const total = summary.length;
-  const cLargeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
-  const cSmallDown = summary.filter(
-    (s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE,
-  ).length;
-  const cZero = summary.filter((s) => s.priceChange === 0).length;
-  const cSmallUp = summary.filter((s) => s.priceChange > 0 && s.priceChange <= BIG_CHANGE).length;
-  const cLargeUp = summary.filter((s) => s.priceChange > BIG_CHANGE).length;
+  const largeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
+  const smallDown = summary.filter((s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE).length;
+  const zero = summary.filter((s) => s.priceChange === 0).length;
+  const smallUp = summary.filter((s) => s.priceChange > 0 && s.priceChange <= BIG_CHANGE).length;
+  const largeUp = summary.filter((s) => s.priceChange > BIG_CHANGE).length;
 
-  const upPct = total ? ((cSmallUp + cLargeUp) / total) * 100 : 0;
-  const downPct = total ? ((cSmallDown + cLargeDown) / total) * 100 : 0;
-
-  const mean = total ? summary.reduce((sum, s) => sum + s.priceChange, 0) / total : 0;
+  const upPct = total ? ((smallUp + largeUp) / total) * 100 : 0;
+  const downPct = total ? ((smallDown + largeDown) / total) * 100 : 0;
+  const meanChange = total ? summary.reduce((sum, s) => sum + s.priceChange, 0) / total : 0;
   const variance = total
-    ? summary.reduce((sum, s) => sum + (s.priceChange - mean) ** 2, 0) / total
+    ? summary.reduce((sum, s) => sum + (s.priceChange - meanChange) ** 2, 0) / total
     : 0;
   const volatility = Math.sqrt(variance);
 
@@ -185,16 +173,14 @@ const Market: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <header className="py-4">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
-        </div>
+      <header className="py-4 text-center">
+        <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
       </header>
 
-      <section className="container mx-auto px-4 py-6 max-w-7xl space-y-4">
-        {/* Nav (container width) */}
-        <div className="container mx-auto px-4">
-          <div className="bg-gray-800 rounded-full flex items-center px-2 py-1 space-x-2">
+      <section className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
+        {/* Nav tabs (consistent spacing & padding) */}
+        <div className="flex mb-4">
+          <div className="inline-flex bg-gray-800 p-2 rounded-full space-x-2">
             <button onClick={toggleView} className="p-2 rounded-full">
               <Icons
                 name="banana"
@@ -207,7 +193,7 @@ const Market: React.FC = () => {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
                   tab === t
                     ? "bg-blue-600 text-white"
                     : "text-gray-300 hover:bg-blue-500 hover:text-white"
@@ -227,7 +213,7 @@ const Market: React.FC = () => {
               {headerCols.map((col) => (
                 <div key={col.key} className={col.width}>
                   <button
-                    onClick={() => sortCol(col.key)}
+                    onClick={() => handleSort(col.key)}
                     className={`flex items-center gap-1 ${
                       col.key === "name" ? "justify-start" : "justify-end"
                     } w-full text-white font-semibold`}
@@ -252,22 +238,18 @@ const Market: React.FC = () => {
 
             {visible.map((s) => {
               const hl = highlight.current.get(s.id);
-              const borderColor =
+              const border =
                 hl === "up"
                   ? "border-green-400"
                   : hl === "down"
                     ? "border-red-400"
                     : "border-transparent";
-
               return (
                 <div
                   key={s.id}
                   onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                  className={`
-                    flex items-center px-4 py-2 rounded-lg border-2 ${borderColor}
-                    transition-colors duration-500 ease-in-out cursor-pointer
-                    hover:bg-gray-700 hover:scale-[1.003]
-                  `}
+                  className={`flex items-center px-4 py-2 rounded-lg border-2 ${border}
+                    transition-colors duration-500 ease-in-out cursor-pointer hover:bg-gray-700 hover:scale-[1.003]`}
                 >
                   <button
                     onClick={(e) => {
@@ -307,7 +289,7 @@ const Market: React.FC = () => {
             {visible.length < finalList.length && <div ref={loadMoreRef} className="h-2" />}
           </div>
 
-          {/* Search & Summary */}
+          {/* Search & summary */}
           <div className="w-full md:w-1/3">
             <div className="sticky top-20 space-y-4">
               <input
@@ -324,11 +306,11 @@ const Market: React.FC = () => {
                 {/* 5-step bar */}
                 <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                   {[
-                    { cnt: cLargeDown, color: "bg-red-700", label: `큰 하락 ${cLargeDown}` },
-                    { cnt: cSmallDown, color: "bg-red-400", label: `하락 ${cSmallDown}` },
-                    { cnt: cZero, color: "bg-gray-500", label: `변동 없음 ${cZero}` },
-                    { cnt: cSmallUp, color: "bg-green-400", label: `상승 ${cSmallUp}` },
-                    { cnt: cLargeUp, color: "bg-green-700", label: `큰 상승 ${cLargeUp}` },
+                    { cnt: largeDown, color: "bg-red-700", label: `큰 하락: ${largeDown}` },
+                    { cnt: smallDown, color: "bg-red-400", label: `하락: ${smallDown}` },
+                    { cnt: zero, color: "bg-gray-500", label: `변동 없음: ${zero}` },
+                    { cnt: smallUp, color: "bg-green-400", label: `상승: ${smallUp}` },
+                    { cnt: largeUp, color: "bg-green-700", label: `큰 상승: ${largeUp}` },
                   ].map(({ cnt, color, label }) => {
                     const pct = total ? (cnt / total) * 100 : 0;
                     return (
@@ -339,67 +321,50 @@ const Market: React.FC = () => {
                   })}
                 </div>
 
-                {/* Metrics cards */}
+                {/* Metric cards */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
-                    <Icons name="caretUp" className="w-5 h-5 text-green-400" />
-                    <div className="ml-2">
-                      <p className="text-xs text-gray-300">상승 비율</p>
-                      <p className="text-lg font-semibold">{formatPercentage(upPct)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
-                    <Icons name="caretDown" className="w-5 h-5 text-red-400" />
-                    <div className="ml-2">
-                      <p className="text-xs text-gray-300">하락 비율</p>
-                      <p className="text-lg font-semibold">{formatPercentage(downPct)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
-                    <Icons name="volatility" className="w-5 h-5 text-yellow-300" />
-                    <div className="ml-2">
-                      <p className="text-xs text-gray-300">변동성</p>
-                      <p className="text-lg font-semibold">{formatPercentage(volatility)}</p>
-                    </div>
-                  </div>
+                  <MetricCard
+                    icon="caretUp"
+                    iconColor="text-green-400"
+                    label="상승 비율"
+                    value={formatPercentage(upPct)}
+                  />
+                  <MetricCard
+                    icon="caretDown"
+                    iconColor="text-red-400"
+                    label="하락 비율"
+                    value={formatPercentage(downPct)}
+                  />
+                  <MetricCard
+                    icon="volatility"
+                    iconColor="text-yellow-300"
+                    label="변동성"
+                    value={formatPercentage(volatility)}
+                  />
                 </div>
 
-                {/* Top 3 */}
+                {/* Top 3 momentum */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-300 mb-1">Top 3 상승</p>
-                    <div className="space-y-2">
-                      {topGainers.map((s) => (
-                        <div
-                          key={s.id}
-                          onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                          className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
-                        >
-                          <span className="text-white font-medium">{s.symbol}</span>
-                          <span className="text-green-400 font-semibold">
-                            {formatPercentage(s.priceChange)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-gray-300 mb-1">Top 3 하락</p>
-                    <div className="space-y-2">
-                      {topLosers.map((s) => (
-                        <div
-                          key={s.id}
-                          onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                          className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
-                        >
-                          <span className="text-white font-medium">{s.symbol}</span>
-                          <span className="text-red-400 font-semibold">
-                            {formatPercentage(s.priceChange)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <MomentumList
+                    title="Top 3 상승"
+                    items={topGainers}
+                    positive
+                    onItemClick={(id) =>
+                      navigate(`/asset/${id}`, {
+                        state: { asset: summary.find((s) => s.id === id)! },
+                      })
+                    }
+                  />
+                  <MomentumList
+                    title="Top 3 하락"
+                    items={topLosers}
+                    positive={false}
+                    onItemClick={(id) =>
+                      navigate(`/asset/${id}`, {
+                        state: { asset: summary.find((s) => s.id === id)! },
+                      })
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -409,5 +374,56 @@ const Market: React.FC = () => {
     </div>
   );
 };
+
+// MetricCard component
+interface MetricCardProps {
+  icon: string;
+  iconColor: string;
+  label: string;
+  value: string;
+}
+const MetricCard: React.FC<MetricCardProps> = ({ icon, iconColor, label, value }) => (
+  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
+    <Icons name={icon} className={`w-5 h-5 ${iconColor}`} />
+    <div className="ml-2">
+      <p className="text-xs text-gray-300">{label}</p>
+      <p className="text-lg font-semibold">{value}</p>
+    </div>
+  </div>
+);
+
+// MomentumList component
+interface MomentumListProps {
+  title: string;
+  items: StockItem[];
+  positive?: boolean;
+  onItemClick: (id: number) => void;
+}
+const MomentumList: React.FC<MomentumListProps> = ({
+  title,
+  items,
+  positive = true,
+  onItemClick,
+}) => (
+  <div>
+    <p className="text-gray-300 mb-1">{title}</p>
+    <div className="space-y-2">
+      {items.map((s) => (
+        <div
+          key={s.id}
+          onClick={() => onItemClick(s.id)}
+          className="bg-gray-700 p-3 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
+        >
+          <p className="text-white font-medium truncate">{s.name}</p>
+          <p
+            className={`mt-1 text-sm font-semibold ${positive ? "text-green-400" : "text-red-400"}`}
+          >
+            {formatPercentage(s.priceChange)}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export default Market;
