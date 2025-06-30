@@ -4,9 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import Tooltip from "../components/Tooltip";
 import { fetchAssets } from "../services/assetService";
-import type { Asset } from "../services/assetService";
 import { fuzzySearch } from "../utils/search";
-import { formatCurrency } from "../utils/formats";
+import { formatCurrency, formatPercentage } from "../utils/formats";
 
 interface StockItem {
   id: number;
@@ -15,50 +14,45 @@ interface StockItem {
   currentPrice: number;
   priceChange: number;
   marketCap: number;
-  logo: string;
   category: "국내" | "해외" | "암호화폐" | "기타";
 }
 
 type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 
-const BIG_CHANGE_THRESHOLD = 5;
-const itemsPerPage = 12;
+const BIG_CHANGE = 5;
+const ITEMS_PER_PAGE = 12;
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
 
-  // -- State
-  const [selectedMarketTab, setSelectedMarketTab] = useState<StockItem["category"] | "전체">(
-    "전체",
-  );
+  // State
+  const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [stockData, setStockData] = useState<StockItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [data, setData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "marketCap",
-    direction: "desc",
+    dir: "desc",
   });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
 
-  // -- Refs for highlight
-  const previousPricesRef = useRef<Map<number, number>>(new Map());
-  const highlightMapRef = useRef<Map<number, "up" | "down">>(new Map());
-  const [, forceUpdate] = useState(0);
+  const prevPrices = useRef<Map<number, number>>(new Map());
+  const highlight = useRef<Map<number, "up" | "down">>(new Map());
+  const [, forceR] = useState(0);
 
-  // 1) Fetch & Highlight
+  // Fetch & highlight
   useEffect(() => {
     const load = () =>
       fetchAssets()
-        .then((assets: Asset[]) => {
-          const list: StockItem[] = assets.map((a) => ({
+        .then((assets) => {
+          const list = assets.map<StockItem>((a) => ({
             id: a.id,
             name: a.name,
             symbol: a.symbol,
             currentPrice: a.currentPrice,
             priceChange: a.priceChange,
             marketCap: a.marketCap,
-            logo: "/panzee.webp",
             category: ["KOSPI", "KOSDAQ"].includes(a.market)
               ? "국내"
               : ["NASDAQ", "NYSE"].includes(a.market)
@@ -68,19 +62,19 @@ const Market: React.FC = () => {
                   : "기타",
           }));
 
-          list.forEach((s) => {
-            const prev = previousPricesRef.current.get(s.id);
-            if (prev !== undefined && prev !== s.currentPrice) {
-              highlightMapRef.current.set(s.id, s.currentPrice > prev ? "up" : "down");
+          list.forEach((item) => {
+            const prev = prevPrices.current.get(item.id);
+            if (prev !== undefined && prev !== item.currentPrice) {
+              highlight.current.set(item.id, item.currentPrice > prev ? "up" : "down");
               setTimeout(() => {
-                highlightMapRef.current.delete(s.id);
-                forceUpdate((v) => v + 1);
+                highlight.current.delete(item.id);
+                forceR((v) => v + 1);
               }, 500);
             }
-            previousPricesRef.current.set(s.id, s.currentPrice);
+            prevPrices.current.set(item.id, item.currentPrice);
           });
 
-          setStockData(list);
+          setData(list);
         })
         .catch(console.error);
 
@@ -89,63 +83,59 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // Reset page on filter changes
+  // Reset page on filters/search
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedMarketTab, viewMode, sortConfig, searchTerm]);
+    setPage(1);
+  }, [tab, viewMode, sortConfig, search]);
 
-  // 2) Filter by tab
-  const filteredByTab = useMemo(
-    () =>
-      selectedMarketTab === "전체"
-        ? stockData
-        : stockData.filter((s) => s.category === selectedMarketTab),
-    [stockData, selectedMarketTab],
+  // Filter by tab
+  const byTab = useMemo(
+    () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
+    [data, tab],
   );
 
-  // 3) Apply view mode
-  const filteredByView = useMemo(() => {
+  // Apply viewMode
+  const byView = useMemo(() => {
     if (viewMode === "즐겨찾기") {
-      return filteredByTab.filter((s) => favorites.includes(s.id));
+      return byTab.filter((s) => favorites.includes(s.id));
     }
-    return [...filteredByTab].sort((a, b) =>
+    return [...byTab].sort((a, b) =>
       favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1,
     );
-  }, [filteredByTab, viewMode, favorites]);
+  }, [byTab, viewMode, favorites]);
 
-  // 4) Sort unless searching
+  // Sort (skip if searching)
   const sorted = useMemo(() => {
-    if (searchTerm.trim()) return filteredByView;
-    const factor = sortConfig.direction === "asc" ? 1 : -1;
-    return [...filteredByView].sort((a, b) =>
+    if (search.trim()) return byView;
+    const f = sortConfig.dir === "asc" ? 1 : -1;
+    return [...byView].sort((a, b) =>
       sortConfig.key === "name"
-        ? a.name.localeCompare(b.name) * factor
-        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * factor,
+        ? a.name.localeCompare(b.name) * f
+        : ((a as any)[sortConfig.key] - (b as any)[sortConfig.key]) * f,
     );
-  }, [filteredByView, sortConfig, searchTerm]);
+  }, [byView, sortConfig, search]);
 
-  // 5) Fuzzy search
-  const searched = useMemo(() => {
-    if (!searchTerm.trim()) return sorted;
-    return fuzzySearch(sorted, searchTerm, {
-      keys: ["name", "symbol"],
-      threshold: 0.3,
-    });
-  }, [sorted, searchTerm]);
+  // Fuzzy search
+  const searched = useMemo(
+    () =>
+      search.trim()
+        ? fuzzySearch(sorted, search, {
+            keys: ["name", "symbol"],
+            threshold: 0.3,
+          })
+        : sorted,
+    [sorted, search],
+  );
 
-  // 6) Pagination & Infinite Scroll
+  // Pagination + infinite scroll
   const finalList = searched;
-  const visible = finalList.slice(0, currentPage * itemsPerPage);
+  const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && visible.length < finalList.length) {
-          setCurrentPage((p) => p + 1);
-        }
-      },
+      ([e]) => e.isIntersecting && visible.length < finalList.length && setPage((p) => p + 1),
       { threshold: 1 },
     );
     obs.observe(el);
@@ -153,36 +143,40 @@ const Market: React.FC = () => {
   }, [visible.length, finalList.length]);
 
   // Handlers
-  const toggleFavorite = (id: number) =>
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  const handleSort = (key: SortKey) => {
-    if (searchTerm.trim()) return;
-    setSortConfig((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "desc" },
+  const toggleFav = (id: number) =>
+    setFavorites((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const sortCol = (key: SortKey) => {
+    if (search.trim()) return;
+    setSortConfig((p) =>
+      p.key === key ? { key, dir: p.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
     );
   };
-  const toggleViewMode = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // 7) Summary (tab-based)
-  const summaryList = filteredByTab;
-  const summaryTotal = summaryList.length;
-  const summaryFallingLarge = summaryList.filter(
-    (s) => s.priceChange < -BIG_CHANGE_THRESHOLD,
+  const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
+
+  // Summary metrics
+  const summary = byTab;
+  const total = summary.length;
+  const cLargeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
+  const cSmallDown = summary.filter(
+    (s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE,
   ).length;
-  const summaryFallingSmall = summaryList.filter(
-    (s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE_THRESHOLD,
-  ).length;
-  const summaryUnchanged = summaryList.filter((s) => s.priceChange === 0).length;
-  const summaryRisingSmall = summaryList.filter(
-    (s) => s.priceChange > 0 && s.priceChange <= BIG_CHANGE_THRESHOLD,
-  ).length;
-  const summaryRisingLarge = summaryList.filter((s) => s.priceChange > BIG_CHANGE_THRESHOLD).length;
-  const summaryAvgPrice = summaryTotal
-    ? Math.round(summaryList.reduce((sum, s) => sum + s.currentPrice, 0) / summaryTotal)
+  const cZero = summary.filter((s) => s.priceChange === 0).length;
+  const cSmallUp = summary.filter((s) => s.priceChange > 0 && s.priceChange <= BIG_CHANGE).length;
+  const cLargeUp = summary.filter((s) => s.priceChange > BIG_CHANGE).length;
+
+  const upPct = total ? ((cSmallUp + cLargeUp) / total) * 100 : 0;
+  const downPct = total ? ((cSmallDown + cLargeDown) / total) * 100 : 0;
+
+  const mean = total ? summary.reduce((sum, s) => sum + s.priceChange, 0) / total : 0;
+  const variance = total
+    ? summary.reduce((sum, s) => sum + (s.priceChange - mean) ** 2, 0) / total
     : 0;
-  const summaryMarketCap = summaryList.reduce((sum, s) => sum + s.marketCap, 0);
+  const volatility = Math.sqrt(variance);
+
+  const topGainers = [...summary].sort((a, b) => b.priceChange - a.priceChange).slice(0, 3);
+  const topLosers = [...summary].sort((a, b) => a.priceChange - b.priceChange).slice(0, 3);
 
   const headerCols = [
     { key: "name", label: "종목", width: "flex-1 text-left" },
@@ -190,7 +184,8 @@ const Market: React.FC = () => {
     { key: "priceChange", label: "변동률", width: "w-20 text-right" },
     { key: "marketCap", label: "시가총액", width: "w-36 text-right" },
   ] as const;
-  const statusTitle = `${selectedMarketTab} 시장 현황`;
+
+  const statusTitle = `${tab} 시장 현황`;
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -201,39 +196,43 @@ const Market: React.FC = () => {
       </header>
 
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-4">
-        {/* 네비탭: 뷰모드 토글 + 시장선택 */}
-        <div className="flex items-center bg-gray-800 p-2 rounded-full w-full space-x-2">
-          <button onClick={toggleViewMode} className="p-2 rounded-full">
-            <Icons
-              name="banana"
-              className={`w-5 h-5 ${viewMode === "즐겨찾기" ? "text-yellow-400" : "text-gray-500"}`}
-            />
-          </button>
-          {(["전체", "국내", "해외", "암호화폐"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setSelectedMarketTab(tab === "전체" ? "전체" : tab)}
-              className={`px-4 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
-                selectedMarketTab === tab
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-blue-500 hover:text-white"
-              }`}
-            >
-              {tab}
+        {/* Nav */}
+        <div className="bg-gray-800 rounded-full">
+          <div className="container mx-auto flex items-center px-4 py-2 space-x-2">
+            <button onClick={toggleView} className="p-2 rounded-full">
+              <Icons
+                name="banana"
+                className={`w-5 h-5 ${
+                  viewMode === "즐겨찾기" ? "text-yellow-400" : "text-gray-500"
+                }`}
+              />
             </button>
-          ))}
+            {(["전체", "국내", "해외", "암호화폐"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-1 rounded-full text-sm font-medium transition-colors ${
+                  tab === t
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
-          {/* 좌측 리스트 */}
+          {/* List */}
           <div className="w-full md:w-2/3 space-y-2">
-            {/* 테이블 헤더 */}
+            {/* Header */}
             <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
               <div className="w-8" />
               {headerCols.map((col) => (
                 <div key={col.key} className={col.width}>
                   <button
-                    onClick={() => handleSort(col.key)}
+                    onClick={() => sortCol(col.key)}
                     className={`flex items-center gap-1 ${
                       col.key === "name" ? "justify-start" : "justify-end"
                     } w-full text-white font-semibold`}
@@ -242,7 +241,7 @@ const Market: React.FC = () => {
                     <Icons
                       name={
                         sortConfig.key === col.key
-                          ? sortConfig.direction === "asc"
+                          ? sortConfig.dir === "asc"
                             ? "caretUp"
                             : "caretDown"
                           : "caretDown"
@@ -257,28 +256,24 @@ const Market: React.FC = () => {
             </div>
 
             {visible.map((s) => {
-              const hl = highlightMapRef.current.get(s.id);
-              const borderClass =
+              const hl = highlight.current.get(s.id);
+              const bd =
                 hl === "up"
                   ? "border-green-400"
                   : hl === "down"
                     ? "border-red-400"
                     : "border-transparent";
-
               return (
                 <div
                   key={s.id}
                   onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
-                  className={`
-                    flex items-center px-4 py-2 rounded-lg border ${borderClass}
-                    transition-all duration-500 cursor-pointer
-                    hover:bg-gray-700 hover:scale-[1.005]
-                  `}
+                  className={`flex items-center px-4 py-2 rounded-lg border ${bd}
+                    transition-transform duration-200 cursor-pointer hover:bg-gray-700 hover:scale-[1.003]`}
                 >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFavorite(s.id);
+                      toggleFav(s.id);
                     }}
                     className="w-8 h-8 flex items-center justify-center"
                   >
@@ -290,7 +285,7 @@ const Market: React.FC = () => {
                     />
                   </button>
                   <div className="flex-1 ml-2">
-                    <p className="text-white font-semibold">{s.name}</p>
+                    <p className="text-white font-medium">{s.name}</p>
                     <p className="text-gray-400 text-xs">{s.symbol}</p>
                   </div>
                   <div className="w-28 text-right text-white font-medium">
@@ -301,8 +296,7 @@ const Market: React.FC = () => {
                       s.priceChange >= 0 ? "text-green-400" : "text-red-400"
                     }`}
                   >
-                    {s.priceChange >= 0 ? "+" : ""}
-                    {s.priceChange.toFixed(2)}%
+                    {formatPercentage(s.priceChange)}
                   </div>
                   <div className="w-36 text-right text-gray-200 ml-2">
                     {formatCurrency(s.marketCap)}
@@ -314,95 +308,98 @@ const Market: React.FC = () => {
             {visible.length < finalList.length && <div ref={loadMoreRef} className="h-2" />}
           </div>
 
-          {/* 우측: 검색창 + 요약 (둘 다 sticky) */}
+          {/* Search & Summary */}
           <div className="w-full md:w-1/3">
             <div className="sticky top-20 space-y-4">
               <input
                 type="text"
-                placeholder="종목명 또는 심볼로 검색"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="종목명·심볼 검색"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 className="w-full p-2 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none"
               />
 
-              <div className="bg-gray-800 rounded-lg shadow p-6 space-y-4">
-                <h2 className="text-lg font-bold text-white text-center">{statusTitle}</h2>
+              <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6 text-white">
+                <h2 className="text-xl font-bold text-center">{statusTitle}</h2>
+
+                {/* 5-step bar */}
                 <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                   {[
-                    {
-                      count: summaryFallingLarge,
-                      color: "bg-red-700",
-                      label: `큰 하락: ${summaryFallingLarge}건`,
-                    },
-                    {
-                      count: summaryFallingSmall,
-                      color: "bg-red-400",
-                      label: `하락: ${summaryFallingSmall}건`,
-                    },
-                    {
-                      count: summaryUnchanged,
-                      color: "bg-gray-500",
-                      label: `변동 없음: ${summaryUnchanged}건`,
-                    },
-                    {
-                      count: summaryRisingSmall,
-                      color: "bg-green-400",
-                      label: `상승: ${summaryRisingSmall}건`,
-                    },
-                    {
-                      count: summaryRisingLarge,
-                      color: "bg-green-700",
-                      label: `큰 상승: ${summaryRisingLarge}건`,
-                    },
-                  ].map(({ count, color, label }) => {
-                    const pct = summaryTotal ? (count / summaryTotal) * 100 : 0;
+                    { cnt: cLargeDown, color: "bg-red-700", label: `큰 하락 ${cLargeDown}` },
+                    { cnt: cSmallDown, color: "bg-red-400", label: `하락 ${cSmallDown}` },
+                    { cnt: cZero, color: "bg-gray-500", label: `변동 없음 ${cZero}` },
+                    { cnt: cSmallUp, color: "bg-green-400", label: `상승 ${cSmallUp}` },
+                    { cnt: cLargeUp, color: "bg-green-700", label: `큰 상승 ${cLargeUp}` },
+                  ].map(({ cnt, color, label }) => {
+                    const pct = total ? (cnt / total) * 100 : 0;
                     return (
                       <Tooltip key={label} label={label} style={{ width: `${pct}%` }}>
-                        <div className={`${color} w-full h-full`} />
+                        <div className={`${color} h-full`} />
                       </Tooltip>
                     );
                   })}
                 </div>
 
-                <div className="grid grid-cols-5 text-xs text-gray-300">
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="w-2 h-2 bg-red-700 rounded-full" />
-                    <span>큰 하락</span>
+                {/* Metrics cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
+                    <Icons name="caretUp" className="w-5 h-5 text-green-400" />
+                    <div className="ml-2">
+                      <p className="text-xs text-gray-300">상승 비율</p>
+                      <p className="text-lg font-semibold">{formatPercentage(upPct)}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="w-2 h-2 bg-red-400 rounded-full" />
-                    <span>하락</span>
+                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
+                    <Icons name="caretDown" className="w-5 h-5 text-red-400" />
+                    <div className="ml-2">
+                      <p className="text-xs text-gray-300">하락 비율</p>
+                      <p className="text-lg font-semibold">{formatPercentage(downPct)}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="w-2 h-2 bg-gray-500 rounded-full" />
-                    <span>변동 없음</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="w-2 h-2 bg-green-400 rounded-full" />
-                    <span>상승</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-1">
-                    <span className="w-2 h-2 bg-green-700 rounded-full" />
-                    <span>큰 상승</span>
+                  <div className="flex items-center bg-gray-700 p-2 rounded-lg">
+                    <Icons name="volatility" className="w-5 h-5 text-yellow-300" />
+                    <div className="ml-2">
+                      <p className="text-xs text-gray-300">변동성</p>
+                      <p className="text-lg font-semibold">{formatPercentage(volatility)}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-gray-400">
-                    <span>총 종목 수</span>
-                    <span className="text-gray-200 font-semibold">{summaryTotal}</span>
+                {/* Top 3 Momentum */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-300 mb-1">Top 3 상승</p>
+                    <div className="space-y-2">
+                      {topGainers.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
+                          className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
+                        >
+                          <span className="text-white font-medium">{s.symbol}</span>
+                          <span className="text-green-400 font-semibold">
+                            {formatPercentage(s.priceChange)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>평균 현재가</span>
-                    <span className="text-gray-200 font-semibold">
-                      {summaryAvgPrice.toLocaleString()} 원
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>전체 시가총액</span>
-                    <span className="text-gray-200 font-semibold">
-                      {formatCurrency(summaryMarketCap)}
-                    </span>
+                  <div>
+                    <p className="text-gray-300 mb-1">Top 3 하락</p>
+                    <div className="space-y-2">
+                      {topLosers.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => navigate(`/asset/${s.id}`, { state: { asset: s } })}
+                          className="flex justify-between items-center bg-gray-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
+                        >
+                          <span className="text-white font-medium">{s.symbol}</span>
+                          <span className="text-red-400 font-semibold">
+                            {formatPercentage(s.priceChange)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
