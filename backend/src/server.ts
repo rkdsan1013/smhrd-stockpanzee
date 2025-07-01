@@ -14,7 +14,7 @@ import { emitMockTop25 } from "./services/marketData/krxMarketService";
 // 1) 뉴스 스케줄러를 import만 하면 즉시 등록됩니다.
 //    services/news/newsScheduler.ts 에서 node-cron 으로
 //    국내(10분), 해외(1시간), 암호화폐(10분) 수집을 자동 실행합니다.
-import "./services/news/newsScheduler";
+// import "./services/news/newsScheduler";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -75,7 +75,5 @@ async function start() {
     //   .catch((err) => console.error("❌ emitStockPrices failed:", err));
   });
 }
-  // (옵션) Binance 암호화폐 5초 주기 DB 업데이트
-  setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
 start();
