@@ -19,6 +19,7 @@ export interface UserProfile {
   uuid: Buffer;
   username: string;
   avatar_url: string | null;
+  email: string;
 }
 
 /** 이메일로 사용자 조회 */

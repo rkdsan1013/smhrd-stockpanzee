@@ -11,6 +11,7 @@ export type UpdateProfileData = {
   email?: string;
   password?: string;
   username?: string;
+  currentPassword?: string;
 };
 
 /**
