@@ -85,21 +85,41 @@ const Home: React.FC = () => {
   };
 
   // 5) 키워드 트렌드
-  const tagCounts: Record<string, number> = {};
-  recent.forEach((item) => {
-    let tags: string[] = [];
-    if (Array.isArray(item.tags)) tags = item.tags;
-    else if (typeof item.tags === "string") {
-      try {
-        const parsed = JSON.parse(item.tags);
-        if (Array.isArray(parsed)) tags = parsed;
-      } catch {}
+const tagCounts: Record<string, number> = {};
+recent.forEach((item) => {
+  let tags: string[] = [];
+
+  if (Array.isArray(item.tags)) {
+    if (typeof item.tags[0] === "string") {
+      tags = item.tags as string[];
+    } else if (typeof item.tags[0] === "object" && item.tags[0] !== null) {
+      tags = item.tags.map((t: any) =>
+        t.name || t.value || t.keyword || t.tag || ""
+      ).filter(Boolean);
     }
-    tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1));
-  });
-  const topTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
+  } else if (typeof item.tags === "string") {
+    try {
+      const parsed = JSON.parse(item.tags);
+      if (Array.isArray(parsed)) {
+        if (typeof parsed[0] === "string") {
+          tags = parsed;
+        } else if (typeof parsed[0] === "object" && parsed[0] !== null) {
+          tags = parsed.map((t: any) =>
+            t.name || t.value || t.keyword || t.tag || ""
+          ).filter(Boolean);
+        }
+      }
+    } catch {
+      tags = item.tags.split(",").map((t) => t.trim());
+    }
+  }
+
+  tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1));
+});
+const topTags = Object.entries(tagCounts)
+  .sort(([, a], [, b]) => b - a)
+  .slice(0, 5);
+
 
   if (loading) {
     return (
