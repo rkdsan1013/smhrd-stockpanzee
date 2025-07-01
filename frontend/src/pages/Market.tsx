@@ -96,25 +96,26 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  useEffect(() => {
-    socket.on("stockPrice", (data: { symbol: string; price: any; rate: any; marketCap: any; }) => {
-      setStockData((prev) =>
-        prev.map((stock) =>
-          stock.symbol === data.symbol
-            ? {
-                ...stock,
-                currentPrice: data.price,
-                priceChange: Number(data.rate),
-                marketCap: data.marketCap,
-              }
-            : stock
-        )
-      );
-    });
-    return () => {
-      socket.off("stockPrice");
-    };
-  }, []);
+  // ✅ Market.tsx - 웹소켓 우선 적용 구조 반영
+useEffect(() => {
+  socket.on("stockPrice", (data: { symbol: string; price: any; rate: any; marketCap: any }) => {
+    setStockData((prev) =>
+      prev.map((stock) =>
+        stock.symbol === data.symbol && stock.category === "국내" // 🔥 국내 주식만!
+          ? {
+              ...stock,
+              currentPrice: Number(data.price),
+              priceChange: Number(data.rate),
+              marketCap: Number(data.marketCap),
+            }
+          : stock
+      )
+    );
+  });
+  return () => {
+    socket.off("stockPrice");
+  };
+}, []);
 
   // 탭/정렬 변경 시 페이지 번호 리셋
   useEffect(() => {

@@ -1,4 +1,4 @@
-// /backend/src/server.ts
+// ✅ /backend/src/server.ts
 import express, { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import http from "http";
@@ -52,26 +52,26 @@ app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
 });
 
-const server = http.createServer(app);
-const io = setupSocket(server);
+// ✅ 서버 + 소켓 실행
+async function start() {
+  const server = http.createServer(app);
+  await setupSocket(server); // 반드시 await
 
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err);
-  res.status(err.statusCode ?? 500).json({ message: err.message ?? "서버 오류" });
-});
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    // (옵션) 실시간 폴리곤 주가 스트림
+    // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon:", err));
 
-  // (옵션) 실시간 폴리곤 주가 스트림
-  // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon:", err));
+    // (옵션) Binance 암호화폐 5초 주기 DB 업데이트
+    // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
-  // (옵션) Binance 암호화폐 5초 주기 DB 업데이트
-  // setInterval(updateCryptoAssetInfoPeriodically, 5000);
+    // (옵션) KRX 실시간 주가 emit
+    // emitStockPrices(io)
+    //   .then(() => console.log("🟢 emitStockPrices started"))
+    //   .catch((err) => console.error("❌ emitStockPrices failed:", err));
+  });
+}
 
-  // (옵션) KRX 실시간 주가 emit
-  // emitStockPrices(io)
-  //   .then(() => console.log("🟢 emitStockPrices started"))
-  //   .catch((err) => console.error("❌ emitStockPrices failed:", err));
-});
+start();
