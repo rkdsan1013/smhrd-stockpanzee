@@ -1,8 +1,7 @@
 // /backend/src/services/authService.ts
 import bcrypt from "bcrypt";
 import { v4 as uuidv4, parse as uuidParse } from "uuid";
-import { SignJWT } from "jose";
-import { jwtSecret } from "../config/jose";
+import { signJwt } from "../utils/jwt";
 import * as authModel from "../models/authModel";
 
 export interface UserProfile {
@@ -20,7 +19,11 @@ export interface User {
 }
 
 /**
- * 회원가입: 이메일 중복 → 해시 → users+profiles 트랜잭션 → JWT 반환
+ * 회원가입:
+ * 1. 이메일 중복 체크
+ * 2. 비밀번호 해싱
+ * 3. users + user_profiles 트랜잭션
+ * 4. JWT 발급 (payload: { uuid: hex } )
  */
 export async function registerUserService(
   username: string,
@@ -32,56 +35,47 @@ export async function registerUserService(
     throw { statusCode: 400, message: "이미 등록된 이메일입니다." };
   }
 
-  // 비밀번호 해싱
   const hashed = await bcrypt.hash(password, 10);
 
-  // UUID 생성 & Buffer 변환
+  // 16바이트 버퍼 → 32자리 hex
   const rawUuid = uuidv4();
   const uuidBuf = Buffer.from(uuidParse(rawUuid));
-  // 토큰 페이로드용 16바이트를 32자리 hex 문자열로
   const uuidHex = uuidBuf.toString("hex");
 
-  // DB 등록
+  // DB 저장
   await authModel.registerUser(uuidBuf, email, hashed, username);
 
-  // JWT 생성 (payload.uuid는 hyphen 없는 hex)
-  const token = await new SignJWT({ uuid: uuidHex })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(jwtSecret);
-
+  // JWT 발급 (1시간 만료)
+  const token = await signJwt({ uuid: uuidHex }, { expiresIn: "1h" });
   return token;
 }
 
 /**
- * 로그인: 이메일 조회 → 비밀번호 비교 → JWT 반환
+ * 로그인:
+ * 1. 이메일 조회
+ * 2. 비밀번호 비교
+ * 3. JWT 발급
  */
 export async function loginUserService(email: string, password: string): Promise<string> {
   const users = await authModel.findUserByEmail(email);
   if (!users.length) {
     throw { statusCode: 400, message: "가입된 사용자가 없습니다." };
   }
+
   const user = users[0];
   const match = await bcrypt.compare(password, user.password);
   if (!match) {
     throw { statusCode: 400, message: "비밀번호가 일치하지 않습니다." };
   }
 
-  // DB uuid(Buffer) → hex
   const uuidHex = user.uuid.toString("hex");
-
-  const token = await new SignJWT({ uuid: uuidHex })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(jwtSecret);
-
+  const token = await signJwt({ uuid: uuidHex }, { expiresIn: "1h" });
   return token;
 }
 
 /**
- * 프로필 조회: payload.uuid(hex) → Buffer → DB 조회
+ * 프로필 조회:
+ * payload.uuid(hex) → Buffer → DB 프로필 조회
  */
 export async function getProfileService(uuidHex: string): Promise<UserProfile> {
   const buf = Buffer.from(uuidHex, "hex");
@@ -89,22 +83,24 @@ export async function getProfileService(uuidHex: string): Promise<UserProfile> {
   if (!profiles.length) {
     throw { statusCode: 404, message: "사용자를 찾을 수 없습니다." };
   }
+
   const row = profiles[0];
   return { uuid: uuidHex, username: row.username, avatar_url: row.avatar_url };
 }
 
-// 구글 계정으로 회원가입 or 로그인
+/**
+ * 구글 OAuth: 기존 사용자 조회 또는 신규 등록
+ */
 export async function findOrCreateGoogleUser(data: {
   email: string;
   username: string;
   avatar_url?: string;
   google_id: string;
 }): Promise<User> {
-  // 1. 먼저 users 테이블에서 email로 조회
-  const existingUsers = await authModel.findUserByEmail(data.email);
-  if (existingUsers && existingUsers.length > 0) {
-    // users 테이블의 uuid(BUFFER)와 user_profiles의 name/avatar_url 등 조회
-    const bufUuid = existingUsers[0].uuid;
+  const existing = await authModel.findUserByEmail(data.email);
+
+  if (existing.length) {
+    const bufUuid = existing[0].uuid;
     const uuidHex = bufUuid.toString("hex");
     const profiles = await authModel.findUserByUuid(bufUuid);
     return {
@@ -116,7 +112,6 @@ export async function findOrCreateGoogleUser(data: {
     };
   }
 
-  // 2. 신규 유저면 uuid 생성, password에 구글임을 나타내는 임의값 저장
   const rawUuid = uuidv4();
   const uuidBuf = Buffer.from(uuidParse(rawUuid));
   const uuidHex = uuidBuf.toString("hex");
@@ -133,10 +128,9 @@ export async function findOrCreateGoogleUser(data: {
   };
 }
 
-export async function generateJwtForUser(uuid: string): Promise<string> {
-  return await new SignJWT({ uuid })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("1h")
-    .sign(jwtSecret);
+/**
+ * 토큰 재발급 등 범용 JWT 생성 헬퍼
+ */
+export async function generateJwtForUser(uuidHex: string): Promise<string> {
+  return signJwt({ uuid: uuidHex }, { expiresIn: "1h" });
 }

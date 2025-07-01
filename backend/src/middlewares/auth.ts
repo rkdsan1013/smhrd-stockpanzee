@@ -1,7 +1,7 @@
 // /backend/src/middlewares/auth.ts
 import { Request, Response, NextFunction } from "express";
-import { jwtVerify, JWTPayload } from "jose";
-import { jwtSecret } from "../config/jose";
+import type { JWTPayload } from "jose";
+import { verifyJwt } from "../utils/jwt";
 
 export interface AuthRequest extends Request {
   cookies: Record<string, string>;
@@ -23,10 +23,10 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       return;
     }
 
-    const { payload } = await jwtVerify(token, jwtSecret);
+    const payload = await verifyJwt(token);
     req.user = payload;
     next();
-  } catch {
+  } catch (err) {
     res.status(401).json({ message: "유효하지 않은 토큰입니다." });
   }
 }
