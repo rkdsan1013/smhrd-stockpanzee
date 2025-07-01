@@ -429,26 +429,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
       </svg>
     ),
 
-      volatility: (
-    <svg
-      className={className || "w-6 h-6 text-gray-800 dark:text-white"}
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M8 20V7m0 13-4-4m4 4 4-4m4-12v13m0-13 4 4m-4-4-4 4"
-      />
-    </svg>
-  ),
-
       more: (
       <svg
         className={className || "w-6 h-6 text-gray-800 dark:text-white"}
@@ -501,58 +481,7 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-    camera: (
-      <svg
-        className={className || "w-6 h-6 text-gray-400"}
-        aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke="currentColor"
-          strokeWidth="2"
-          d="M7 6l1.3-1.95A1 1 0 0 1 9.13 4h5.74a1 1 0 0 1 .83.45L17 6m2 0a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14Zm-7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"
-        />
-        <circle
-          cx="12"
-          cy="13"
-          r="2.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-        />
-      </svg>
-    ),
 
-    reply: (
-      <svg
-        className={className || "w-5 h-5 text-gray-400"}
-        aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        fill="none"
-        viewBox="0 0 20 20"
-      >
-        <path
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M6.667 9.167V6.667A1.667 1.667 0 0 1 8.333 5h6.667A1.667 1.667 0 0 1 16.667 6.667v6.666A1.667 1.667 0 0 1 15 15h-6.667A1.667 1.667 0 0 1 6.667 13.333v-2.5"
-        />
-        <path
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M6.667 10.833 3.333 8.333l3.334-2.5"
-        />
-      </svg>
-    ),
 
     
   };
