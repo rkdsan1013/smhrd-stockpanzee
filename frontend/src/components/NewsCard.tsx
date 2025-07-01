@@ -4,10 +4,30 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { NewsItem } from "../services/newsService";
 
+// NewsTag 타입 명시
+type NewsTag = { symbol: string; name: string };
+
 export interface NewsCardProps {
   /** "hero" | "default" | "compact" */
   variant?: "hero" | "default" | "compact";
   newsItem: NewsItem;
+}
+
+// 태그를 항상 객체 배열(NewsTag[])로 변환
+function parseNewsTags(tags: any): NewsTag[] {
+  if (!tags) return [];
+  if (Array.isArray(tags) && tags.length > 0 && typeof tags[0] === "object") return tags;
+  if (Array.isArray(tags)) return tags.map((v: string) => ({ symbol: v, name: v }));
+  if (typeof tags === "string") {
+    try {
+      const parsed = JSON.parse(tags);
+      if (Array.isArray(parsed)) {
+        if (parsed.length > 0 && typeof parsed[0] === "object") return parsed;
+        return parsed.map((v: string) => ({ symbol: v, name: v }));
+      }
+    } catch {}
+  }
+  return [];
 }
 
 const getCategoryLabel = (c: "domestic" | "international" | "crypto") =>
@@ -22,22 +42,14 @@ const getSentiment = (v: number | string | null): { label: string; style: string
       x <= 2
         ? "bg-red-600 text-white"
         : x === 3
-          ? "bg-gray-600 text-white"
-          : "bg-green-600 text-white",
+        ? "bg-gray-600 text-white"
+        : "bg-green-600 text-white",
   };
 };
 
 const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) => {
-  // tags 배열화
-  let tags: string[] = [];
-  if (Array.isArray(newsItem.tags)) tags = newsItem.tags as string[];
-  else if (typeof newsItem.tags === "string") {
-    try {
-      const p = JSON.parse(newsItem.tags);
-      if (Array.isArray(p)) tags = p as string[];
-    } catch {}
-  }
-  //console.log("🟦 NewsCard tags:", tags, "newsItem:", newsItem);
+  // 👇 항상 객체 배열로
+  const tags: NewsTag[] = parseNewsTags(newsItem.tags);
   const sentiment = getSentiment(newsItem.sentiment);
   const categoryLabel = getCategoryLabel(newsItem.category);
 
@@ -118,7 +130,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
                   key={i}
                   className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
                 >
-                  {t}
+                  {t.name}
                 </span>
               ))}
             </div>
