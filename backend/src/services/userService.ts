@@ -4,7 +4,6 @@ import * as authModel from "../models/authModel";
 
 export interface UserProfile {
   uuid: string;
-  email: string;
   username: string;
   avatar_url: string | null;
 }
@@ -18,12 +17,11 @@ export async function getProfileService(uuidHex: string): Promise<UserProfile> {
   if (rows.length === 0) {
     throw { statusCode: 404, message: "User not found" };
   }
-  const { uuid, username, avatar_url, email } = rows[0] as any;
+  const { uuid, username, avatar_url } = rows[0] as any;
   return {
     uuid: uuid.toString("hex"),
     username,
     avatar_url,
-    email,
   };
 }
 

@@ -19,8 +19,7 @@ export const getNews: RequestHandler = async (req, res) => {
       res.status(200).json(list);
       return;
     }
-    const all = await newsService.getAllNews();
-
+    const all = await getAllNews();
     res.status(200).json(all);
   } catch (err: any) {
     console.error("뉴스 조회 중 오류:", err);

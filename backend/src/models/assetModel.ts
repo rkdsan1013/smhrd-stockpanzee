@@ -2,7 +2,6 @@
 
 import type { RowDataPacket } from "mysql2/promise";
 import pool from "../config/db";
-import db from "../config/db";
 import {
   SELECT_ALL_ASSETS,
   UPSERT_ASSET_INFO,
@@ -98,19 +97,4 @@ export async function findAssetWithInfoById(assetId: number) {
   );
   if ((rows as any[]).length === 0) return null;
   return (rows as any[])[0]; // id 포함
-}
-
-
-export async function getAssetNamesBySymbols(symbols: string[]): Promise<Record<string, string>> {
-  if (!symbols.length) return {};
-  const placeholders = symbols.map(() => "?").join(",");
-  const [rows] = await db.query(
-    `SELECT symbol, name FROM assets WHERE symbol IN (${placeholders})`,
-    symbols
-  );
-  const mapping: Record<string, string> = {};
-  (rows as any[]).forEach(({ symbol, name }) => {
-    mapping[symbol] = name;
-  });
-  return mapping;
 }

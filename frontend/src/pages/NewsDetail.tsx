@@ -1,3 +1,4 @@
+// frontend/src/pages/NewsDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchNewsDetail, fetchLatestNewsByAsset } from "../services/newsService";
@@ -34,31 +35,7 @@ const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   );
 };
 
-/** NewsTag type으로 파싱 (symbol, name) */
-type NewsTag = { symbol: string; name: string };
-const parseTags = (val: any): NewsTag[] => {
-  if (Array.isArray(val) && typeof val[0] === "object" && "symbol" in val[0] && "name" in val[0]) {
-    return val as NewsTag[];
-  }
-  // 혹시 백엔드에서 잘못 내려온 경우: string[], fallback
-  if (Array.isArray(val)) {
-    return val.map((code) => ({ symbol: code, name: code }));
-  }
-  // string인 경우: JSON.parse
-  if (typeof val === "string") {
-    try {
-      const parsed = JSON.parse(val);
-      if (Array.isArray(parsed)) {
-        if (typeof parsed[0] === "object" && "symbol" in parsed[0] && "name" in parsed[0]) {
-          return parsed;
-        }
-        return parsed.map((code) => ({ symbol: code, name: code }));
-      }
-    } catch {}
-  }
-  return [];
-};
-
+/** JSON 문자열 또는 배열 → 배열로 변환 */
 const parseList = (val: string | string[] | undefined): string[] => {
   if (Array.isArray(val)) return val;
   if (!val) return [];
@@ -79,6 +56,7 @@ const NewsDetailPage: React.FC = () => {
     {},
   );
 
+  // 전체 자산(symbol+market → id) 매핑
   useEffect(() => {
     fetchAssets()
       .then((assets) => {
@@ -94,6 +72,7 @@ const NewsDetailPage: React.FC = () => {
       .catch((e) => console.error("fetchAssets error:", e));
   }, []);
 
+  // 뉴스 상세 & 최신 뉴스 로딩
   useEffect(() => {
     if (!id) {
       setStatus("error");
@@ -131,17 +110,19 @@ const NewsDetailPage: React.FC = () => {
     );
   }
 
+  // TradingView 심볼
   const tvSymbol = news.assets_symbol
     ? news.news_category === "crypto"
       ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
       : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
     : "";
 
+  // 긍/부정 배열 파싱
   const positives = parseList(news.news_positive);
   const negatives = parseList(news.news_negative);
 
-  // ⬇️ 태그 객체배열 파싱
-  const parsedTags = parseTags(news.tags);
+  // 태그 배열 파싱
+  const parsedTags = parseList(news.tags);
 
   return (
     <div className="w-full bg-gray-900 px-6 py-8">
@@ -190,38 +171,40 @@ const NewsDetailPage: React.FC = () => {
               <div className="text-gray-300 text-xs mb-1">태그</div>
               <div className="flex flex-wrap gap-2">
                 {parsedTags.length > 0 ? (
-                  parsedTags.map((tag) => {
-                    const sym = tag.symbol;
-                    const name = tag.name;
+                  parsedTags.map((t) => {
+                    const sym = t.toUpperCase();
                     const markets = symbolMarketMap[sym];
                     let linkId: number | undefined;
 
                     if (markets) {
+                      // crypto 뉴스면 BINANCE 마켓 우선
                       if (news.news_category === "crypto") {
                         linkId = markets["BINANCE"];
                       } else {
+                        // stock 뉴스면 해당 news.assets_market 우선
                         linkId = markets[news.assets_market!.toUpperCase()];
                       }
+                      // 유일 매핑이 아니면, 단 하나만 있을 때 사용
                       if (!linkId) {
                         const mks = Object.keys(markets);
-                        if (mks.length === 1) linkId = markets[mks[0]];
+                        if (mks.length === 1) {
+                          linkId = markets[mks[0]];
+                        }
                       }
                     }
 
-                    console.log("tag", tag, "markets", markets, "linkId", linkId);
-
                     return linkId ? (
-                      <Link key={sym} to={`/asset/${linkId}`}>
+                      <Link key={t} to={`/asset/${linkId}`}>
                         <span className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs cursor-pointer">
-                          {name}
+                          {t}
                         </span>
                       </Link>
                     ) : (
                       <span
-                        key={sym}
+                        key={t}
                         className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs"
                       >
-                        {name}
+                        {t}
                       </span>
                     );
                   })

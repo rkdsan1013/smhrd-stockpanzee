@@ -16,9 +16,9 @@ export const INSERT_USER_PROFILE = `
 `;
 
 export const SELECT_USER_BY_UUID = `
-  SELECT u.uuid, u.email, up.name AS username, up.avatar_url
+  SELECT u.uuid, u.email, p.name AS username, p.avatar_url
   FROM users u
-  JOIN user_profiles up ON u.uuid = up.uuid
+  JOIN user_profiles p ON u.uuid = p.uuid
   WHERE u.uuid = ?
 `;
 

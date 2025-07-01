@@ -1,5 +1,3 @@
-// frontend/src/pages/AssetDetail.tsx
-
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import type { Asset } from "../services/assetService";
@@ -9,26 +7,6 @@ import { fetchLatestNewsByAsset } from "../services/newsService";
 import { renderTradingViewChart, getTradingViewSymbol } from "../services/tradingViewService";
 import NewsCard from "../components/NewsCard";
 import AssetComments from "../components/AssetComments";
-
-// NewsTag 타입 명시
-type NewsTag = { symbol: string; name: string };
-
-// 항상 NewsTag[]로 변환
-const parseNewsTags = (tags: any): NewsTag[] => {
-  if (!tags) return [];
-  if (Array.isArray(tags) && typeof tags[0] === "object") return tags;
-  if (Array.isArray(tags)) return tags.map((v: string) => ({ symbol: v, name: v }));
-  if (typeof tags === "string") {
-    try {
-      const parsed = JSON.parse(tags);
-      if (Array.isArray(parsed)) {
-        if (typeof parsed[0] === "object") return parsed;
-        return parsed.map((v: string) => ({ symbol: v, name: v }));
-      }
-    } catch {}
-  }
-  return [];
-};
 
 const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +18,7 @@ const AssetDetail: React.FC = () => {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<"chart" | "community">("chart");
 
+  // 자산 정보 및 초기 실시간 데이터
   useEffect(() => {
     if (!id) return;
     fetchAssetById(Number(id))
@@ -50,14 +29,17 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [id]);
 
-  useEffect(() => {
-    if (!asset) return;
-    const determineCategory = (market: string): "domestic" | "international" | "crypto" => {
-      if (market.includes("KRX")) return "domestic";
-      if (market.includes("NASDAQ") || market.includes("NYSE")) return "international";
-      return "crypto";
-    };
-    const assetCategory = determineCategory(asset.market);
+  // 최신 뉴스 1건 + 다음 5건 로드
+ useEffect(() => {
+  if (!asset) return;
+
+  const determineCategory = (market: string): "domestic" | "international" | "crypto" => {
+    if (market.includes("KRX")) return "domestic";
+    if (market.includes("NASDAQ") || market.includes("NYSE")) return "international";
+    return "crypto";
+  };
+
+  const assetCategory = determineCategory(asset.market);
     fetchLatestNewsByAsset(asset.symbol)
       .then((list) => {
         if (list.length === 0) {
@@ -65,11 +47,11 @@ const AssetDetail: React.FC = () => {
           setNewsList([]);
         } else {
           const [first, ...rest] = list;
-          // news_sentiment → sentiment
+          // 여기서 news_sentiment → sentiment로 강제 매핑
           const fixField = (item: any) => ({
             ...item,
             category: assetCategory,
-            sentiment: item.news_sentiment ?? item.sentiment,
+            sentiment: item.news_sentiment ?? item.sentiment, // 둘 다 없는 경우는 undefined
           });
           setDetailNews(fixField(first));
           setNewsList(rest.slice(0, 5).map(fixField));
@@ -78,6 +60,7 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [asset]);
 
+  // TradingView 차트 렌더링
   useEffect(() => {
     if (!asset || selectedTab !== "chart") return;
     const containerId = `tv-chart-${asset.id}`;
@@ -89,6 +72,7 @@ const AssetDetail: React.FC = () => {
     }
   }, [asset, selectedTab]);
 
+  // 5초마다 실시간 가격 업데이트
   useEffect(() => {
     if (!asset) return;
     const timer = setInterval(() => {
@@ -101,9 +85,27 @@ const AssetDetail: React.FC = () => {
     return () => clearInterval(timer);
   }, [asset, id]);
 
-  // NewsTag[] 사용
+  // Parse tags for detailNews
+  const parseTags = (tags: string | string[] | null): string[] => {
+    let parsedTags: string[] = [];
+    if (Array.isArray(tags)) {
+      parsedTags = tags;
+    } else if (typeof tags === "string") {
+      try {
+        const parsed = JSON.parse(tags);
+        if (Array.isArray(parsed)) {
+          parsedTags = parsed;
+        }
+      } catch {
+        // Handle invalid JSON gracefully
+      }
+    }
+    return parsedTags;
+  };
+
+  // Get sentiment label and style
+  const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
   const getSentiment = (v: number | string | null): { label: string; style: string } => {
-    const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
     const x = Math.min(5, Math.max(1, Number(v) || 3));
     return {
       label: SENT_LABELS[x - 1],
@@ -111,8 +113,8 @@ const AssetDetail: React.FC = () => {
         x <= 2
           ? "bg-red-600 text-white"
           : x === 3
-          ? "bg-gray-600 text-white"
-          : "bg-green-600 text-white",
+            ? "bg-gray-600 text-white"
+            : "bg-green-600 text-white",
     };
   };
 
@@ -122,9 +124,6 @@ const AssetDetail: React.FC = () => {
 
   const { currentPrice, priceChange } = liveData;
   const containerId = `tv-chart-${asset.id}`;
-
-  // 👇 tags 항상 객체 배열로 파싱
-  const parsedTags = detailNews ? parseNewsTags(detailNews.tags) : [];
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-6">
@@ -185,19 +184,16 @@ const AssetDetail: React.FC = () => {
                   {/* Sentiment and Tags */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${getSentiment(
-                        detailNews.sentiment,
-                      ).style}`}
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${getSentiment(detailNews.sentiment).style}`}
                     >
                       {getSentiment(detailNews.sentiment).label}
                     </span>
-                    {/* 👇 tags .name만 출력 */}
-                    {parsedTags.map((tag, index) => (
+                    {parseTags(detailNews.tags).map((tag, index) => (
                       <span
                         key={index}
                         className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
                       >
-                        {tag.name}
+                        {tag}
                       </span>
                     ))}
                   </div>
