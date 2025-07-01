@@ -86,3 +86,9 @@ export async function updateUserPassword(uuid: Buffer, hashedPassword: string) {
 export async function updateUserProfile(uuid: Buffer, username: string) {
   await pool.query(UPDATE_USER_PROFILE, [username, uuid]);
 }
+
+/** users 테이블에서 인증(비번) 정보만 조회 */
+export async function findUserAuthByUuid(uuid: Buffer): Promise<{ uuid: Buffer; password: string }[]> {
+  const [rows] = await pool.query("SELECT uuid, password FROM users WHERE uuid = ?", [uuid]);
+  return rows as { uuid: Buffer; password: string }[];
+}

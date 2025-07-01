@@ -1,5 +1,5 @@
 // /frontend/src/services/userService.ts
-import { get, put } from "./apiClient";
+import { get, put, del } from "./apiClient";
 
 export interface UserProfile {
   uuid: string;
@@ -32,4 +32,9 @@ export async function updateUserProfile(data: UpdateProfileData): Promise<UserPr
   return res.data;
 }
 
-export default { fetchUserProfile, updateUserProfile };
+export async function withdrawUser(): Promise<void> {
+  await del("/user/me");
+}
+
+
+export default { fetchUserProfile,  updateUserProfile,  withdrawUser };

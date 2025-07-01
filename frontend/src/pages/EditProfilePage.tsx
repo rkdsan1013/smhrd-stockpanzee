@@ -5,6 +5,7 @@ import userService from "../services/userService";
 import type { UserProfile } from "../services/userService";
 import Icons from "../components/Icons";
 
+
 type Mode = "view" | "choose" | "editName" | "editPassword";
 
 const EditProfilePage: React.FC = () => {
@@ -70,6 +71,7 @@ const EditProfilePage: React.FC = () => {
     }
     setLoading(true);
     try {
+      console.log('pwForm:', pwForm);
       await userService.updateUserProfile({
         password: pwForm.new,
         currentPassword: pwForm.current,
@@ -82,6 +84,19 @@ const EditProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleWithdraw = async () => {
+  if (!window.confirm("정말로 회원탈퇴 하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+  try {
+    await userService.withdrawUser();
+    alert("탈퇴가 완료되었습니다. 그동안 이용해주셔서 감사합니다.");
+    // 로그아웃/메인으로 이동 등
+    window.location.href = "/";
+  } catch (e) {
+    alert("탈퇴 실패. 다시 시도해주세요.");
+  }
+};
+
 
   if (!profile) {
     return <div className="min-h-screen flex items-center justify-center text-white">로딩 중...</div>;
@@ -131,6 +146,10 @@ const EditProfilePage: React.FC = () => {
               className="w-full bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
               onClick={() => setMode("editPassword")}
             >비밀번호 수정하기</button>
+            <button
+              className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              onClick={handleWithdraw}
+            >회원탈퇴</button>
             <button
               className="w-full mt-2 text-gray-400 hover:text-white text-sm"
               onClick={() => setMode("view")}

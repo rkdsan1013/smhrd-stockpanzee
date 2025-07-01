@@ -32,7 +32,7 @@ export async function getProfileService(uuidHex: string): Promise<UserProfile> {
  */
 export async function updateProfileService(
   uuidHex: string,
-  updates: { email?: string; password?: string; username?: string },
+  updates: { email?: string; password?: string; username?: string; currentPassword?: string },
 ): Promise<UserProfile> {
   const buf = Buffer.from(uuidHex, "hex");
 
@@ -45,8 +45,25 @@ export async function updateProfileService(
     await authModel.updateUserEmail(buf, updates.email);
   }
 
-  // 비밀번호 변경 (해시 처리)
+  // 비밀번호 변경
   if (updates.password) {
+    // 1. 현재 비밀번호 입력 안 하면 에러
+    if (!updates.currentPassword) {
+      throw { statusCode: 400, message: "현재 비밀번호를 입력해주세요." };
+    }
+
+    // 2. 실제 DB에서 기존 해시 비밀번호 불러오기 (users 테이블)
+    const [user] = await authModel.findUserAuthByUuid(buf);
+    if (!user) {
+      throw { statusCode: 404, message: "유저를 찾을 수 없습니다." };
+    }
+    // 3. 현재 비밀번호 대조 (bcrypt.compare)
+    const isMatch = await bcrypt.compare(updates.currentPassword, user.password);
+    if (!isMatch) {
+      throw { statusCode: 400, message: "현재 비밀번호가 일치하지 않습니다." };
+    }
+
+    // 4. 통과하면 새 비밀번호 해시 후 업데이트
     const hashed = await bcrypt.hash(updates.password, 10);
     await authModel.updateUserPassword(buf, hashed);
   }
@@ -58,4 +75,9 @@ export async function updateProfileService(
 
   // 변경된 프로필 재조회 후 반환
   return getProfileService(uuidHex);
+}
+
+export async function deleteUserService(uuidHex: string) {
+  const buf = Buffer.from(uuidHex, "hex");
+  await authModel.deleteUserCascade(buf);
 }

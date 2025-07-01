@@ -87,3 +87,5 @@ export const SELECT_STOCK_ASSETS = `
   WHERE a.market IN ('NYSE','NASDAQ')
   ORDER BY a.id;
 `;
+
+
