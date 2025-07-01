@@ -1,3 +1,4 @@
+// /frontend/src/services/userService.ts
 import { get, put } from "./apiClient";
 
 export interface UserProfile {
@@ -11,6 +12,7 @@ export type UpdateProfileData = {
   email?: string;
   password?: string;
   username?: string;
+  currentPassword?: string;
 };
 
 /**
