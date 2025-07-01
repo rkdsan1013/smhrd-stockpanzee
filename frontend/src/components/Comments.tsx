@@ -112,7 +112,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
       <div className="flex items-center gap-2">
         {/* 카메라 아이콘으로 파일 첨부 */}
         <label className="cursor-pointer flex items-center">
-          <Icons name="camera" className="w-6 h-6 text-gray-400 hover:text-blue-400" />
+          <Icons name="camera" className="w-6 h-6 text-white hover:text-blue-400" />
           <input
             type="file"
             accept="image/*"
