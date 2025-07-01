@@ -459,44 +459,40 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         <circle cx="19" cy="12" r="2" />
       </svg>
     ),
-
-    // Icons.tsx 내부 일부 (eyeOpen, eyeClosed만)
     eyeOpen: (
       <svg
-        className={className || "w-6 h-6 text-white"}
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="white"
         width="24"
         height="24"
-        aria-hidden="true"
+        fill="none"
+        viewBox="0 0 24 24"
       >
         <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          stroke="currentColor"
           strokeWidth="2"
-          d="M1.5 12s4.5-7.5 10.5-7.5 10.5 7.5 10.5 7.5-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z"
+          d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z"
         />
-        <circle cx="12" cy="12" r="3.5" stroke="white" strokeWidth="2" fill="none" />
+        <path stroke="currentColor" strokeWidth="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
       </svg>
     ),
     eyeClosed: (
       <svg
-        className={className || "w-6 h-6 text-white"}
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="white"
         width="24"
         height="24"
-        aria-hidden="true"
+        fill="none"
+        viewBox="0 0 24 24"
       >
         <path
+          stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
-          d="M3 3l18 18M1.5 12s4.5-7.5 10.5-7.5c2.74 0 5.19 1.18 7.07 2.91M4.1 5.08A16.978 16.978 0 0 0 1.5 12s4.5 7.5 10.5 7.5c2.2 0 4.29-.54 6.15-1.52M9.5 14.5A3.5 3.5 0 0 0 12 15.5c1.93 0 3.5-1.57 3.5-3.5a3.5 3.5 0 0 0-1-2.5"
+          d="M3.933 13.909A4.357 4.357 0 0 1 3 12c0-1 4-6 9-6m7.6 3.8A5.068 5.068 0 0 1 21 12c0 1-3 6-9 6-.314 0-.62-.014-.918-.04M5 19 19 5m-4 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
         />
       </svg>
     ),

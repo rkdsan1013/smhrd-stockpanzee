@@ -1,7 +1,7 @@
 // frontend/src/components/NewsCard.tsx
-
 import React from "react";
 import { Link } from "react-router-dom";
+import Icons from "../components/Icons";
 import type { NewsItem } from "../services/newsService";
 
 export interface NewsCardProps {
@@ -68,10 +68,17 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
               {newsItem.title_ko || newsItem.title}
             </h3>
           </div>
-          {/* 하단: 퍼블리셔 · 날짜 */}
-          <div className="mt-4 text-xs text-gray-400 space-y-1">
-            <div>{newsItem.publisher}</div>
-            <div>{new Date(newsItem.published_at).toLocaleString()}</div>
+
+          {/* 하단: 퍼블리셔 · 날짜 · 조회수 */}
+          <div className="mt-4 flex justify-between items-center text-xs text-gray-400">
+            <div className="space-y-1">
+              <div>{newsItem.publisher}</div>
+              <div>{new Date(newsItem.published_at).toLocaleString()}</div>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Icons name="eyeOpen" className="w-5 h-5 text-gray-400" />
+              <span>{(newsItem.view_count ?? 0).toLocaleString()}</span>
+            </div>
           </div>
         </div>
       </Link>
@@ -135,10 +142,16 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
           </p>
         </div>
 
-        {/* 하단: 퍼블리셔 · 작성일 */}
-        <div className="mt-auto pt-4 text-xs text-gray-400 space-y-1">
-          <div>{newsItem.publisher}</div>
-          <div>{new Date(newsItem.published_at).toLocaleString()}</div>
+        {/* 하단: 퍼블리셔 · 작성일 · 조회수 */}
+        <div className="mt-auto pt-4 flex justify-between items-center text-xs text-gray-400">
+          <div className="space-y-1">
+            <div>{newsItem.publisher}</div>
+            <div>{new Date(newsItem.published_at).toLocaleString()}</div>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Icons name="eyeOpen" className="w-5 h-5 text-gray-400" />
+            <span>{(newsItem.view_count ?? 0).toLocaleString()}</span>
+          </div>
         </div>
       </div>
     </Link>

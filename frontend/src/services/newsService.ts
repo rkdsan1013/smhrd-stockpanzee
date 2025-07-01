@@ -1,4 +1,4 @@
-// /frontend/src/services/newsService.ts
+// frontend/src/services/newsService.ts
 import { get } from "./apiClient";
 
 export interface NewsItem {
@@ -10,9 +10,10 @@ export interface NewsItem {
   sentiment: number;
   summary: string;
   brief_summary: string;
-  tags: string; // JSON 문자열
+  tags: string; // JSON 문자열 (배열 형태로 파싱 필요)
   published_at: string;
   publisher: string;
+  view_count: number; // 조회수 필드 추가
 }
 
 export interface NewsDetail {
@@ -33,6 +34,8 @@ export interface NewsDetail {
   assets_symbol?: string;
   assets_market?: string;
   assets_name?: string;
+
+  view_count: number; // 상세 조회 시에도 조회수 제공
 }
 
 /**
