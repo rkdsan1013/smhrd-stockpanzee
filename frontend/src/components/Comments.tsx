@@ -1,5 +1,4 @@
 // frontend/src/components/Comments.tsx
-
 import React, { useState, useContext } from "react";
 import Icons from "./Icons";
 import { AuthContext } from "../providers/AuthProvider";
@@ -110,15 +109,22 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
         rows={3}
         placeholder="자신의 의견을 남기세요."
       />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={e => setFile(e.target.files?.[0] ?? null)}
-      />
+      <div className="flex items-center gap-2">
+        {/* 카메라 아이콘으로 파일 첨부 */}
+        <label className="cursor-pointer flex items-center">
+          <Icons name="camera" className="w-6 h-6 text-gray-400 hover:text-blue-400" />
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => setFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
+        <button className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" type="submit">
+          포스트
+        </button>
+      </div>
       {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-24 h-24 object-cover rounded" />}
-      <button className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" type="submit">
-        포스트
-      </button>
     </form>
   );
 };
@@ -234,10 +240,16 @@ const CommentItem: React.FC<{
             type="button"
           >
             <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
-            {comment.likes}
+            {comment.likes > 0 && <span>{comment.likes}</span>}
           </button>
-          <button className="text-xs text-white" onClick={() => setShowReply(v => !v)}>
-            답글
+          {/* 답글 아이콘 */}
+          <button
+            className="flex items-center text-gray-500 hover:text-pink-400"
+            onClick={() => setShowReply(v => !v)}
+            type="button"
+            title="답글 달기"
+          >
+            <Icons name="reply" className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -317,16 +329,20 @@ const ReplyInput: React.FC<{
         rows={2}
         placeholder="대댓글을 입력하세요"
       />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={e => setFile(e.target.files?.[0] ?? null)}
-      />
-      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-20 h-20 object-cover rounded" />}
       <div className="flex items-center gap-2">
+        <label className="cursor-pointer flex items-center">
+          <Icons name="camera" className="w-6 h-6 text-white hover:text-blue-400" />
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => setFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
         <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" onClick={handleRegister} type="button">등록</button>
         <button className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm" onClick={onCancel} type="button">취소</button>
       </div>
+      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-20 h-20 object-cover rounded" />}
     </div>
   );
 };
@@ -403,7 +419,7 @@ const ReplyItem: React.FC<{
             onClick={handleLike}
           >
             <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
-            {reply.likes}
+            {reply.likes > 0 && <span>{reply.likes}</span>}
           </button>
         </div>
       </div>

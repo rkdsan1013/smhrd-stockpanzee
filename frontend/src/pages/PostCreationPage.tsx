@@ -1,6 +1,8 @@
+// /frontend/src/pages/PostCreationPage.tsx
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Icons from "../components/Icons"; // 꼭 추가!
 
 const PostCreationPage: React.FC = () => {
   const [title, setTitle] = useState("");
@@ -98,18 +100,23 @@ const PostCreationPage: React.FC = () => {
           ></textarea>
         </div>
 
-        {/* 이미지 업로드 */}
+        {/* 이미지 업로드 (사진기 아이콘) */}
         <div>
-          <label htmlFor="image" className="block text-sm font-medium mb-1">
-            이미지 업로드 (선택)
+          <label
+            htmlFor="image"
+            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 rounded cursor-pointer hover:bg-gray-700 w-fit"
+            tabIndex={0}
+          >
+            <Icons name="camera" className="w-7 h-7 text-white hover:text-blue-400" />
+            <span className="text-white font-medium">사진 선택</span>
+            <input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
           </label>
-          <input
-            id="image"
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full text-white"
-          />
           {image && (
             <img
               src={URL.createObjectURL(image)}

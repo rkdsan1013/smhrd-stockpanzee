@@ -73,7 +73,6 @@ const CommunityDetail: React.FC = () => {
   useEffect(() => {
     setIsLiked(Boolean(post?.isLiked));
     setLikeCount(post?.community_likes || 0);
-    console.log("post 응답 데이터:", post);
   }, [post]);
 
   const handleLikeToggle = async () => {
@@ -199,7 +198,7 @@ const CommunityDetail: React.FC = () => {
             type="button"
           >
             <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
-            {likeCount}
+            {likeCount > 0 && <span>{likeCount}</span>}
           </button>
           <span className="flex items-center">
             <Icons name="messageDots" className="w-5 h-5 mr-1" />
