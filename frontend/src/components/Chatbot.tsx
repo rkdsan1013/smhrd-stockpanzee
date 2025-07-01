@@ -24,21 +24,6 @@ const Chatbot: React.FC = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef<number>(2);
 
-  // 닫기 버튼 외부 클릭 시 닫기
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        isChatOpen &&
-        chatContainerRef.current &&
-        !chatContainerRef.current.closest(".chatbot-wrapper")?.contains(e.target as Node)
-      ) {
-        setIsChatOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isChatOpen]);
-
   // 채팅창 열면 자동 포커스
   useEffect(() => {
     if (isChatOpen && inputRef.current) {
@@ -65,17 +50,17 @@ const Chatbot: React.FC = () => {
     </div>
   );
 
-  // 토글: 로그인 상관없이 열기/닫기
   const toggleChatbot = () => {
     setIsChatOpen((prev) => !prev);
   };
 
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return; // 로그인 필요
+    if (!user) return;
     if (!message.trim() || isLoading) return;
 
     setIsLoading(true);
+
     const userMsg: Message = {
       id: nextIdRef.current++,
       sender: "user",
@@ -84,12 +69,12 @@ const Chatbot: React.FC = () => {
     setConversations((prev) => [...prev, userMsg]);
     setMessage("");
 
-    const botMsg: Message = {
+    const botPlaceholder: Message = {
       id: nextIdRef.current++,
       sender: "bot",
       text: "",
     };
-    setConversations((prev) => [...prev, botMsg]);
+    setConversations((prev) => [...prev, botPlaceholder]);
 
     try {
       const { answer } = await getChatbotAnswer({ question: userMsg.text });
@@ -120,11 +105,8 @@ const Chatbot: React.FC = () => {
               : "opacity-0 translate-y-4 pointer-events-none"
           }`}
       >
-        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-4 py-3 border-b border-gray-200">
           <h3 className="text-lg font-semibold">팬지봇</h3>
-          <button onClick={() => setIsChatOpen(false)}>
-            <Icons name="close" className="w-5 h-5 text-gray-500" />
-          </button>
         </div>
 
         <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-3">
