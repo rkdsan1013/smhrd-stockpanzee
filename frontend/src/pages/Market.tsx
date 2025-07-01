@@ -86,39 +86,41 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
   useEffect(() => {
-  socket.on("stockPrice", (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
-    setData((prev) => {
-      return prev.map((stock) => {
-        if (stock.symbol === data.symbol && stock.category === "국내") {
-          const prevPrice = stock.currentPrice;
-          const newPrice = Number(data.price);
+    socket.on(
+      "stockPrice",
+      (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
+        setData((prev) => {
+          return prev.map((stock) => {
+            if (stock.symbol === data.symbol && stock.category === "국내") {
+              const prevPrice = stock.currentPrice;
+              const newPrice = Number(data.price);
 
-          // 하이라이트 처리 (가격 변경 시)
-          if (prevPrice !== newPrice) {
-            highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
-            setTimeout(() => {
-              highlight.current.delete(stock.id);
-              rerender((v) => v + 1); // 리렌더 트리거
-            }, 500);
-          }
+              // 하이라이트 처리 (가격 변경 시)
+              if (prevPrice !== newPrice) {
+                highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
+                setTimeout(() => {
+                  highlight.current.delete(stock.id);
+                  rerender((v) => v + 1); // 리렌더 트리거
+                }, 500);
+              }
 
-          return {
-            ...stock,
-            currentPrice: newPrice,
-            priceChange: Number(data.rate),
-            marketCap: Number(data.marketCap),
-          };
-        }
-        return stock;
-      });
-    });
-  });
+              return {
+                ...stock,
+                currentPrice: newPrice,
+                priceChange: Number(data.rate),
+                marketCap: Number(data.marketCap),
+              };
+            }
+            return stock;
+          });
+        });
+      },
+    );
 
-  return () => {
-    socket.off("stockPrice");
-  };
-}, []);
-
+    return () => {
+      socket.off("stockPrice");
+    };
+  }, []);
 
   // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
   useEffect(() => {
@@ -514,7 +516,3 @@ const MomentumList: React.FC<MomentumListProps> = ({
 );
 
 export default Market;
-
-function setStockData(arg0: (prev: any) => any) {
-  throw new Error("Function not implemented.");
-}
