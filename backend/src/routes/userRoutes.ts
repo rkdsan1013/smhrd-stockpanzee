@@ -7,5 +7,6 @@ const router = express.Router();
 
 router.get("/me", authenticate, userController.getProfile);
 router.put("/me", authenticate, userController.updateProfile);
+router.delete("/me", authenticate, userController.deleteUser);
 
 export default router;

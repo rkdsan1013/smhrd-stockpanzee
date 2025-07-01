@@ -42,3 +42,36 @@ export const UPDATE_USER_PROFILE = `
   SET name = ?
   WHERE uuid = ?
 `;
+
+
+export const DELETE_LIKES_BY_USER = `
+  DELETE FROM likes
+  WHERE user_uuid = ?
+`;
+
+export const DELETE_FAVORITES_BY_USER = `
+  DELETE FROM user_favorites
+  WHERE user_uuid = ?
+`;
+
+// ⚠️ community_com의 실제 컬럼명 확인해서 넣기! (예: writer_uuid)
+export const DELETE_COMMENTS_BY_USER = `
+  DELETE FROM community_com
+  WHERE uuid = ?
+
+`;
+
+export const DELETE_POSTS_BY_USER = `
+  DELETE FROM community
+  WHERE uuid = ?
+`;
+
+export const DELETE_PROFILE_BY_USER = `
+  DELETE FROM user_profiles
+  WHERE uuid = ?
+`;
+
+export const DELETE_USER = `
+  DELETE FROM users
+  WHERE uuid = ?
+`;

@@ -7,6 +7,14 @@ import {
   UPDATE_USER_PASSWORD,
   UPDATE_USER_PROFILE,
 } from "./authQueries";
+import {
+  DELETE_LIKES_BY_USER,
+  DELETE_FAVORITES_BY_USER,
+  DELETE_COMMENTS_BY_USER,
+  DELETE_POSTS_BY_USER,
+  DELETE_PROFILE_BY_USER,
+  DELETE_USER,
+} from "./authQueries";
 import { registerUserTransaction } from "./authTransactions";
 
 export interface DbUser {
@@ -85,3 +93,30 @@ export async function updateUserPassword(uuid: Buffer, hashedPassword: string) {
 export async function updateUserProfile(uuid: Buffer, username: string) {
   await pool.query(UPDATE_USER_PROFILE, [username, uuid]);
 }
+
+
+export async function deleteUserCascade(uuid: Buffer) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(DELETE_LIKES_BY_USER, [uuid]);
+    await conn.query(DELETE_FAVORITES_BY_USER, [uuid]);
+    await conn.query(DELETE_COMMENTS_BY_USER, [uuid]);
+    await conn.query(DELETE_POSTS_BY_USER, [uuid]);
+    await conn.query(DELETE_PROFILE_BY_USER, [uuid]);
+    await conn.query(DELETE_USER, [uuid]);
+    console.log("회원 탈퇴 완료");
+  } catch (err) {
+    await conn.rollback();
+    console.log("회원 탈퇴 트랜잭션 롤백:", err);
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// user의 인증 정보(비번)만 조회
+export async function findUserAuthByUuid(uuid: Buffer): Promise<{ uuid: Buffer; password: string }[]> {
+  const [rows] = await pool.query("SELECT uuid, password FROM users WHERE uuid = ?", [uuid]);
+  return rows as { uuid: Buffer; password: string }[];
+}
+

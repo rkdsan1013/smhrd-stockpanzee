@@ -92,6 +92,7 @@ export const patch = <T>(url: string, payload?: any, config?: AxiosRequestConfig
 export const remove = <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
   request<T>("delete", url, undefined, config);
 
-
+export const del = <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+  request<T>("delete", url, undefined, config);
 
 export default axiosInstance;
