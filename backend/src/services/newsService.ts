@@ -1,6 +1,8 @@
 // backend/src/services/newsService.ts
 
 import * as newsModel from "../models/newsModel";
+import { getAllNews as getAllNewsRaw } from "../models/newsTransactions";
+import * as assetModel from "../models/assetModel";
 
 export interface NewsItem {
   id: number;
@@ -43,49 +45,103 @@ export async function getNewsDetailById(newsId: number): Promise<NewsDetail | nu
   const raw = await newsModel.findNewsWithAnalysisById(newsId);
   if (!raw) return null;
 
-  // raw.tags 는 문자열(JSON) 또는 배열 형태로 올 수 있으니, 한 번만 파싱
+  // raw.tags는 문자열(JSON) 또는 배열
   let tagsArr: string[] = [];
   if (typeof raw.tags === "string") {
     try {
       const parsed = JSON.parse(raw.tags);
       if (Array.isArray(parsed)) tagsArr = parsed;
-    } catch {
-      // parsing 실패 시 빈 배열 유지
-    }
+    } catch {}
   } else if (Array.isArray(raw.tags)) {
     tagsArr = raw.tags;
   }
 
+  // ⭐⭐⭐ 국내 뉴스면 종목명으로 변환
+  if (
+    (raw.news_category === "domestic" || raw.category === "domestic") &&
+    Array.isArray(tagsArr) &&
+    tagsArr.length > 0
+  ) {
+    const assetNames = await assetModel.getAssetNamesBySymbols(tagsArr);
+    tagsArr = tagsArr.map((code) => assetNames[code] || code);
+  }
+
   return {
-    id: raw.id,
-    title_ko: raw.title_ko,
-    news_category: raw.news_category,
-    thumbnail: raw.thumbnail,
-    news_link: raw.news_link,
-    publisher: raw.publisher,
-    published_at: raw.published_at,
-    summary: raw.summary,
-    news_positive: raw.news_positive,
-    news_negative: raw.news_negative,
-    community_sentiment: String(raw.community_sentiment ?? ""),
-    news_sentiment: raw.news_sentiment,
+    ...raw,
     tags: tagsArr,
-    // raw 에서 직접 꺼낸 assets_* 필드
+    community_sentiment: String(raw.community_sentiment ?? ""),
     assets_symbol: raw.assets_symbol ?? undefined,
     assets_market: raw.assets_market ?? undefined,
     assets_name: raw.assets_name ?? undefined,
   };
 }
 
+
 /**
  * 종목(Symbol) 기반으로 매칭된 최신 뉴스 목록 조회 (현재 ID 제외)
  */
+// getAllNews 내부: 뉴스 전체 목록 반환할 때 국내만 변환
+// 기존 함수 이름은 getAllNews 그대로 둬도 됨.
+export async function getAllNews(): Promise<NewsItem[]> {
+  const list = await getAllNewsRaw();
+
+  // ① 국내 뉴스에서 등장한 모든 종목코드 한 번에 모으기
+  const allDomesticCodes = new Set<string>();
+  for (const item of list) {
+    // tags가 string이면 먼저 파싱
+    if (typeof item.tags === "string") {
+      try { item.tags = JSON.parse(item.tags); } catch {}
+    }
+    if (item.category === "domestic" && Array.isArray(item.tags)) {
+      item.tags.forEach((code: string) => {
+        // 코드 형태인 태그만 모으기 (숫자문자열인 경우)
+        if (/^\d+$/.test(code)) allDomesticCodes.add(code);
+      });
+    }
+  }
+
+  // ② 한 번만 쿼리로 종목명 맵핑 가져오기
+  let assetNames: Record<string, string> = {};
+  if (allDomesticCodes.size > 0) {
+    assetNames = await assetModel.getAssetNamesBySymbols(Array.from(allDomesticCodes));
+  }
+
+  // ③ 각 뉴스의 태그를 변환
+  for (const item of list) {
+    if (item.category === "domestic" && Array.isArray(item.tags)) {
+      item.tags = item.tags.map((code: string) =>
+        assetNames[code] ? assetNames[code] : code
+      );
+    }
+  }
+  return list;
+}
+
+
+
+// 이미 아래와 같이 되어 있다면 그대로 두면 됩니다!
 export async function getNewsByAsset(assetSymbol: string, excludeId?: number): Promise<NewsItem[]> {
   const list = await newsModel.findNewsByAsset(assetSymbol, excludeId);
 
-  // 프론트가 tags를 JSON 문자열로 기대하므로, 배열이면 stringify
+  for (const item of list) {
+    // ⭐⭐⭐ 국내(category/news_category === "domestic")만 한글 변환
+    if (
+      (item.category === "domestic" || item.news_category === "domestic")
+      && Array.isArray(item.tags)
+      && item.tags.length > 0
+    ) {
+      // 혹시 tags가 string이면 파싱
+      if (typeof item.tags[0] === "string" && !isNaN(Number(item.tags[0]))) {
+        // 숫자(코드) 배열인 경우만!
+        const assetNames = await assetModel.getAssetNamesBySymbols(item.tags);
+        item.tags = item.tags.map((code: string) => assetNames[code] || code);
+      }
+    }
+  }
   return list.map((item) => ({
     ...item,
+    sentiment: item.news_sentiment ?? item.sentiment,
     tags: Array.isArray(item.tags) ? JSON.stringify(item.tags) : item.tags,
   }));
 }
+

@@ -62,3 +62,4 @@ export const fetchLatestNewsByAsset = async (
   }
   return await get<NewsItem[]>(url);
 };
+

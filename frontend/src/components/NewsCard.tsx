@@ -37,7 +37,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) =>
       if (Array.isArray(p)) tags = p as string[];
     } catch {}
   }
-
+  //console.log("🟦 NewsCard tags:", tags, "newsItem:", newsItem);
   const sentiment = getSentiment(newsItem.sentiment);
   const categoryLabel = getCategoryLabel(newsItem.category);
 
