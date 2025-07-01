@@ -8,6 +8,7 @@ import { fuzzySearch } from "../utils/search";
 import { formatCurrency, formatPercentage } from "../utils/formats";
 import { AuthContext } from "../providers/AuthProvider";
 import { fetchFavorites, addFavorite, removeFavorite } from "../services/favoriteService";
+import socket from "../socket";
 
 interface StockItem {
   id: number;
@@ -83,6 +84,42 @@ const Market: React.FC = () => {
     load();
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
+  }, []);
+  useEffect(() => {
+    socket.on(
+      "stockPrice",
+      (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
+        setData((prev) => {
+          return prev.map((stock) => {
+            if (stock.symbol === data.symbol && stock.category === "국내") {
+              const prevPrice = stock.currentPrice;
+              const newPrice = Number(data.price);
+
+              // 하이라이트 처리 (가격 변경 시)
+              if (prevPrice !== newPrice) {
+                highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
+                setTimeout(() => {
+                  highlight.current.delete(stock.id);
+                  rerender((v) => v + 1); // 리렌더 트리거
+                }, 500);
+              }
+
+              return {
+                ...stock,
+                currentPrice: newPrice,
+                priceChange: Number(data.rate),
+                marketCap: Number(data.marketCap),
+              };
+            }
+            return stock;
+          });
+        });
+      },
+    );
+
+    return () => {
+      socket.off("stockPrice");
+    };
   }, []);
 
   // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
