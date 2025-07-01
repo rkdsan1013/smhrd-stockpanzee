@@ -8,6 +8,7 @@ import { fuzzySearch } from "../utils/search";
 import { formatCurrency, formatPercentage } from "../utils/formats";
 import { AuthContext } from "../providers/AuthProvider";
 import { fetchFavorites, addFavorite, removeFavorite } from "../services/favoriteService";
+import socket from "../socket";
 
 interface StockItem {
   id: number;
@@ -84,6 +85,26 @@ const Market: React.FC = () => {
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, []);
+   // ✅ Market.tsx - 웹소켓 우선 적용 구조 반영
+useEffect(() => {
+  socket.on("stockPrice", (data: { symbol: string; price: any; rate: any; marketCap: any }) => {
+    setStockData((prev) =>
+      prev.map((stock: { symbol: string; category: string; }) =>
+        stock.symbol === data.symbol && stock.category === "국내" // 🔥 국내 주식만!
+          ? {
+              ...stock,
+              currentPrice: Number(data.price),
+              priceChange: Number(data.rate),
+              marketCap: Number(data.marketCap),
+            }
+          : stock
+      )
+    );
+  });
+  return () => {
+    socket.off("stockPrice");
+  };
+}, []);
 
   // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
   useEffect(() => {
@@ -479,3 +500,7 @@ const MomentumList: React.FC<MomentumListProps> = ({
 );
 
 export default Market;
+
+function setStockData(arg0: (prev: any) => any) {
+  throw new Error("Function not implemented.");
+}
