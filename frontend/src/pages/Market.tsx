@@ -1,11 +1,13 @@
 // /frontend/src/pages/Market.tsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import Tooltip from "../components/Tooltip";
 import { fetchAssets } from "../services/assetService";
 import { fuzzySearch } from "../utils/search";
 import { formatCurrency, formatPercentage } from "../utils/formats";
+import { AuthContext } from "../providers/AuthProvider";
+import { fetchFavorites, addFavorite, removeFavorite } from "../services/favoriteService";
 
 interface StockItem {
   id: number;
@@ -24,6 +26,7 @@ const ITEMS_PER_PAGE = 12;
 
 const Market: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   // State & refs
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
@@ -31,17 +34,17 @@ const Market: React.FC = () => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
-    key: "marketCap",
-    dir: "desc",
-  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    dir: "asc" | "desc";
+  }>({ key: "marketCap", dir: "desc" });
   const [page, setPage] = useState(1);
 
   const prevPrices = useRef<Map<number, number>>(new Map());
   const highlight = useRef<Map<number, "up" | "down">>(new Map());
   const [, rerender] = useState(0);
 
-  // Fetch data & highlight
+  // 1) 자산 데이터 로드 및 가격 변동 하이라이트
   useEffect(() => {
     const load = () =>
       fetchAssets()
@@ -82,17 +85,35 @@ const Market: React.FC = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // Reset page on filter/search change
-  useEffect(() => setPage(1), [tab, viewMode, sortConfig, search]);
+  // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
+  useEffect(() => {
+    if (user) {
+      fetchFavorites()
+        .then((list) => setFavorites(list))
+        .catch((err) => {
+          console.error("즐겨찾기 조회 실패:", err);
+          setFavorites([]);
+        });
+    } else {
+      setFavorites([]);
+    }
+  }, [user]);
 
-  // Filter > sort > search > paginate
+  // 3) 필터/정렬/검색 변경 시 페이지 리셋
+  useEffect(() => {
+    setPage(1);
+  }, [tab, viewMode, sortConfig, search]);
+
+  // 4) 데이터 가공: 탭 → 뷰 모드 → 정렬 → 검색 → 페이징
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
   );
 
   const byView = useMemo(() => {
-    if (viewMode === "즐겨찾기") return byTab.filter((s) => favorites.includes(s.id));
+    if (viewMode === "즐겨찾기") {
+      return byTab.filter((s) => favorites.includes(s.id));
+    }
     return [...byTab].sort((a, b) =>
       favorites.includes(a.id) === favorites.includes(b.id) ? 0 : favorites.includes(a.id) ? -1 : 1,
     );
@@ -111,7 +132,10 @@ const Market: React.FC = () => {
   const finalList = useMemo(
     () =>
       search.trim()
-        ? fuzzySearch(sorted, search, { keys: ["name", "symbol"], threshold: 0.3 })
+        ? fuzzySearch(sorted, search, {
+            keys: ["name", "symbol"],
+            threshold: 0.3,
+          })
         : sorted,
     [sorted, search],
   );
@@ -129,10 +153,29 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // Handlers
-  const toggleFav = (id: number) =>
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  // 5) 즐겨찾기 토글 핸들러
+  const toggleFav = async (id: number) => {
+    if (!user) {
+      alert("즐겨찾기를 추가하려면 로그인해주세요.");
+      navigate("/login");
+      return;
+    }
+    const isFav = favorites.includes(id);
+    try {
+      if (isFav) {
+        await removeFavorite(id);
+        setFavorites((prev) => prev.filter((x) => x !== id));
+      } else {
+        await addFavorite(id);
+        setFavorites((prev) => [...prev, id]);
+      }
+    } catch (err) {
+      console.error("즐겨찾기 업데이트 실패:", err);
+      alert("즐겨찾기 업데이트에 실패했습니다.");
+    }
+  };
 
+  // 6) 기타 핸들러
   const handleSort = (key: SortKey) => {
     if (search.trim()) return;
     setSortConfig((prev) =>
@@ -142,7 +185,7 @@ const Market: React.FC = () => {
 
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // Summary metrics
+  // 7) 요약 지표 계산
   const summary = byTab;
   const total = summary.length;
   const largeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
@@ -178,7 +221,7 @@ const Market: React.FC = () => {
       </header>
 
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-        {/* Nav tabs (consistent spacing & padding) */}
+        {/* Nav tabs */}
         <div className="flex mb-4">
           <div className="inline-flex bg-gray-800 p-2 rounded-full space-x-2">
             <button onClick={toggleView} className="p-2 rounded-full">
@@ -256,7 +299,9 @@ const Market: React.FC = () => {
                       e.stopPropagation();
                       toggleFav(s.id);
                     }}
-                    className="w-8 h-8 flex items-center justify-center"
+                    className={`w-8 h-8 flex items-center justify-center transition-all ${
+                      !user ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
                     <Icons
                       name="banana"
@@ -265,6 +310,7 @@ const Market: React.FC = () => {
                       }`}
                     />
                   </button>
+
                   <div className="flex-1 ml-2">
                     <p className="text-white font-medium">{s.name}</p>
                     <p className="text-gray-400 text-xs">{s.symbol}</p>
