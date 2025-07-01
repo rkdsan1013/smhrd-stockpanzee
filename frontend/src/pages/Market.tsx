@@ -85,26 +85,40 @@ const Market: React.FC = () => {
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, []);
-   // ✅ Market.tsx - 웹소켓 우선 적용 구조 반영
-useEffect(() => {
-  socket.on("stockPrice", (data: { symbol: string; price: any; rate: any; marketCap: any }) => {
-    setStockData((prev) =>
-      prev.map((stock: { symbol: string; category: string; }) =>
-        stock.symbol === data.symbol && stock.category === "국내" // 🔥 국내 주식만!
-          ? {
-              ...stock,
-              currentPrice: Number(data.price),
-              priceChange: Number(data.rate),
-              marketCap: Number(data.marketCap),
-            }
-          : stock
-      )
-    );
+  useEffect(() => {
+  socket.on("stockPrice", (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
+    setData((prev) => {
+      return prev.map((stock) => {
+        if (stock.symbol === data.symbol && stock.category === "국내") {
+          const prevPrice = stock.currentPrice;
+          const newPrice = Number(data.price);
+
+          // 하이라이트 처리 (가격 변경 시)
+          if (prevPrice !== newPrice) {
+            highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
+            setTimeout(() => {
+              highlight.current.delete(stock.id);
+              rerender((v) => v + 1); // 리렌더 트리거
+            }, 500);
+          }
+
+          return {
+            ...stock,
+            currentPrice: newPrice,
+            priceChange: Number(data.rate),
+            marketCap: Number(data.marketCap),
+          };
+        }
+        return stock;
+      });
+    });
   });
+
   return () => {
     socket.off("stockPrice");
   };
 }, []);
+
 
   // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
   useEffect(() => {
