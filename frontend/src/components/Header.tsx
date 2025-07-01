@@ -47,7 +47,7 @@ const Header: React.FC = () => {
   const navItems = [
     { key: "news", label: "뉴스", path: "/news" },
     { key: "market", label: "마켓", path: "/market" },
-    { key: "community", label: "커뮤니티", path: "/community" },
+    { key: "community", label: "팬지's TALK", path: "/community" },
   ];
 
   return (

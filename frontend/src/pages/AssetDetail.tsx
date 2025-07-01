@@ -149,7 +149,7 @@ const AssetDetail: React.FC = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            차트/호가
+            차트/뉴스
           </button>
           <button
             onClick={() => setSelectedTab("community")}
@@ -159,7 +159,7 @@ const AssetDetail: React.FC = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            토론
+            우끼끼
           </button>
         </nav>
       </header>

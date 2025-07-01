@@ -97,7 +97,7 @@ const Chatbot: React.FC = () => {
   return (
     <>
       <div
-        className={`chatbot-wrapper fixed bottom-28 right-8 w-[400px] max-h-[80vh]
+        className={`chatbot-wrapper fixed bottom-40 right-8 w-[400px] max-h-[80vh]
           bg-white text-gray-800 shadow-2xl rounded-xl flex flex-col
           transition-all duration-300 ease-in-out ${
             isChatOpen
@@ -176,7 +176,7 @@ const Chatbot: React.FC = () => {
 
       <button
         onClick={toggleChatbot}
-        className="fixed bottom-8 right-8 p-3 bg-blue-600 rounded-full
+        className="fixed bottom-14 right-8 p-3 bg-blue-600 rounded-full
           shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out"
       >
         {isChatOpen ? (
