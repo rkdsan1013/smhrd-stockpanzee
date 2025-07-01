@@ -1,4 +1,4 @@
-// frontend/src/pages/Home.tsx
+// /frontend/src/pages/Home.tsx
 import React, { useState, useEffect } from "react";
 import { fetchNews } from "../services/newsService";
 import type { NewsItem } from "../services/newsService";

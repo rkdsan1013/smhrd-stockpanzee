@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchNewsDetail, fetchLatestNewsByAsset } from "../services/newsService";
+import { fetchAssets } from "../services/assetService";
 import type { NewsDetail, NewsItem } from "../services/newsService";
 import { TradingViewMiniChart } from "../components/Chart/TradingViewMiniChart";
 import { getTradingViewSymbol } from "../services/tradingViewService";
@@ -51,7 +52,27 @@ const NewsDetailPage: React.FC = () => {
   const [news, setNews] = useState<NewsDetail | null>(null);
   const [latest, setLatest] = useState<NewsItem[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [symbolMarketMap, setSymbolMarketMap] = useState<Record<string, Record<string, number>>>(
+    {},
+  );
 
+  // 전체 자산(symbol+market → id) 매핑
+  useEffect(() => {
+    fetchAssets()
+      .then((assets) => {
+        const map: Record<string, Record<string, number>> = {};
+        assets.forEach((a) => {
+          const sym = a.symbol.toUpperCase();
+          const mkt = a.market.toUpperCase();
+          if (!map[sym]) map[sym] = {};
+          map[sym][mkt] = a.id;
+        });
+        setSymbolMarketMap(map);
+      })
+      .catch((e) => console.error("fetchAssets error:", e));
+  }, []);
+
+  // 뉴스 상세 & 최신 뉴스 로딩
   useEffect(() => {
     if (!id) {
       setStatus("error");
@@ -150,11 +171,43 @@ const NewsDetailPage: React.FC = () => {
               <div className="text-gray-300 text-xs mb-1">태그</div>
               <div className="flex flex-wrap gap-2">
                 {parsedTags.length > 0 ? (
-                  parsedTags.map((t) => (
-                    <span key={t} className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs">
-                      {t}
-                    </span>
-                  ))
+                  parsedTags.map((t) => {
+                    const sym = t.toUpperCase();
+                    const markets = symbolMarketMap[sym];
+                    let linkId: number | undefined;
+
+                    if (markets) {
+                      // crypto 뉴스면 BINANCE 마켓 우선
+                      if (news.news_category === "crypto") {
+                        linkId = markets["BINANCE"];
+                      } else {
+                        // stock 뉴스면 해당 news.assets_market 우선
+                        linkId = markets[news.assets_market!.toUpperCase()];
+                      }
+                      // 유일 매핑이 아니면, 단 하나만 있을 때 사용
+                      if (!linkId) {
+                        const mks = Object.keys(markets);
+                        if (mks.length === 1) {
+                          linkId = markets[mks[0]];
+                        }
+                      }
+                    }
+
+                    return linkId ? (
+                      <Link key={t} to={`/asset/${linkId}`}>
+                        <span className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs cursor-pointer">
+                          {t}
+                        </span>
+                      </Link>
+                    ) : (
+                      <span
+                        key={t}
+                        className="bg-blue-700 text-white px-3 py-1 rounded-full text-xs"
+                      >
+                        {t}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="text-gray-500 text-sm">태그 없음</span>
                 )}

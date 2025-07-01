@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import http from "http";
-import { emitMockTop25, updateRealToDB } from "./services/korStock";
+import { emitMockTop25, updateRealToDB } from "./services/marketData/krxMarketService";
 import pool from "./config/db";
 
 function sleep(ms: number) {

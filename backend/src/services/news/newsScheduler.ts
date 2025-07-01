@@ -27,17 +27,23 @@ function backupVectorData() {
   const tables = PG_VECTOR_TABLES.split(",")
     .map((t) => t.trim())
     .filter(Boolean);
+
   if (tables.length === 0) {
     console.error("❌ PG_VECTOR_TABLES 값이 비어 있습니다.");
     return;
   }
 
+  // 컨테이너 내부 경로
   const dumpPath = "/backup/vectordata.dump";
-  const args = [
+
+  // docker exec 로 DB 컨테이너 내부 pg_dump(v16) 호출
+  const dockerArgs = [
+    "exec",
+    "-i",
+    "stockpanzee-db",
+    "pg_dump",
     "-h",
-    PG_HOST,
-    "-p",
-    PG_PORT,
+    "localhost", // 컨테이너 내부에서 localhost
     "-U",
     PG_USER,
     "-Fc",
@@ -48,10 +54,12 @@ function backupVectorData() {
     ...tables.flatMap((t) => ["-t", t]),
     PG_NAME,
   ];
-  const env = { ...process.env, PGPASSWORD: PG_PASS };
 
-  console.log("🛠️ pg_dump 실행:", ["pg_dump", ...args].join(" "));
-  const child = spawn("pg_dump", args, { env, stdio: "inherit" });
+  console.log("🛠️ docker pg_dump 실행:", ["docker", ...dockerArgs].join(" "));
+  const child = spawn("docker", dockerArgs, {
+    env: { ...process.env, PGPASSWORD: PG_PASS },
+    stdio: "inherit",
+  });
 
   child.on("close", (code) => {
     if (code === 0) {
@@ -62,7 +70,7 @@ function backupVectorData() {
   });
 }
 
-// 뉴스 수집 스케줄러 등록
+// 00분: 전체 수집 + 백업
 cron.schedule(
   "0 * * * *",
   async () => {
@@ -81,18 +89,19 @@ cron.schedule(
   { timezone: "Asia/Seoul" },
 );
 
-cron.schedule(
-  "10,20,30,40,50 * * * *",
-  async () => {
-    console.log("⏰ 10분 간격 수집 시작");
-    try {
-      await Promise.all([fetchAndProcessKrxNews(), fetchAndProcessCryptoNews()]);
-      backupVectorData();
-    } catch (err) {
-      console.error("❌ 수집 오류:", err);
-    }
-  },
-  { timezone: "Asia/Seoul" },
-);
+// 10,20,30,40,50분: 일부 수집 + 백업
+// cron.schedule(
+//   "10,20,30,40,50 * * * *",
+//   async () => {
+//     console.log("⏰ 10분 간격: 국내+암호화폐 수집");
+//     try {
+//       await Promise.all([fetchAndProcessKrxNews(), fetchAndProcessCryptoNews()]);
+//       backupVectorData();
+//     } catch (err) {
+//       console.error("❌ 수집 오류:", err);
+//     }
+//   },
+//   { timezone: "Asia/Seoul" },
+// );
 
 console.log("🔔 뉴스 스케줄러 및 벡터 백업 등록 완료");

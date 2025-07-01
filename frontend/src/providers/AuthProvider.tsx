@@ -53,6 +53,4 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   );
 };
 
-
-
 export default AuthProvider;

@@ -1,4 +1,4 @@
-// frontend/src/pages/Community.tsx
+// /frontend/src/pages/Community.tsx
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -61,7 +61,9 @@ const Community: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     axios
-      .get<{ posts: CommunityPost[] } | CommunityPost[]>(`${import.meta.env.VITE_API_BASE_URL}/community`)
+      .get<{ posts: CommunityPost[] } | CommunityPost[]>(
+        `${import.meta.env.VITE_API_BASE_URL}/community`,
+      )
       .then(async (res) => {
         let loadedPosts: CommunityPost[];
         if (Array.isArray(res.data)) loadedPosts = res.data;
@@ -74,14 +76,14 @@ const Community: React.FC = () => {
             if (typeof post.comment_count === "number") return post;
             try {
               const res = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL}/community/${post.id}/comments`
+                `${import.meta.env.VITE_API_BASE_URL}/community/${post.id}/comments`,
               );
               const count = Array.isArray(res.data) ? res.data.length : 0;
               return { ...post, comment_count: count };
             } catch {
               return { ...post, comment_count: 0 };
             }
-          })
+          }),
         );
         setPosts(postsWithCounts);
         setLoading(false);
@@ -96,13 +98,11 @@ const Community: React.FC = () => {
   // 정렬/필터/페이지네이션
   let sortedPosts = posts;
   if (selectedSort === "latest") {
-    sortedPosts = posts.slice().sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    sortedPosts = posts
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   } else if (selectedSort === "popular") {
-    sortedPosts = posts.slice().sort(
-      (a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0)
-    );
+    sortedPosts = posts.slice().sort((a, b) => (b.community_likes ?? 0) - (a.community_likes ?? 0));
   }
 
   const filteredPosts =
@@ -293,9 +293,9 @@ const Community: React.FC = () => {
                 <img
                   src={
                     post.img_url
-                      ? (post.img_url.startsWith("/uploads/")
-                          ? `http://localhost:5000${post.img_url}`
-                          : post.img_url)
+                      ? post.img_url.startsWith("/uploads/")
+                        ? `http://localhost:5000${post.img_url}`
+                        : post.img_url
                       : "/panzee.webp"
                   }
                   alt="썸네일"
@@ -306,7 +306,7 @@ const Community: React.FC = () => {
                   {post.community_title}
                 </h3>
                 {/* 본문요약 */}
-                <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+                <p className="text-sm text-gray-300 mb-3 line-clamp-2 whitespace-pre-wrap">
                   {post.community_contents}
                 </p>
                 {/* 카테고리 | 닉네임 */}
@@ -368,7 +368,7 @@ const Community: React.FC = () => {
             <div key={index} className="w-10 h-10 flex items-center justify-center text-gray-500">
               {page}
             </div>
-          )
+          ),
         )}
         <button
           onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}

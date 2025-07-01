@@ -60,7 +60,7 @@ export const getCommunityPost = async (
       post.uuid = post.uuid.toString("hex");
     }
 
-    // 이미지 BLOB → base64
+    // 이미지
     if (post.community_img) {
       post.community_img = post.community_img.toString("base64");
     }
@@ -68,8 +68,13 @@ export const getCommunityPost = async (
     const user_uuid = (req as any).user?.uuid;
     let isLiked = false;
     if (user_uuid) {
-      isLiked = await communityService.isPostLikedByUser(id, Buffer.from(user_uuid, "hex"));
+      const buf = Buffer.from(user_uuid, "hex");
+      console.log("user_uuid(프론트):", user_uuid);
+      console.log("user_uuid(Buffer):", buf);
+      isLiked = await communityService.isPostLikedByUser(id, buf);
+      console.log("isLiked 값:", isLiked);
     }
+
     const community_likes = await communityService.getCommunityLikesCount(id);
 
     res.json({

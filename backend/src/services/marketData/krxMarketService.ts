@@ -1,213 +1,226 @@
-// /backend/src/services/emitStockPrices.ts
-
+// ✅ korStock.ts - 실전투자 DB 저장 (25개씩) + 모의투자 실시간 emit
+import axios from "axios";
 import dotenv from "dotenv";
+import pool from "../../config/db";
+import { Server } from "socket.io";
+
 dotenv.config();
 
-import axios from "axios";
-import { RowDataPacket } from "mysql2";
-import pool from "../../config/db";
-import type { Server as IOServer } from "socket.io";
-
 let accessToken = "";
+let mockToken = "";
 
-/**
- * 1) ACCESS TOKEN 발급
- */
-async function getAccessToken(): Promise<void> {
+interface TokenResponse {
+  access_token: string;
+}
+
+interface StockItem {
+  symbol: string;
+  name: string;
+  market: string;
+}
+
+// ✅ 실전투자 토큰 발급
+async function getAccessToken() {
   try {
-    const { data } = await axios.post<{ access_token: string }>(
+    const res = await axios.post<TokenResponse>(
       "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
       {
         grant_type: "client_credentials",
         appkey: process.env.APP_KEY,
         appsecret: process.env.APP_SECRET,
       },
-      { headers: { "Content-Type": "application/json" } },
+      { headers: { "Content-Type": "application/json" } }
     );
-    accessToken = data.access_token;
-    console.log("✅ ACCESS_TOKEN 발급 성공");
+    accessToken = res.data.access_token;
+    console.log("🔐 실전투자 토큰 발급 완료");
   } catch (err: any) {
-    console.error("❌ ACCESS_TOKEN 발급 실패:", err.message || err);
-    throw err;
+    console.error("❌ 토큰 발급 실패 - 실전:", err.response?.data || err.message);
   }
 }
 
-/**
- * 2) 단일 종목 시세 조회
- *    - 간단 retry: socket hang up 오류 시 최대 2회 재시도
- */
-async function fetchFullPriceInfo(
-  symbol: string,
-  tries = 2,
-): Promise<{
-  symbol: string;
-  price: number | null;
-  prev: number | null;
-  cap: number | null;
-}> {
-  const url =
-    "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price";
-  const headers = {
-    "Content-Type": "application/json",
-    authorization: `Bearer ${accessToken}`,
-    appkey: process.env.APP_KEY!,
-    appsecret: process.env.APP_SECRET!,
-    tr_id: "FHKST01010100",
-  };
-
+// ✅ 모의투자 토큰 발급
+async function getMockToken() {
   try {
-    const { data } = await axios.get<{ output: any }>(url, {
-      headers,
-      params: {
-        fid_cond_mrkt_div_code: "J",
-        fid_input_iscd: symbol,
+    const res = await axios.post<TokenResponse>(
+      "https://openapivts.koreainvestment.com:29443/oauth2/tokenP",
+      {
+        grant_type: "client_credentials",
+        appkey: process.env.MOCK_KEY,
+        appsecret: process.env.MOCK_SECRET,
       },
-      timeout: 10_000,
-    });
-
-    const o = Number(data.output.stck_prpr);
-    const d = Number(data.output.prdy_vrss);
-    const s = Number(data.output.lstn_stcn);
-
-    const price = isNaN(o) ? null : o;
-    const prev = !price || isNaN(d) ? null : o - d;
-    const cap = !price || isNaN(s) ? null : o * s;
-
-    return { symbol, price, prev, cap };
+      { headers: { "Content-Type": "application/json" } }
+    );
+    mockToken = res.data.access_token;
+    console.log("🔐 모의투자 토큰 발급 완료");
   } catch (err: any) {
-    // socket hang up 시 재시도
-    if (tries > 0 && /socket hang up/.test(err.message)) {
-      console.warn(`🔄 [${symbol}] 네트워크 에러, 재시도 남음(${tries})`);
-      await new Promise((r) => setTimeout(r, 1000));
-      return fetchFullPriceInfo(symbol, tries - 1);
-    }
-    console.error(`❌ [${symbol}] 시세 조회 실패:`, err.message || err);
-    return { symbol, price: null, prev: null, cap: null };
+    console.error("❌ 토큰 발급 실패 - 모의:", err.response?.data || err.message);
   }
 }
 
-/**
- * 3) asset_info 테이블에 저장
- *    - prev가 0이거나 null일 땐 changePct를 0으로 설정
- */
-async function saveToAssetInfo(params: {
-  assetId: number;
-  price: number;
-  prev: number | null;
-  cap: number;
-}): Promise<boolean> {
-  const { assetId, price, prev, cap } = params;
-
-  // 분모가 0이거나 null일 경우 등락률 0
-  const changePct = !prev || prev <= 0 ? 0 : ((price - prev) / prev) * 100;
+// ✅ 주식 정보 조회
+async function fetchStock(symbol: string, type: "real" | "mock") {
+  const isMock = type === "mock";
+  const baseURL = isMock
+    ? "https://openapivts.koreainvestment.com:29443"
+    : "https://openapi.koreainvestment.com:9443";
+  const token = isMock ? mockToken : accessToken;
 
   try {
-    await pool.execute(
-      `INSERT INTO asset_info
-         (asset_id, current_price, price_change, market_cap, last_updated)
-       VALUES (?, ?, ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE
-         current_price = VALUES(current_price),
-         price_change  = VALUES(price_change),
-         market_cap    = VALUES(market_cap),
-         last_updated  = NOW()`,
-      [assetId, price, changePct, cap],
+    const res = await axios.get<{ output: any }>(
+      `${baseURL}/uapi/domestic-stock/v1/quotations/inquire-price`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          authorization: `Bearer ${token}`,
+          appkey: isMock ? process.env.MOCK_KEY! : process.env.APP_KEY!,
+          appsecret: isMock ? process.env.MOCK_SECRET! : process.env.APP_SECRET!,
+          tr_id: "FHKST01010100",
+        },
+        params: {
+          fid_cond_mrkt_div_code: "J",
+          fid_input_iscd: symbol,
+        },
+      }
     );
-    return true;
+
+    const o = res.data.output;
+    const price = Number(o.stck_prpr);
+    const diff = Number(o.prdy_vrss);
+    const prevPrice = !isNaN(price) && !isNaN(diff) ? price - diff : null;
+    const shares = Number(o.lstn_stcn);
+    const marketCap = !isNaN(price) && !isNaN(shares) ? price * shares : null;
+
+    return {
+      symbol,
+      name: o.hts_kor_isnm,
+      market: o.rprs_mrkt_kor_name,
+      price,
+      diff,
+      prevPrice,
+      marketCap,
+    };
   } catch (err: any) {
-    console.error(`❌ asset_info 저장 실패 (asset_id=${assetId}):`, err.message || err);
-    return false;
+    console.error(`❌ 조회 실패 - ${type.toUpperCase()} ${symbol}:`, err.response?.data || err.message);
+    return {
+      symbol,
+      name: "",
+      market: "",
+      price: null,
+      diff: null,
+      prevPrice: null,
+      marketCap: null,
+    };
   }
 }
 
-/** 4) 대기 유틸 */
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+// ✅ 슬립 유틸
+function sleep(ms: number) {
+  return new Promise((res) => setTimeout(res, ms));
 }
 
-/**
- * 5) 메인 함수: socket.io에 실시간 주가 emit & DB 저장
- */
-export async function emitStockPrices(io: IOServer): Promise<void> {
-  console.log("🟡 emitStockPrices 시작");
+// ✅ 모의투자 상위 25개 종목 실시간 emit
+export async function emitMockTop25(io: Server) {
+  if (!mockToken) await getMockToken();
 
-  // 1) 토큰 확보
-  if (!accessToken) {
-    await getAccessToken();
-  }
+  while (true) {
+    console.log("🚀 모의투자 수집 시작 (상위 25개)");
 
-  // 2) DB에서 자산 리스트(id, symbol, name) 조회
-  const [rows] = await pool.query<RowDataPacket[] & { id: number; symbol: string; name: string }[]>(
-    `SELECT id, symbol, name
-       FROM assets
-      WHERE market IN ('KOSPI','KOSDAQ')`,
-  );
-  const stocks = rows as { id: number; symbol: string; name: string }[];
-  console.log(`▶️ 조회할 종목 수: ${stocks.length}`);
+    const [rows]: any = await pool.query(`
+      SELECT a.symbol, a.name, a.market
+      FROM asset_info i
+      JOIN assets a ON i.asset_id = a.id
+      WHERE a.market IN ('KOSPI', 'KOSDAQ')
+      ORDER BY i.market_cap DESC
+      LIMIT 25
+    `);
 
-  const chunkSize = 30;
-  let successCount = 0;
-  let failCount = 0;
-  let loggedOk = false;
-  let loggedErr = false;
+    let successCount = 0;
+    let failCount = 0;
 
-  // 3) 청크 단위 처리
-  for (let i = 0; i < stocks.length; i += chunkSize) {
-    const batch = stocks.slice(i, i + chunkSize);
-    const infos = await Promise.all(batch.map((s) => fetchFullPriceInfo(s.symbol)));
+    for (let i = 0; i < rows.length; i += 3) {
+      const chunk = rows.slice(i, i + 3);
+      const results = await Promise.all(
+        chunk.map((stock: any) => fetchStock(stock.symbol, "mock"))
+      );
 
-    for (const info of infos) {
-      const meta = batch.find((s) => s.symbol === info.symbol)!;
-      const { id: assetId, name } = meta;
+      for (const res of results) {
+        if (res.price && res.prevPrice) {
+          const rate = ((res.diff! / res.prevPrice!) * 100).toFixed(2);
+          io.emit("stockPrice", {
+            symbol: res.symbol,
+            price: res.price,
+            diff: res.diff,
+            prevPrice: res.prevPrice,
+            rate,
+            marketCap: res.marketCap,
+          });
 
-      // price, prev, cap 모두 null 아님을 체크
-      if (info.price != null && info.prev != null && info.cap != null) {
-        const diff = info.price - info.prev;
-        const pct = (diff / info.prev) * 100;
-        const arrow = diff > 0 ? "🔺" : diff < 0 ? "🔻" : "⏸️";
-
-        io.emit("stockPrice", {
-          symbol: info.symbol,
-          name,
-          price: info.price,
-          prevPrice: info.prev,
-          diff,
-          rate: pct.toFixed(2),
-          marketCap: info.cap,
-        });
-
-        const ok = await saveToAssetInfo({
-          assetId,
-          price: info.price,
-          prev: info.prev,
-          cap: info.cap,
-        });
-        if (ok) {
           successCount++;
-          if (!loggedOk) {
-            console.log(`${arrow} ${name}(${info.symbol}) ${pct.toFixed(2)}%`);
-            loggedOk = true;
-          }
         } else {
           failCount++;
-          if (!loggedErr) {
-            console.warn(`⚠️ DB 저장 오류: ${name}(${info.symbol})`);
-            loggedErr = true;
-          }
         }
-      } else {
+      }
+
+      await sleep(2000);
+    }
+
+    console.log(`✅ 모의투자 전송 완료 - 성공 ${successCount}개 / 실패 ${failCount}개`);
+    await sleep(5000);
+  }
+}
+
+// ✅ 실전 종목 DB 저장
+export async function updateRealToDB() {
+  console.log("🚀 실전 종목 수집 시작");
+
+  if (!accessToken) await getAccessToken();
+
+  const [rows]: any = await pool.query(`
+    SELECT id, symbol, name, market FROM assets
+    WHERE market IN ('KOSPI', 'KOSDAQ')
+  `);
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < rows.length; i += 25) {
+    const chunk = rows.slice(i, i + 25);
+    const results = await Promise.all(
+      chunk.map((asset: { symbol: string; }) => fetchStock(asset.symbol, "real"))
+    );
+
+    for (let j = 0; j < chunk.length; j++) {
+      const asset = chunk[j];
+      const res = results[j];
+
+      if (res.price == null || res.prevPrice == null || res.marketCap == null) {
         failCount++;
-        if (!loggedErr) {
-          console.warn(`⚠️ 조회 실패: ${name}(${info.symbol})`);
-          loggedErr = true;
-        }
+        continue;
+      }
+
+      try {
+        const rate = Number(((res.diff! / res.prevPrice!) * 100).toFixed(2));
+
+        await pool.execute(
+          `INSERT INTO asset_info 
+            (asset_id, current_price, price_change, market_cap, last_updated)
+           VALUES (?, ?, ?, ?, NOW())
+           ON DUPLICATE KEY UPDATE
+             current_price = VALUES(current_price),
+             price_change = VALUES(price_change),
+             market_cap = VALUES(market_cap),
+             last_updated = NOW()`,
+          [asset.id, res.price, rate, res.marketCap]
+        );
+
+        successCount++;
+      } catch (e: any) {
+        failCount++;
       }
     }
 
-    if (i + chunkSize < stocks.length) {
-      await sleep(2000);
-    }
+    await sleep(2000);
   }
 
-  console.log(`✅ emitStockPrices 완료: 성공 ${successCount} / 실패 ${failCount}`);
+  console.log(`✅ 실전 종목 저장 완료 - 성공 ${successCount}개 / 실패 ${failCount}개`);
 }
