@@ -75,6 +75,36 @@ export const SELECT_NEWS_BY_ASSET = `
   FROM news n
   LEFT JOIN news_analysis na ON n.id = na.news_id
   WHERE JSON_CONTAINS(na.tags, JSON_QUOTE(?), '$')
-  /* excludeId 파라미터가 있으면 AND n.id != ? 를 추가 */
   ORDER BY n.published_at DESC
+`;
+
+/* ────────────────── 추가: 뉴스 CRUD ────────────────── */
+
+/** 뉴스 INSERT */
+export const INSERT_NEWS = `
+  INSERT INTO news
+    (news_category, title, title_ko, content, thumbnail, news_link, publisher, published_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+/** 뉴스 한글 제목 업데이트 */
+export const UPDATE_NEWS_TITLE_KO = `
+  UPDATE news
+  SET title_ko = ?
+  WHERE id = ?
+`;
+
+/** 링크로 기존 뉴스 조회 */
+export const SELECT_NEWS_BY_LINK = `
+  SELECT id FROM news
+  WHERE news_link = ?
+  LIMIT 1
+`;
+
+/** 뉴스 분석 INSERT */
+export const INSERT_NEWS_ANALYSIS = `
+  INSERT INTO news_analysis
+    (news_id, news_sentiment, news_positive, news_negative,
+     community_sentiment, summary, brief_summary, tags)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `;

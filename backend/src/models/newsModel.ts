@@ -7,6 +7,29 @@ import {
   SELECT_NEWS_BY_ASSET,
 } from "./newsQueries";
 
+// ① 트랜잭션에서 사용할 타입 정의 (export 추가)
+export interface INews {
+  news_category: "domestic" | "international" | "crypto";
+  title: string;
+  title_ko?: string;
+  content: string;
+  thumbnail: string;
+  news_link: string;
+  publisher: string;
+  published_at: Date;
+}
+
+export interface NewsAnalysis {
+  news_id: number;
+  news_sentiment: number;
+  news_positive: string;
+  news_negative: string;
+  community_sentiment?: number;
+  summary: string;
+  brief_summary: string;
+  tags: string;
+}
+
 export interface NewsDetailRaw {
   id: number;
   title_ko: string;
@@ -55,13 +78,10 @@ export async function findNewsWithAnalysisById(newsId: number): Promise<NewsDeta
   const news = (rows as any[])[0];
   if (!news) return null;
 
-  // tags: JSON 문자열 → 배열
   if (typeof news.tags === "string") {
     try {
       news.tags = JSON.parse(news.tags);
-    } catch {
-      // parsing 실패 시 무시
-    }
+    } catch {}
   }
   return news;
 }
@@ -71,7 +91,6 @@ export async function findAllNewsWithAnalysis(): Promise<NewsRow[]> {
   const [rows] = await db.query(SELECT_ALL_NEWS_WITH_ANALYSIS);
   return (rows as any[]).map((r) => ({
     ...r,
-    // tags: 배열이면 stringify, 문자열이면 그대로
     tags: typeof r.tags === "string" ? r.tags : JSON.stringify(r.tags),
   }));
 }
@@ -82,7 +101,6 @@ export async function findNewsByAsset(assetSymbol: string, excludeId?: number): 
   const params: (string | number)[] = [assetSymbol];
 
   if (excludeId) {
-    // WHERE 뒤에 AND 조건을 붙이려면 문자열 조작
     sql = sql.replace("ORDER BY", `AND n.id != ? ORDER BY`);
     params.push(excludeId);
   }
