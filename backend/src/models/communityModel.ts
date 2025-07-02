@@ -123,7 +123,7 @@ export async function insertLikeOrUpdate(userUuid: Buffer, targetType: string, t
 
 export async function getComments(target_type: string, target_id: number) {
   const [rows]: any = await pool.query(
-    `SELECT * FROM community_com WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC`,
+    `SELECT * FROM comments WHERE target_type = ? AND target_id = ? ORDER BY created_at ASC`,
     [target_type, target_id]
   );
   return rows;
@@ -138,7 +138,7 @@ export async function insertComment(params: {
   img_url?: string
 }) {
   const [result]: any = await pool.query(
-    `INSERT INTO community_com (uuid, target_type, target_id, parent_id, content, img_url)
+    `INSERT INTO comments (uuid, target_type, target_id, parent_id, content, img_url)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
       params.uuid,
@@ -155,7 +155,7 @@ export async function insertComment(params: {
 
 export async function updateComment(id: number, content: string, uuid: Buffer) {
   const [result]: any = await pool.query(
-    `UPDATE community_com SET content = ?, updated_at = NOW() WHERE id = ? AND uuid = ?`,
+    `UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ? AND uuid = ?`,
     [content, id, uuid]
   );
   return result;
@@ -163,7 +163,7 @@ export async function updateComment(id: number, content: string, uuid: Buffer) {
 
 export async function deleteComment(id: number, uuid: Buffer) {
   const [result]: any = await pool.query(
-    `DELETE FROM community_com WHERE id = ? AND uuid = ?`,
+    `DELETE FROM comments WHERE id = ? AND uuid = ?`,
     [id, uuid]
   );
   return result;
@@ -171,7 +171,7 @@ export async function deleteComment(id: number, uuid: Buffer) {
 
 export async function getCommentsPaged(target_type: string, target_id: number, offset: number, limit: number) {
   const [rows]: any = await pool.query(
-    `SELECT * FROM community_com WHERE target_type = ? AND target_id = ?
+    `SELECT * FROM comments WHERE target_type = ? AND target_id = ?
      ORDER BY created_at DESC LIMIT ?, ?`,
     [target_type, target_id, offset, limit]
   );
