@@ -67,17 +67,16 @@ export interface NewsRow {
   tags: string;
 }
 
-/** 1) 조회수 1 증가 */
+// 1) 조회수 1 증가
 export async function incrementViewCount(newsId: number): Promise<void> {
   await db.query(UPDATE_NEWS_VIEW_COUNT, [newsId]);
 }
 
-/** 2) 뉴스 상세 + 분석 조회 */
+// 2) 뉴스 상세 + 분석 조회
 export async function findNewsWithAnalysisById(newsId: number): Promise<NewsDetailRaw | null> {
   const [rows] = await db.query(SELECT_NEWS_WITH_ANALYSIS_BY_ID, [newsId]);
   const news = (rows as any[])[0];
   if (!news) return null;
-
   if (typeof news.tags === "string") {
     try {
       news.tags = JSON.parse(news.tags);
@@ -86,7 +85,7 @@ export async function findNewsWithAnalysisById(newsId: number): Promise<NewsDeta
   return news;
 }
 
-/** 3) 전체 뉴스 + 분석 목록 조회 */
+// 3) 전체 뉴스 + 분석 목록 조회
 export async function findAllNewsWithAnalysis(): Promise<NewsRow[]> {
   const [rows] = await db.query(SELECT_ALL_NEWS_WITH_ANALYSIS);
   return (rows as any[]).map((r) => ({
@@ -95,16 +94,14 @@ export async function findAllNewsWithAnalysis(): Promise<NewsRow[]> {
   }));
 }
 
-/** 4) 종목(asset) 기반 뉴스 필터 조회 */
+// 4) 종목(asset) 기반 뉴스 필터 조회
 export async function findNewsByAsset(assetSymbol: string, excludeId?: number): Promise<NewsRow[]> {
   let sql = SELECT_NEWS_BY_ASSET;
   const params: (string | number)[] = [assetSymbol];
-
   if (excludeId) {
     sql = sql.replace("ORDER BY", `AND n.id != ? ORDER BY`);
     params.push(excludeId);
   }
-
   const [rows] = await db.query(sql, params);
   return (rows as any[]).map((r) => ({
     ...r,

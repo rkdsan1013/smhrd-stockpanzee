@@ -59,25 +59,35 @@ function TickerTape() {
       if (running) setTimeout(load, 5000);
     };
     load();
-    return () => { running = false; };
+    return () => {
+      running = false;
+    };
   }, []);
 
   // fetch favorites
   useEffect(() => {
     if (user) {
-      fetchFavorites().then(setFavorites).catch(() => setFavorites([]));
+      fetchFavorites()
+        .then(setFavorites)
+        .catch(() => setFavorites([]));
     } else {
       setFavorites([]);
     }
   }, [user]);
 
   // 전체 10개씩 추출
-  const koreaTop10 = tickers.filter((t) => getCategory(t.market) === "한국")
-    .sort((a, b) => b.marketCap - a.marketCap).slice(0, 10);
-  const globalTop10 = tickers.filter((t) => getCategory(t.market) === "해외")
-    .sort((a, b) => b.marketCap - a.marketCap).slice(0, 10);
-  const cryptoTop10 = tickers.filter((t) => getCategory(t.market) === "암호화폐")
-    .sort((a, b) => b.marketCap - a.marketCap).slice(0, 10);
+  const koreaTop10 = tickers
+    .filter((t) => getCategory(t.market) === "한국")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
+  const globalTop10 = tickers
+    .filter((t) => getCategory(t.market) === "해외")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
+  const cryptoTop10 = tickers
+    .filter((t) => getCategory(t.market) === "암호화폐")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
 
   let displayTickers: Ticker[] = [];
   if (showFav && user && favorites.length > 0) {
@@ -85,8 +95,12 @@ function TickerTape() {
     displayTickers = [...displayTickers, ...displayTickers];
   } else {
     displayTickers = [
-      ...koreaTop10, ...globalTop10, ...cryptoTop10,
-      ...koreaTop10, ...globalTop10, ...cryptoTop10,
+      ...koreaTop10,
+      ...globalTop10,
+      ...cryptoTop10,
+      ...koreaTop10,
+      ...globalTop10,
+      ...cryptoTop10,
     ];
   }
 
@@ -165,7 +179,10 @@ function TickerTape() {
           tabIndex={0}
           aria-label="즐겨찾기 모드"
         >
-          <Icons name="banana" className={`w-7 h-7 ${showFav ? "text-yellow-400" : "text-gray-400"}`} />
+          <Icons
+            name="banana"
+            className={`w-7 h-7 ${showFav ? "text-yellow-400" : "text-gray-400"}`}
+          />
         </button>
       </div>
 
@@ -210,8 +227,8 @@ function TickerTape() {
                     ticker.priceChange > 0
                       ? "text-green-400"
                       : ticker.priceChange < 0
-                      ? "text-red-400"
-                      : "text-gray-300"
+                        ? "text-red-400"
+                        : "text-gray-300"
                   }`}
                 >
                   {ticker.priceChange > 0 && "+"}

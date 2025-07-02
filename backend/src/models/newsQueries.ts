@@ -33,18 +33,18 @@ export const SELECT_NEWS_WITH_ANALYSIS_BY_ID = `
   LIMIT 1
 `;
 
-/** 전체 뉴스 + 분석(join) 목록 조회 (view_count 포함) */
+/** 전체 뉴스 + 분석(join) 목록 조회 */
 export const SELECT_ALL_NEWS_WITH_ANALYSIS = `
   SELECT
     n.id,
     n.title,
     n.title_ko,
-    n.news_category    AS category,
-    n.thumbnail        AS image,
+    n.news_category   AS category,
+    n.thumbnail       AS image,
     n.publisher,
     n.published_at,
     n.view_count,
-    na.news_sentiment  AS sentiment,
+    na.news_sentiment AS sentiment,
     na.news_positive,
     na.news_negative,
     na.summary,
@@ -55,23 +55,23 @@ export const SELECT_ALL_NEWS_WITH_ANALYSIS = `
   ORDER BY n.published_at DESC
 `;
 
-/** 종목(asset) 기반 뉴스 필터 조회 (view_count 포함) */
+/** 종목(asset) 기반 뉴스 필터 조회 */
 export const SELECT_NEWS_BY_ASSET = `
   SELECT
     n.id,
     n.title,
     n.title_ko,
-    n.news_category   AS news_category,
-    n.thumbnail       AS thumbnail,
+    n.news_category AS category,
+    n.thumbnail     AS image,
     n.publisher,
     n.published_at,
     n.view_count,
-    na.news_sentiment AS news_sentiment,
-    na.brief_summary  AS brief_summary,
-    na.summary        AS summary,
-    na.news_positive  AS news_positive,
-    na.news_negative  AS news_negative,
-    na.tags           AS tags
+    na.news_sentiment AS sentiment,
+    na.brief_summary   AS brief_summary,
+    na.summary         AS summary,
+    na.news_positive   AS news_positive,
+    na.news_negative   AS news_negative,
+    na.tags            AS tags
   FROM news n
   LEFT JOIN news_analysis na ON n.id = na.news_id
   WHERE JSON_CONTAINS(na.tags, JSON_QUOTE(?), '$')

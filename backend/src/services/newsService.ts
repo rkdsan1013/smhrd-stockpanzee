@@ -11,7 +11,7 @@ export interface NewsItem {
   summary: string;
   brief_summary: string;
   tags: string; // JSON 문자열
-  published_at: string; // 변경: string
+  published_at: string; // ISO string
   publisher: string;
   view_count: number;
 }
@@ -23,7 +23,7 @@ export interface NewsDetail {
   thumbnail: string;
   news_link: string;
   publisher: string;
-  published_at: string; // 변경: string
+  published_at: string;
   summary: string;
   news_positive: string;
   news_negative: string;
@@ -36,27 +36,24 @@ export interface NewsDetail {
   view_count: number;
 }
 
-// 조회수 증가 서비스 (수정 없음)
+// 조회수 증가
 export async function incrementViewCount(newsId: number): Promise<void> {
   return newsModel.incrementViewCount(newsId);
 }
 
-// 상세 조회 (ID) — view_count 포함
+// 상세 조회
 export async function getNewsDetailById(newsId: number): Promise<NewsDetail | null> {
   const raw = await newsModel.findNewsWithAnalysisById(newsId);
   if (!raw) return null;
-
-  // tags 배열 보장
   const tagsArr = Array.isArray(raw.tags)
     ? raw.tags
     : (() => {
         try {
           return JSON.parse(raw.tags as string);
         } catch {
-          return [] as string[];
+          return [];
         }
       })();
-
   return {
     id: raw.id,
     title_ko: raw.title_ko,
@@ -64,7 +61,6 @@ export async function getNewsDetailById(newsId: number): Promise<NewsDetail | nu
     thumbnail: raw.thumbnail,
     news_link: raw.news_link,
     publisher: raw.publisher,
-    // Date → ISO string
     published_at: raw.published_at.toISOString(),
     summary: raw.summary,
     news_positive: raw.news_positive,
@@ -72,30 +68,26 @@ export async function getNewsDetailById(newsId: number): Promise<NewsDetail | nu
     community_sentiment: String(raw.community_sentiment ?? ""),
     news_sentiment: raw.news_sentiment,
     tags: tagsArr,
-    assets_symbol: raw.assets_symbol ?? undefined,
-    assets_market: raw.assets_market ?? undefined,
-    assets_name: raw.assets_name ?? undefined,
+    assets_symbol: raw.assets_symbol,
+    assets_market: raw.assets_market,
+    assets_name: raw.assets_name,
     view_count: raw.view_count,
   };
 }
 
-/**
- * 종목(Symbol) 기반으로 매칭된 최신 뉴스 목록 조회 (현재 ID 제외)
- */
+// 종목별 최신 뉴스 조회
 export async function getNewsByAsset(assetSymbol: string, excludeId?: number): Promise<NewsItem[]> {
   const list = await newsModel.findNewsByAsset(assetSymbol, excludeId);
-
   return list.map((item) => ({
     id: item.id,
     title: item.title,
     title_ko: item.title_ko,
     image: item.image,
     category: item.category,
-    sentiment: item.sentiment,
+    sentiment: item.sentiment, // 이제 실제 news_sentiment 값(1~5)이 내려갑니다
     summary: item.summary,
     brief_summary: item.brief_summary,
-    tags: Array.isArray(item.tags) ? JSON.stringify(item.tags) : item.tags,
-    // Date → ISO string
+    tags: item.tags,
     published_at: item.published_at.toISOString(),
     publisher: item.publisher,
     view_count: item.view_count,

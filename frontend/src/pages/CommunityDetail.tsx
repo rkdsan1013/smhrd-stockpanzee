@@ -48,10 +48,10 @@ const CommunityDetail: React.FC = () => {
   const fetchPost = useCallback(() => {
     setLoading(true);
     axios
-      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`,{
-        withCredentials: true
+      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`, {
+        withCredentials: true,
       })
-      .then(res => setPost(res.data))
+      .then((res) => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
   }, [id]);
