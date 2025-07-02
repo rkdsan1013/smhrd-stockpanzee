@@ -162,7 +162,7 @@ const AssetDetail: React.FC = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            커뮤니티
+            토론방
           </button>
         </nav>
       </header>

@@ -1,7 +1,7 @@
 // frontend/src/pages/NewsDetail.tsx
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { fetchNewsDetail, fetchLatestNewsByAsset } from "../services/newsService";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { fetchNewsDetail, fetchLatestNewsByAsset, fetchNews } from "../services/newsService";
 import { fetchAssets } from "../services/assetService";
 import type { NewsDetail, NewsItem } from "../services/newsService";
 import { TradingViewMiniChart } from "../components/Chart/TradingViewMiniChart";
@@ -12,7 +12,6 @@ const DEFAULT_THUMB = "/panzee.webp";
 const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
 const stepColors = ["bg-red-500", "bg-orange-500", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
 
-/** 5칸 분리된 게이지 */
 const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   if (score == null || isNaN(score)) {
     return <span className="text-gray-400 text-sm">데이터 없음</span>;
@@ -36,7 +35,6 @@ const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   );
 };
 
-/** JSON 문자열 또는 배열 → 배열로 변환 */
 const parseList = (val: string | string[] | undefined): string[] => {
   if (Array.isArray(val)) return val;
   if (!val) return [];
@@ -50,12 +48,16 @@ const parseList = (val: string | string[] | undefined): string[] => {
 
 const NewsDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  // 모든 Hook을 최상단에
   const [news, setNews] = useState<NewsDetail | null>(null);
   const [latest, setLatest] = useState<NewsItem[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [symbolMarketMap, setSymbolMarketMap] = useState<Record<string, Record<string, number>>>(
     {},
   );
+  const [allNews, setAllNews] = useState<Pick<NewsItem, "id" | "title_ko" | "title" | "published_at">[]>([]);
 
   // 전체 자산(symbol+market → id) 매핑
   useEffect(() => {
@@ -73,61 +75,96 @@ const NewsDetailPage: React.FC = () => {
       .catch((e) => console.error("fetchAssets error:", e));
   }, []);
 
-  // 뉴스 상세 & 최신 뉴스 로딩
+  // 뉴스 최신순 전체 목록 fetch (id, title 등)
+  useEffect(() => {
+    fetchNews()
+      .then(list => setAllNews(list.map(n => ({
+        id: n.id,
+        title_ko: n.title_ko,
+        title: n.title,
+        published_at: n.published_at,
+      }))))
+      .catch(() => setAllNews([]));
+  }, []);
+
+  // 뉴스 상세 & 관련 뉴스 fetch
   useEffect(() => {
     if (!id) {
       setStatus("error");
+      setNews(null);
+      setLatest([]);
       return;
     }
     setStatus("loading");
-
+    setNews(null);
+    setLatest([]);
     fetchNewsDetail(+id)
       .then((data) => {
         setNews(data);
         if (data.assets_symbol) {
           return fetchLatestNewsByAsset(data.assets_symbol, data.id);
         }
-        return Promise.resolve([]);
+        return [];
       })
       .then((list) => {
         setLatest(list.slice(0, MAX_LATEST));
         setStatus("idle");
       })
-      .catch(() => setStatus("error"));
+      .catch(() => {
+        setStatus("error");
+        setNews(null);
+        setLatest([]);
+      });
   }, [id]);
 
+  // 이전/다음 뉴스 계산
+  const currentIndex = allNews.findIndex(n => n.id === Number(id));
+  const prevNews = currentIndex > 0 ? allNews[currentIndex - 1] : null;
+  const nextNews = currentIndex >= 0 && currentIndex < allNews.length - 1 ? allNews[currentIndex + 1] : null;
+
+  // ←/→ 키보드 단축키 이동
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft" && prevNews) {
+        navigate(`/news/${prevNews.id}`);
+      } else if (e.key === "ArrowRight" && nextNews) {
+        navigate(`/news/${nextNews.id}`);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate, prevNews, nextNews]);
+
+  // 중간 return을 하지 않고 렌더 변수로 분기
+  let content: React.ReactNode = null;
   if (status === "loading") {
-    return (
+    content = (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         로딩 중…
       </div>
     );
-  }
-
-  if (status === "error" || !news) {
-    return (
+  } else if (status === "error" || !news) {
+    content = (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
         뉴스를 불러올 수 없습니다.
       </div>
     );
-  }
+  } else {
+    // TradingView 심볼
+    const tvSymbol = news.assets_symbol
+      ? news.news_category === "crypto"
+        ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
+        : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
+      : "";
 
-  // TradingView 심볼
-  const tvSymbol = news.assets_symbol
-    ? news.news_category === "crypto"
-      ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
-      : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
-    : "";
+    // 긍/부정 배열 파싱
+    const positives = parseList(news.news_positive);
+    const negatives = parseList(news.news_negative);
 
-  // 긍/부정 배열 파싱
-  const positives = parseList(news.news_positive);
-  const negatives = parseList(news.news_negative);
+    // 태그 배열 파싱
+    const parsedTags = parseList(news.tags);
 
-  // 태그 배열 파싱
-  const parsedTags = parseList(news.tags);
-
-  return (
-    <div className="w-full bg-gray-900 px-6 py-8">
+    content = (
       <div className="max-w-screen-xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main */}
         <div className="lg:col-span-3 space-y-6">
@@ -290,6 +327,39 @@ const NewsDetailPage: React.FC = () => {
             </ul>
           </div>
         </aside>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full bg-gray-900 px-6 py-8">
+      {content}
+      {/* 이전/다음 버튼 헤더 */}
+      <div className="max-w-screen-xl mx-auto py-6">
+        <div className="flex justify-between items-center mb-5">
+          <button
+            disabled={!prevNews}
+            onClick={() => prevNews && navigate(`/news/${prevNews.id}`)}
+            className={`flex items-center px-4 py-2 rounded-lg bg-gray-800 hover:bg-blue-700 text-white font-semibold text-lg transition 
+              ${!prevNews ? "opacity-40 cursor-not-allowed" : ""}`}
+            title={prevNews ? `${prevNews.title_ko || prevNews.title}\n${new Date(prevNews.published_at).toLocaleDateString()}` : "이전 뉴스 없음"}
+            aria-label="이전 뉴스"
+          >
+            <span className="mr-2 text-2xl ">←</span>
+            이전 뉴스
+          </button>
+          <button
+            disabled={!nextNews}
+            onClick={() => nextNews && navigate(`/news/${nextNews.id}`)}
+            className={`flex items-center px-4 py-2 rounded-lg bg-gray-800 hover:bg-blue-700 text-white font-semibold text-lg transition 
+              ${!nextNews ? "opacity-40 cursor-not-allowed" : ""}`}
+            title={nextNews ? `${nextNews.title_ko || nextNews.title}\n${new Date(nextNews.published_at).toLocaleDateString()}` : "다음 뉴스 없음"}
+            aria-label="다음 뉴스"
+          >
+            다음 뉴스
+            <span className="ml-2 text-2xl">→</span>
+          </button>
+        </div>
       </div>
     </div>
   );
