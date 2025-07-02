@@ -106,7 +106,7 @@ const Footer: React.FC = () => {
           </ul>
         </div>
       </div>
-      <div className="container mx-auto px-4 mt-8 border-t border-gray-700 pt-4">
+      <div className="container mx-auto px-4 mt-8 border-t border-gray-700 pt-4 pb-8">
         <p className="text-center text-sm">
           &copy; {new Date().getFullYear()} STOCKPANZEE. All rights reserved.
         </p>

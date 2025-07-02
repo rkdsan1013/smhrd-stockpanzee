@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ChatbotButton from "../components/Chatbot";
 import TradingViewTape from "../components/TradingViewTape";
+import TickerTape from "../components/TickerTape"
 
 const MainPage: React.FC = () => {
   return (
@@ -15,9 +16,9 @@ const MainPage: React.FC = () => {
         <Outlet />
       </main>
       <Footer />
-      <TradingViewTape />
+      <TickerTape />
       {/* 챗봇 버튼은 MainPage 레이아웃에 포함됨 */}
-      <ChatbotButton />
+      <ChatbotButton />    
     </div>
   );
 };
