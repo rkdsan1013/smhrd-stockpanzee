@@ -14,7 +14,7 @@ import { emitMockTop25 } from "./services/marketData/krxMarketService";
 // 1) 뉴스 스케줄러를 import만 하면 즉시 등록됩니다.
 //    services/news/newsScheduler.ts 에서 node-cron 으로
 //    국내(10분), 해외(1시간), 암호화폐(10분) 수집을 자동 실행합니다.
-import "./services/news/newsScheduler";
+// import "./services/news/newsScheduler";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -67,7 +67,7 @@ async function start() {
     // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon:", err));
 
     // (옵션) Binance 암호화폐 5초 주기 DB 업데이트
-    setInterval(updateCryptoAssetInfoPeriodically, 5000);
+    // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
     // (옵션) KRX 실시간 주가 emit
     // emitStockPrices(io)
