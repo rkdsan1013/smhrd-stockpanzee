@@ -10,6 +10,7 @@ import { fetchAndProcessUsStockNews } from "../services/news/usStockNewsService"
 // GET /api/news
 export const getNews: RequestHandler = async (req, res) => {
   const { asset, exclude } = req.query;
+
   try {
     if (asset) {
       const list = await newsService.getNewsByAsset(
@@ -19,6 +20,7 @@ export const getNews: RequestHandler = async (req, res) => {
       res.status(200).json(list);
       return;
     }
+
     const all = await getAllNews();
     res.status(200).json(all);
   } catch (err: any) {
@@ -36,11 +38,17 @@ export const getNewsDetail: RequestHandler = async (req, res) => {
   }
 
   try {
+    // 1) view_count 1 증가
+    await newsService.incrementViewCount(newsId);
+
+    // 2) 상세 데이터 조회
     const detail = await newsService.getNewsDetailById(newsId);
     if (!detail) {
       res.status(404).json({ error: "뉴스를 찾을 수 없습니다." });
       return;
     }
+
+    // 3) 응답
     res.status(200).json(detail);
   } catch (err: any) {
     console.error("뉴스 상세 조회 중 오류:", err);
