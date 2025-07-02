@@ -89,12 +89,17 @@ const Comments: React.FC<{
 const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void }> = ({ onSubmit }) => {
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const { user } = useContext(AuthContext);
 
   return (
-    <form
+   <form
       className="flex flex-col gap-2"
       onSubmit={e => {
         e.preventDefault();
+        if (!user) {
+          alert("로그인 후 작성 가능합니다!");
+          return;
+        }
         if (!content.trim()) return;
         onSubmit(content.trim(), file || undefined);
         setContent("");
