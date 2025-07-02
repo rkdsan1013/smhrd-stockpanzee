@@ -57,7 +57,7 @@ app.get("/", (_req: Request, res: Response) => {
 // ✅ 서버 + 소켓 실행
 async function start() {
   const server = http.createServer(app);
-  await setupSocket(server); // 반드시 await
+  const io = await setupSocket(server); // 반드시 await
 
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
@@ -67,7 +67,7 @@ async function start() {
     // startPolygonPriceStream(io).catch((err) => console.error("Failed to start Polygon:", err));
 
     // (옵션) Binance 암호화폐 5초 주기 DB 업데이트
-    setInterval(updateCryptoAssetInfoPeriodically, 5000);
+    // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
     // (옵션) KRX 실시간 주가 emit
     // emitStockPrices(io)
