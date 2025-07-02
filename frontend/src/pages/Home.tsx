@@ -144,13 +144,20 @@ const Home: React.FC = () => {
         </nav>
 
         {/* 메인 그리드 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {/* 뉴스 영역 (2/3) */}
-          <div className="lg:col-span-2 space-y-8">
-            {hero && <NewsCard newsItem={hero} variant="hero" />}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="lg:col-span-2 flex flex-col space-y-8">
+            {hero && (
+              <div className="h-full">
+                <NewsCard newsItem={hero} variant="hero" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
               {subNews.map((n) => (
-                <NewsCard key={n.id} newsItem={n} variant="compact" />
+                <div key={n.id} className="h-full">
+                  <NewsCard newsItem={n} variant="compact" />
+                </div>
               ))}
             </div>
           </div>
@@ -162,7 +169,6 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
               </h3>
-              {/* rounded + overflow-hidden 유지 */}
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                 {LEVELS.map((lvl) => {
                   const pct = distPct[lvl].toFixed(1);
@@ -176,8 +182,6 @@ const Home: React.FC = () => {
                         : lvl === 4
                           ? "bg-green-400"
                           : "bg-green-600";
-
-                  // 툴팁을 위한 폭만 style 로 전달
                   return (
                     <Tooltip
                       key={lvl}
@@ -189,8 +193,6 @@ const Home: React.FC = () => {
                   );
                 })}
               </div>
-
-              {/* 평균 감정 */}
               <div className="mt-3 text-white flex items-center justify-between">
                 <span className="text-sm">평균 감정</span>
                 <span

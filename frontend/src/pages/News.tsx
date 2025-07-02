@@ -3,34 +3,38 @@ import React, { useState, useEffect, useRef } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
+import SkeletonCard from "../components/SkeletonCard";
+import Icons from "../components/Icons";
 
-// 필터 탭 옵션: 내부 키는 API의 값, 화면에는 한글 라벨로 표시
-const tabs: { key: "all" | "domestic" | "international" | "crypto"; label: string }[] = [
+const tabs = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
   { key: "international", label: "해외" },
   { key: "crypto", label: "암호화폐" },
-];
+] as const;
+
+type TabKey = (typeof tabs)[number]["key"];
+// 한 줄에 3개씩 로드
+const itemsPerPage = 3;
 
 const News: React.FC = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [selectedNewsTab, setSelectedNewsTab] = useState<
-    "all" | "domestic" | "international" | "crypto"
-  >("all");
+  const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 페이지네이션 관련 상태
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 6; // 한 페이지당 표시할 뉴스 개수
+  const [currentPage, setCurrentPage] = useState(1);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [showTopBtn, setShowTopBtn] = useState(false);
 
-  // 뉴스 데이터를 불러옴
   const loadNews = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const data = await fetchNews();
       setNewsItems(data);
-      setLoading(false);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "알 수 없는 오류");
+    } finally {
       setLoading(false);
     }
   };
@@ -39,81 +43,129 @@ const News: React.FC = () => {
     loadNews();
   }, []);
 
-  // 필터 탭이 변경될 때 페이지 번호 초기화
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedNewsTab]);
+  }, [selectedTab]);
 
-  // 선택된 필터에 따라 뉴스 항목 필터링
-  const filteredNews =
-    selectedNewsTab === "all"
-      ? newsItems
-      : newsItems.filter((item) => item.category === selectedNewsTab);
+  const filtered =
+    selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
-  // 페이지네이션을 반영한 뉴스 항목 제한
-  const visibleNews = filteredNews.slice(0, currentPage * itemsPerPage);
+  const visibleNews = filtered.slice(0, currentPage * itemsPerPage);
 
-  // 무한 스크롤을 위한 Intersection Observer 적용
-  const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting && visibleNews.length < filteredNews.length) {
-          setCurrentPage((prevPage) => prevPage + 1);
+    if (!loadMoreRef.current) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && visibleNews.length < filtered.length) {
+          setCurrentPage((p) => p + 1);
         }
       },
-      { threshold: 1 },
+      { rootMargin: "200px" },
     );
-    const currentLoadMoreRef = loadMoreRef.current;
-    if (currentLoadMoreRef) {
-      observer.observe(currentLoadMoreRef);
-    }
-    return () => {
-      if (currentLoadMoreRef) {
-        observer.unobserve(currentLoadMoreRef);
-      }
-    };
-  }, [visibleNews, filteredNews]);
+    io.observe(loadMoreRef.current);
+    return () => io.disconnect();
+  }, [visibleNews, filtered]);
 
-  if (loading) {
-    return <div className="p-6 text-white text-center">Loading news...</div>;
-  }
-  if (error) {
-    return <div className="p-6 text-red-400 text-center">Error: {error}</div>;
-  }
+  useEffect(() => {
+    const onScroll = () => setShowTopBtn(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleTabClick = (key: TabKey) => {
+    setSelectedTab(key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* 페이지 헤더 */}
-      <h1 className="text-3xl font-bold text-white mb-6 text-center">최신 뉴스</h1>
-      {/* 뉴스 필터 탭 */}
-      <div className="mb-8 flex justify-center">
-        <div className="bg-gray-800 px-4 py-2 rounded-full flex space-x-3">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setSelectedNewsTab(tab.key)}
-              className={`px-4 py-2 rounded-full transition-colors duration-300 text-sm font-medium focus:outline-none ${
-                selectedNewsTab === tab.key
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-blue-500 hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </button>
+    <section className="container mx-auto px-4 py-8">
+      {/* 헤더 + 탭 */}
+      <header className="flex flex-col sm:flex-row justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold text-white">최신 뉴스</h1>
+        <nav className="mt-4 sm:mt-0">
+          <ul className="flex space-x-4">
+            {tabs.map((t) => (
+              <li key={t.key}>
+                <button
+                  onClick={() => handleTabClick(t.key)}
+                  className={`
+                    text-sm font-medium pb-2
+                    ${
+                      selectedTab === t.key
+                        ? "border-b-2 border-blue-500 text-white"
+                        : "text-gray-400 hover:text-white hover:border-gray-600"
+                    }
+                  `}
+                >
+                  {t.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+
+      {/* 로딩 스켈레톤 */}
+      {loading && (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          {Array.from({ length: itemsPerPage }).map((_, i) => (
+            <li key={i}>
+              <SkeletonCard />
+            </li>
           ))}
+        </ul>
+      )}
+
+      {/* 에러 */}
+      {!loading && error && (
+        <div className="text-center text-red-400">
+          <p className="mb-4">오류가 발생했습니다: {error}</p>
+          <button
+            onClick={loadNews}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 text-white"
+          >
+            <Icons name="refreshCw" className="mr-2 w-5 h-5" />
+            다시 시도
+          </button>
         </div>
-      </div>
+      )}
+
+      {/* 결과 없음 */}
+      {!loading && !error && visibleNews.length === 0 && (
+        <div className="text-center text-gray-300">조건에 맞는 뉴스가 없습니다.</div>
+      )}
+
       {/* 뉴스 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {visibleNews.map((item) => (
-          <NewsCard key={item.id} newsItem={item} />
-        ))}
-      </div>
-      {/* 무한 스크롤을 위한 sentinel 요소 */}
-      {visibleNews.length < filteredNews.length && <div ref={loadMoreRef} className="h-4" />}
-    </div>
+      {!loading && !error && visibleNews.length > 0 && (
+        <>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            {visibleNews.map((item) => (
+              <li key={item.id}>
+                <NewsCard newsItem={item} />
+              </li>
+            ))}
+          </ul>
+
+          {/* 무한 스크롤 로딩 표시 */}
+          {visibleNews.length < filtered.length && (
+            <div ref={loadMoreRef} className="mt-8 flex justify-center items-center text-gray-500">
+              로딩 중...
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 맨 위로 버튼 */}
+      {showTopBtn && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-8 right-8 text-4xl text-blue-500 hover:text-blue-400 transition"
+          aria-label="Scroll to top"
+        >
+          <Icons name="arrowUpCircle" />
+        </button>
+      )}
+    </section>
   );
 };
 

@@ -1,4 +1,4 @@
-// frontend/src/components/NewsCard.tsx
+// /frontend/src/components/NewsCard.tsx
 import React from "react";
 import { Link } from "react-router-dom";
 import Icons from "../components/Icons";
@@ -10,146 +10,122 @@ export interface NewsCardProps {
   newsItem: NewsItem;
 }
 
-const getCategoryLabel = (c: "domestic" | "international" | "crypto") =>
-  c === "domestic" ? "국내" : c === "international" ? "해외" : "암호화폐";
-
-const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
-const getSentiment = (v: number | string | null): { label: string; style: string } => {
-  const x = Math.min(5, Math.max(1, Number(v) || 3));
-  return {
-    label: SENT_LABELS[x - 1],
-    style:
-      x <= 2
-        ? "bg-red-600 text-white"
-        : x === 3
-          ? "bg-gray-600 text-white"
-          : "bg-green-600 text-white",
-  };
+const CATEGORY_LABELS: Record<string, string> = {
+  domestic: "국내",
+  international: "해외",
+  crypto: "암호화폐",
 };
 
-const NewsCard: React.FC<NewsCardProps> = ({ newsItem, variant = "default" }) => {
-  // tags 배열화
+const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"] as const;
+const SENT_ICONS = ["arrowDown", "arrowDown", "minus", "arrowUp", "arrowUp"] as const;
+
+function getCategoryLabel(key: string): string {
+  return CATEGORY_LABELS[key] || "기타";
+}
+
+function getSentiment(v: number | string | null) {
+  const idx = Math.min(4, Math.max(0, Number(v) - 1 || 2));
+  return {
+    label: SENT_LABELS[idx],
+    iconName: SENT_ICONS[idx],
+    color: idx <= 1 ? "bg-red-600" : idx === 2 ? "bg-gray-600" : "bg-green-600",
+  };
+}
+
+const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) => {
   let tags: string[] = [];
-  if (Array.isArray(newsItem.tags)) tags = newsItem.tags as string[];
-  else if (typeof newsItem.tags === "string") {
+  if (Array.isArray(newsItem.tags)) {
+    tags = newsItem.tags;
+  } else if (typeof newsItem.tags === "string") {
     try {
-      const p = JSON.parse(newsItem.tags);
-      if (Array.isArray(p)) tags = p as string[];
+      const parsed = JSON.parse(newsItem.tags);
+      if (Array.isArray(parsed)) tags = parsed;
     } catch {}
   }
 
-  const sentiment = getSentiment(newsItem.sentiment);
   const categoryLabel = getCategoryLabel(newsItem.category);
+  const sentiment = getSentiment(newsItem.sentiment);
 
-  // 이미지 높이 & 제목 크기
-  const imgHeight = variant === "hero" ? "h-80" : variant === "default" ? "h-48" : "";
-  const titleSize =
-    variant === "hero" ? "text-3xl" : variant === "default" ? "text-lg" : "text-base";
-
-  // COMPACT 모드
-  if (variant === "compact") {
-    return (
-      <Link
-        to={`/news/${newsItem.id}`}
-        className="flex flex-col bg-gray-800 rounded-lg overflow-hidden transform hover:scale-[1.02] transition"
-      >
-        <div className="p-4 flex-1 flex flex-col justify-between">
-          {/* 상단: 배지 + 제목 */}
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <span className="px-2 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-                {categoryLabel}
-              </span>
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${sentiment.style}`}>
-                {sentiment.label}
-              </span>
-            </div>
-            <h3 className="font-semibold text-white line-clamp-2">
-              {newsItem.title_ko || newsItem.title}
-            </h3>
-          </div>
-
-          {/* 하단: 퍼블리셔 · 날짜 · 조회수 */}
-          <div className="mt-4 flex justify-between items-center text-xs text-gray-400">
-            <div className="space-y-1">
-              <div>{newsItem.publisher}</div>
-              <div>{new Date(newsItem.published_at).toLocaleString()}</div>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Icons name="eyeOpen" className="w-5 h-5 text-gray-400" />
-              <span>{(newsItem.view_count ?? 0).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    );
-  }
-
-  // HERO / DEFAULT 모드
   return (
     <Link
       to={`/news/${newsItem.id}`}
-      className="flex flex-col bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-[1.02] transition"
+      className="flex flex-col h-full bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:scale-[1.02] transition"
+      aria-label={newsItem.title_ko || newsItem.title}
     >
-      {/* 이미지 */}
-      <div className={`relative w-full ${imgHeight}`}>
-        <img
-          src={newsItem.image || "/panzee.webp"}
-          alt={newsItem.title}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = "/panzee.webp";
-          }}
-        />
-      </div>
+      {/* hero/default 모드의 이미지 */}
+      {variant !== "compact" && (
+        <div className={`flex-shrink-0 w-full ${variant === "hero" ? "h-80" : "h-48"} relative`}>
+          <img
+            src={newsItem.image || "/panzee.webp"}
+            alt={newsItem.title}
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/panzee.webp";
+            }}
+          />
+        </div>
+      )}
 
-      {/* 내용 */}
-      <div className="flex flex-col flex-1 p-6">
-        <div className="space-y-3">
-          {/* 배지 */}
-          <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 bg-gray-700 text-xs font-semibold rounded-full">
-              {categoryLabel}
-            </span>
-            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${sentiment.style}`}>
-              {sentiment.label}
-            </span>
-          </div>
-
-          {/* 종목 태그 */}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* 제목 */}
-          <h3 className={`font-bold text-white ${titleSize}`}>
-            {newsItem.title_ko || newsItem.title}
-          </h3>
-
-          {/* 요약 */}
-          <p className="text-sm text-gray-300 line-clamp-2">
-            {newsItem.brief_summary || newsItem.summary}
-          </p>
+      {/* 본문 */}
+      <div className={`flex flex-col flex-1 ${variant === "compact" ? "p-4" : "p-6"}`}>
+        {/* 배지 */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="px-2 py-1 bg-gray-700 text-xs font-semibold rounded-full">
+            {categoryLabel}
+          </span>
+          <span
+            className={`flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full ${sentiment.color}`}
+          >
+            <Icons name={sentiment.iconName} />
+            <span>{sentiment.label}</span>
+          </span>
         </div>
 
-        {/* 하단: 퍼블리셔 · 작성일 · 조회수 */}
+        {variant === "compact" ? (
+          <h3 className="text-white font-semibold text-base line-clamp-2">
+            {newsItem.title_ko || newsItem.title}
+          </h3>
+        ) : (
+          <>
+            {/* 태그 */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {tags.map((t, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-1 bg-blue-600 text-xs font-semibold rounded-full"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 제목 */}
+            <h3
+              className={`text-white font-bold mb-2 line-clamp-2 ${
+                variant === "hero" ? "text-3xl" : "text-lg"
+              }`}
+            >
+              {newsItem.title_ko || newsItem.title}
+            </h3>
+
+            {/* 요약 */}
+            <p className="text-gray-300 text-sm flex-1 line-clamp-3">
+              {newsItem.brief_summary || newsItem.summary}
+            </p>
+          </>
+        )}
+
+        {/* 푸터: 퍼블리셔/날짜/조회수 */}
         <div className="mt-auto pt-4 flex justify-between items-center text-xs text-gray-400">
           <div className="space-y-1">
             <div>{newsItem.publisher}</div>
             <div>{new Date(newsItem.published_at).toLocaleString()}</div>
           </div>
           <div className="flex items-center space-x-1">
-            <Icons name="eyeOpen" className="w-5 h-5 text-gray-400" />
+            <Icons name="eyeOpen" />
             <span>{(newsItem.view_count ?? 0).toLocaleString()}</span>
           </div>
         </div>
