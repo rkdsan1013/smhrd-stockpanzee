@@ -8,6 +8,7 @@ import { TradingViewMiniChart } from "../components/Chart/TradingViewMiniChart";
 import { getTradingViewSymbol } from "../services/tradingViewService";
 
 const MAX_LATEST = 5;
+const DEFAULT_THUMB = "/panzee.webp";
 const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"];
 const stepColors = ["bg-red-500", "bg-orange-500", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
 
@@ -102,6 +103,7 @@ const NewsDetailPage: React.FC = () => {
       </div>
     );
   }
+
   if (status === "error" || !news) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
@@ -148,13 +150,16 @@ const NewsDetailPage: React.FC = () => {
                 </a>
               </div>
             </div>
-            {news.thumbnail && (
-              <img
-                src={news.thumbnail}
-                alt="뉴스 썸네일"
-                className="w-full max-w-xs h-40 object-cover rounded-xl"
-              />
-            )}
+            <img
+              src={news.thumbnail ?? DEFAULT_THUMB}
+              alt="뉴스 썸네일"
+              className="w-full max-w-xs h-40 object-cover rounded-xl"
+              onError={(e) => {
+                const img = e.currentTarget;
+                img.onerror = null;
+                img.src = DEFAULT_THUMB;
+              }}
+            />
           </div>
 
           {/* Sentiment Bars & Tags */}
@@ -177,14 +182,11 @@ const NewsDetailPage: React.FC = () => {
                     let linkId: number | undefined;
 
                     if (markets) {
-                      // crypto 뉴스면 BINANCE 마켓 우선
                       if (news.news_category === "crypto") {
                         linkId = markets["BINANCE"];
                       } else {
-                        // stock 뉴스면 해당 news.assets_market 우선
                         linkId = markets[news.assets_market!.toUpperCase()];
                       }
-                      // 유일 매핑이 아니면, 단 하나만 있을 때 사용
                       if (!linkId) {
                         const mks = Object.keys(markets);
                         if (mks.length === 1) {
