@@ -4,7 +4,6 @@ import { Outlet } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ChatbotButton from "../components/Chatbot";
-import TradingViewTape from "../components/TradingViewTape";
 import TickerTape from "../components/TickerTape"
 
 const MainPage: React.FC = () => {
