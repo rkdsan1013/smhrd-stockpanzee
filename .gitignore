@@ -47,3 +47,6 @@ build/
 *.lock
 *.cache
 *.tmp
+
+# Database dumps
+_db/vectordata.dump
