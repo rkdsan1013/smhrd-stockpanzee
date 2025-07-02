@@ -35,7 +35,8 @@
     "puppeteer": "^24.10.2",
     "snoowrap": "^1.23.0",
     "socket.io": "^4.8.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "validator": "^13.15.15"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
@@ -52,6 +53,7 @@
     "@types/pg": "^8.15.4",
     "@types/socket.io": "^3.0.1",
     "@types/uuid": "^10.0.0",
+    "@types/validator": "^13.15.2",
     "@types/ws": "^8.18.1",
     "eslint": "^9.27.0",
     "prettier": "^3.5.3",
