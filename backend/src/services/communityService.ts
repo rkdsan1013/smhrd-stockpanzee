@@ -86,7 +86,7 @@ export async function getCommunityLikesCount(postId: number) {
 export async function deleteCommunityPost(postId: number) {
   // 1. 해당 게시글의 모든 댓글 id 가져오기
   const [commentRows]: any = await pool.query(
-    `SELECT id FROM community_com WHERE target_type='community' AND target_id=?`,
+    `SELECT id FROM comments WHERE target_type='community' AND target_id=?`,
     [postId]
   );
   const commentIds = commentRows.map((row: any) => row.id);
@@ -110,7 +110,7 @@ export async function deleteCommunityPost(postId: number) {
     );
     // 5. 댓글/대댓글 삭제
     await conn.query(
-      `DELETE FROM community_com WHERE target_type='community' AND target_id=?`,
+      `DELETE FROM comments WHERE target_type='community' AND target_id=?`,
       [postId]
     );
     // 6. 게시글 삭제
