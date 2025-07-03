@@ -43,11 +43,11 @@ function getFullImgUrl(img_url?: string) {
 }
 
 // ---------- 모든 댓글(대댓글 포함) 개수 카운트 ----------  // 👈 추가!
-function countAllComments(comments: Comment[]): number {
+function countAllComments(comments: { replies?: any[] }[]): number {
   let total = 0;
   for (const c of comments) {
     total += 1;
-    if (c.replies && c.replies.length > 0) {
+    if (Array.isArray(c.replies) && c.replies.length > 0) {
       total += countAllComments(c.replies);
     }
   }
