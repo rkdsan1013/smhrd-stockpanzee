@@ -5,12 +5,16 @@ import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 import SkeletonCard from "../components/SkeletonCard";
 import Icons from "../components/Icons";
+import { fetchFavorites } from "../services/favoriteService";
+import { fetchAssets, type Asset } from "../services/assetService";
+import { AuthContext } from "../providers/AuthProvider";
 
 const tabs = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
   { key: "international", label: "해외" },
   { key: "crypto", label: "암호화폐" },
+  { key: "favorites", label: "즐겨찾기" },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -18,6 +22,7 @@ type TabKey = (typeof tabs)[number]["key"];
 const itemsPerPage = 3;
 
 const News: React.FC = () => {
+  const { user } = React.useContext(AuthContext);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [loading, setLoading] = useState(true);
@@ -25,6 +30,8 @@ const News: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
 
   const loadNews = async () => {
     setLoading(true);
@@ -44,11 +51,46 @@ const News: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setFavorites([]);
+      setAssets([]);
+      return;
+    }
+    fetchFavorites().then(setFavorites).catch(() => setFavorites([]));
+    fetchAssets().then(setAssets).catch(() => setAssets([]));
+  }, [user]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [selectedTab]);
 
+    // id → symbol 맵핑
+  const favoriteSymbols = React.useMemo(() => {
+    if (!favorites.length || !assets.length) return [];
+    // favorites: number[] (assetId)
+    // assets: Asset[] (id, symbol, ...)
+    return favorites
+      .map(fid => assets.find(a => a.id === fid)?.symbol)
+      .filter((s): s is string => !!s);
+  }, [favorites, assets]);
+
+ 
+    // 기존 필터 확장
   const filtered =
-    selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
+    selectedTab === "all"
+      ? newsItems
+      : selectedTab === "favorites"
+        ? newsItems.filter((n) => {
+            // 태그가 없는 경우 제외
+            if (!n.tags) return false;
+            let tags: string[] = [];
+            try {
+              tags = Array.isArray(n.tags) ? n.tags : JSON.parse(n.tags);
+            } catch { return false; }
+            // favoriteSymbols 중 하나라도 tags에 포함
+            return tags.some((t) => favoriteSymbols.includes(t));
+          })
+        : newsItems.filter((n) => n.category === selectedTab);
 
   const visibleNews = filtered.slice(0, currentPage * itemsPerPage);
 
@@ -72,10 +114,15 @@ const News: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleTabClick = (key: TabKey) => {
-    setSelectedTab(key);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    const handleTabClick = (key: TabKey) => {
+      if (key === "favorites" && !user) {
+        alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
+        return;
+      }
+      setSelectedTab(key);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
 
   return (
     <section className="container mx-auto px-4 py-8">
