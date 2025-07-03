@@ -39,8 +39,8 @@ const COLOR: Record<Category, string> = {
   기타: "text-gray-300",
 };
 
-const MAX_PER_CAT = 5;
-const MAX_TOTAL_FAV = 10;
+const MAX_PER_CAT = 3;
+const MAX_TOTAL_FAV = 9;
 
 const FavoriteAssetsWidget: React.FC = () => {
   const { user } = useContext(AuthContext);
