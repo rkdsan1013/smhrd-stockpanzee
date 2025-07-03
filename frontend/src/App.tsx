@@ -17,10 +17,12 @@ import PostCreationPage from "./pages/PostCreationPage";
 import AppProvider from "./providers/AppProvider"; // 전역 프로바이더 예시
 import CommunityDetail from "./pages/CommunityDetail";
 import PostEditPage from "./pages/PostEditPage";
+import Alert from "./components/Alert";
 
 const App: React.FC = () => {
   return (
     <AppProvider>
+      <Alert />
       <BrowserRouter>
         <Routes>
           {/* 메인 레이아웃 하위 페이지 */}
