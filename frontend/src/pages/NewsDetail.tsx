@@ -128,6 +128,7 @@ const NewsDetailPage: React.FC = () => {
       </div>
     );
   }
+
   if (status === "error" || !news) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
@@ -169,13 +170,12 @@ const NewsDetailPage: React.FC = () => {
               </div>
             </div>
             <img
-              src={news.thumbnail ?? DEFAULT_THUMB}
+              src={news.thumbnail || DEFAULT_THUMB}
               alt="썸네일"
               className="w-full max-w-xs h-40 object-cover rounded-2xl"
-              onError={(e) => {
-                const img = e.currentTarget;
-                img.onerror = null;
-                img.src = DEFAULT_THUMB;
+              onError={({ currentTarget }) => {
+                currentTarget.onerror = null;
+                currentTarget.src = DEFAULT_THUMB;
               }}
             />
           </div>
@@ -258,7 +258,7 @@ const NewsDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: chart + latest news (no bg wrapper) */}
+        {/* Right: chart + latest news */}
         <aside className="flex flex-col space-y-6">
           <div className="rounded-2xl overflow-hidden shadow-lg h-56 w-full">
             <TradingViewMiniChart symbol={tvSymbol} />

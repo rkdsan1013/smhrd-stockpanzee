@@ -1,3 +1,4 @@
+// cspell:ignore KOSPI KOSDAQ NASDAQ NYSE S&P500 Binance Upbit
 import React, { useEffect, useRef, useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -37,23 +38,24 @@ const getCategory = (market: string): "한국" | "해외" | "암호화폐" | "�
 
 function TickerTape() {
   const [tickers, setTickers] = useState<Ticker[]>([]);
+  const [prevTickers, setPrevTickers] = useState<Record<number, Ticker>>({});
+  const [flashStates, setFlashStates] = useState<Record<number, "up" | "down" | null>>({});
   const [showFav, setShowFav] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const tapeInnerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
-  const lastTimeRef = useRef<number | null>(null);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // fetch ticker (5초마다)
+  // 1) 5초마다 시세 불러오기
   useEffect(() => {
     let running = true;
     const load = async () => {
       try {
         const data = await fetchTickers();
-        setTickers(Array.isArray(data) ? data : []);
-      } catch (e) {
+        setTickers(data);
+      } catch {
         setTickers([]);
       }
       if (running) setTimeout(load, 5000);
@@ -64,7 +66,45 @@ function TickerTape() {
     };
   }, []);
 
-  // fetch favorites
+  // 2) 이전 가격과 비교해서 flash 상태 설정
+  useEffect(() => {
+    const newFlash: Record<number, "up" | "down" | null> = {};
+    const timers: number[] = [];
+
+    tickers.forEach((t) => {
+      const prev = prevTickers[t.id];
+      if (prev) {
+        if (t.currentPrice > prev.currentPrice) newFlash[t.id] = "up";
+        else if (t.currentPrice < prev.currentPrice) newFlash[t.id] = "down";
+        else newFlash[t.id] = null;
+      }
+    });
+
+    setFlashStates(newFlash);
+
+    // 0.8초 후에 원상복구
+    Object.entries(newFlash).forEach(([id, state]) => {
+      if (state) {
+        const timer = window.setTimeout(() => {
+          setFlashStates((fs) => ({ ...fs, [Number(id)]: null }));
+        }, 800);
+        timers.push(timer);
+      }
+    });
+
+    // prevTickers 갱신
+    const map: Record<number, Ticker> = {};
+    tickers.forEach((t) => {
+      map[t.id] = t;
+    });
+    setPrevTickers(map);
+
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, [tickers]);
+
+  // 즐겨찾기 불러오기
   useEffect(() => {
     if (user) {
       fetchFavorites()
@@ -75,16 +115,16 @@ function TickerTape() {
     }
   }, [user]);
 
-  // 전체 10개씩 추출
-  const koreaTop10 = tickers
+  // top10 리스트
+  const koreaTop = tickers
     .filter((t) => getCategory(t.market) === "한국")
     .sort((a, b) => b.marketCap - a.marketCap)
     .slice(0, 5);
-  const globalTop10 = tickers
+  const globalTop = tickers
     .filter((t) => getCategory(t.market) === "해외")
     .sort((a, b) => b.marketCap - a.marketCap)
     .slice(0, 5);
-  const cryptoTop10 = tickers
+  const cryptoTop = tickers
     .filter((t) => getCategory(t.market) === "암호화폐")
     .sort((a, b) => b.marketCap - a.marketCap)
     .slice(0, 5);
@@ -95,16 +135,16 @@ function TickerTape() {
     displayTickers = [...displayTickers, ...displayTickers];
   } else {
     displayTickers = [
-      ...koreaTop10,
-      ...globalTop10,
-      ...cryptoTop10,
-      ...koreaTop10,
-      ...globalTop10,
-      ...cryptoTop10,
+      ...koreaTop,
+      ...globalTop,
+      ...cryptoTop,
+      ...koreaTop,
+      ...globalTop,
+      ...cryptoTop,
     ];
   }
 
-  // 실제 ticker 길이
+  // tape 길이 계산
   const [tapeWidth, setTapeWidth] = useState(0);
   useEffect(() => {
     if (tapeInnerRef.current) {
@@ -112,8 +152,9 @@ function TickerTape() {
     }
   }, [tickers, favorites, showFav]);
 
-  // ticker 애니메이션
+  // tape 애니메이션
   const speed = 30;
+  const lastTimeRef = useRef<number | null>(null);
   useEffect(() => {
     let running = true;
     function step(ts: number) {
@@ -136,7 +177,7 @@ function TickerTape() {
       lastTimeRef.current = null;
       cancelAnimationFrame(raf);
     };
-  }, [isPaused, tapeWidth, speed]);
+  }, [isPaused, tapeWidth]);
 
   return (
     <div
@@ -149,7 +190,7 @@ function TickerTape() {
         fontFamily: "system-ui,sans-serif",
       }}
     >
-      {/* 바나나 버튼 (항상 z-50, pointer-events-auto) */}
+      {/* 즐겨찾기 토글 */}
       <div
         className="flex items-center justify-center h-full relative"
         style={{
@@ -158,7 +199,7 @@ function TickerTape() {
           background: "rgba(22,27,34,0.95)",
           borderRight: "1.5px solid #222",
           zIndex: 50,
-          pointerEvents: "auto", // 이거 중요!
+          pointerEvents: "auto",
         }}
       >
         <button
@@ -167,16 +208,12 @@ function TickerTape() {
           style={{
             background: "none",
             border: "none",
-            pointerEvents: "auto",
             cursor: "pointer",
             fontSize: "2rem",
-            color: showFav ? "#FFD600" : "#bbb",
             transition: "color 0.2s",
-            borderRadius: "0",
             userSelect: "none",
             zIndex: 51,
           }}
-          tabIndex={0}
           aria-label="즐겨찾기 모드"
         >
           <Icons
@@ -186,7 +223,7 @@ function TickerTape() {
         </button>
       </div>
 
-      {/* 테이프 */}
+      {/* ticker tape */}
       <div className="relative flex-1 h-full overflow-hidden">
         <div
           ref={tapeInnerRef}
@@ -205,37 +242,44 @@ function TickerTape() {
           {displayTickers.length === 0 ? (
             <span className="text-gray-400 px-8">표시할 종목이 없습니다.</span>
           ) : (
-            displayTickers.map((ticker, i) => (
-              <div
-                key={ticker.id + "-" + i}
-                className="flex items-center gap-1 px-5 hover:bg-gray-800 rounded cursor-pointer"
-                onClick={() => navigate(`/asset/${ticker.id}`)}
-                style={{
-                  transition: "background 0.2s",
-                  minWidth: 120,
-                  height: "100%",
-                  alignItems: "center",
-                }}
-              >
-                <span className="font-semibold text-white">{ticker.name}</span>
-                <span className="ml-1 text-gray-400 text-xs">{ticker.symbol}</span>
-                <span className="ml-2 font-bold text-white">
-                  {(ticker.currentPrice ?? 0).toLocaleString()}
-                </span>
-                <span
-                  className={`ml-2 font-semibold text-sm ${
-                    ticker.priceChange > 0
-                      ? "text-green-400"
-                      : ticker.priceChange < 0
-                        ? "text-red-400"
-                        : "text-gray-300"
-                  }`}
+            displayTickers.map((ticker, i) => {
+              const flash = flashStates[ticker.id];
+              const colorClass =
+                flash === "up"
+                  ? "text-green-300"
+                  : flash === "down"
+                    ? "text-red-300"
+                    : "text-white";
+
+              return (
+                <div
+                  key={`${ticker.id}-${i}`}
+                  className="flex items-center gap-1 px-5 hover:bg-gray-800 rounded cursor-pointer"
+                  onClick={() => navigate(`/asset/${ticker.id}`)}
+                  style={{ transition: "background 0.2s", minWidth: 120, height: "100%" }}
                 >
-                  {ticker.priceChange > 0 && "+"}
-                  {(ticker.priceChange ?? 0).toFixed(2)}%
-                </span>
-              </div>
-            ))
+                  <span className="font-semibold text-white">{ticker.name}</span>
+                  <span className="ml-1 text-gray-400 text-xs">{ticker.symbol}</span>
+                  <span
+                    className={`ml-2 font-bold transition-colors duration-700 ease-out ${colorClass}`}
+                  >
+                    {ticker.currentPrice.toLocaleString()}
+                  </span>
+                  <span
+                    className={`ml-2 font-semibold text-sm ${
+                      ticker.priceChange > 0
+                        ? "text-green-400"
+                        : ticker.priceChange < 0
+                          ? "text-red-400"
+                          : "text-gray-300"
+                    }`}
+                  >
+                    {ticker.priceChange > 0 && "+"}
+                    {ticker.priceChange.toFixed(2)}%
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
