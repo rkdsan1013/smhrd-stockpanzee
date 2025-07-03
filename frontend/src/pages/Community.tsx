@@ -59,7 +59,7 @@ function getDisplayPages(total: number, current: number): (number | "...")[] {
 const Community: React.FC = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>("latest");
+  const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [filterCat, setFilterCat] = useState<string>("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const [showTopBtn, setShowTopBtn] = useState(false);
