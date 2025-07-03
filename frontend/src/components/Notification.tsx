@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
 import { fetchFavorites } from "../services/favoriteService";
@@ -32,7 +33,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     }
   }, [anchorRef]);
 
-  // 클릭 외 영역 및 리사이즈 처리
+  // 외부 클릭 및 리사이즈
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -55,7 +56,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     };
   }, [isOpen, onClose, anchorRef, updatePosition]);
 
-  // 알림 리스트 fetch + 필터링 (assetId + threshold)
+  // 알림 데이터 로드
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
@@ -69,10 +70,10 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
           .then((assets) => assets.filter((a) => favSet.has(a.id)))
           .then((favAssets) =>
             favAssets
-              .map((asset) => {
-                const thresholdCrossed = Math.floor(Math.abs(asset.priceChange) / 5) * 5;
-                return { ...asset, thresholdCrossed };
-              })
+              .map((asset) => ({
+                ...asset,
+                thresholdCrossed: Math.floor(Math.abs(asset.priceChange) / 5) * 5,
+              }))
               .filter(
                 (a) => a.thresholdCrossed > 0 && !dismissedSet.has(`${a.id}_${a.thresholdCrossed}`),
               ),
@@ -84,7 +85,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
 
   if (!isOpen || !anchorRef.current) return null;
 
-  // 개별 알림 닫기
+  // 개별 닫기
   const handleDismiss = async (id: number, threshold: number) => {
     try {
       await dismissNotification(id, threshold);
@@ -120,22 +121,25 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
               key={`${asset.id}-${asset.thresholdCrossed}`}
               className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {asset.name} ({asset.symbol})
-                </p>
-                <p className="text-xs">
-                  <span
-                    className={
-                      asset.priceChange >= 0
-                        ? "text-green-500 dark:text-green-400"
-                        : "text-red-500 dark:text-red-400"
-                    }
-                  >
-                    {(asset.priceChange >= 0 ? "+" : "") + asset.priceChange.toFixed(2)}%
-                  </span>
-                </p>
-              </div>
+              {/* 클릭 시 asset detail 이동 */}
+              <Link to={`/asset/${asset.id}`} className="flex-1 flex items-center space-x-2">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {asset.name} ({asset.symbol})
+                  </p>
+                  <p className="text-xs">
+                    <span
+                      className={
+                        asset.priceChange >= 0
+                          ? "text-green-500 dark:text-green-400"
+                          : "text-red-500 dark:text-red-400"
+                      }
+                    >
+                      {(asset.priceChange >= 0 ? "+" : "") + asset.priceChange.toFixed(2)}%
+                    </span>
+                  </p>
+                </div>
+              </Link>
               <button
                 onClick={() => handleDismiss(asset.id, asset.thresholdCrossed)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
