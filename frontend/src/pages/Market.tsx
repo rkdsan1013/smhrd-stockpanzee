@@ -35,17 +35,17 @@ const Market: React.FC = () => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [sortConfig, setSortConfig] = useState<{
-    key: SortKey;
-    dir: "asc" | "desc";
-  }>({ key: "marketCap", dir: "desc" });
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+    key: "marketCap",
+    dir: "desc",
+  });
   const [page, setPage] = useState(1);
 
   const prevPrices = useRef<Map<number, number>>(new Map());
   const highlight = useRef<Map<number, "up" | "down">>(new Map());
   const [, rerender] = useState(0);
 
-  // 1) 자산 데이터 로드 및 가격 변동 하이라이트
+  // 1) Load data & highlight changes
   useEffect(() => {
     const load = () =>
       fetchAssets()
@@ -77,6 +77,7 @@ const Market: React.FC = () => {
             }
             prevPrices.current.set(item.id, item.currentPrice);
           });
+
           setData(list);
         })
         .catch(console.error);
@@ -85,25 +86,23 @@ const Market: React.FC = () => {
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, []);
+
   useEffect(() => {
     socket.on(
       "stockPrice",
       (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
-        setData((prev) => {
-          return prev.map((stock) => {
+        setData((prev) =>
+          prev.map((stock) => {
             if (stock.symbol === data.symbol && stock.category === "국내") {
               const prevPrice = stock.currentPrice;
               const newPrice = Number(data.price);
-
-              // 하이라이트 처리 (가격 변경 시)
               if (prevPrice !== newPrice) {
                 highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
                 setTimeout(() => {
                   highlight.current.delete(stock.id);
-                  rerender((v) => v + 1); // 리렌더 트리거
+                  rerender((v) => v + 1);
                 }, 500);
               }
-
               return {
                 ...stock,
                 currentPrice: newPrice,
@@ -112,36 +111,32 @@ const Market: React.FC = () => {
               };
             }
             return stock;
-          });
-        });
+          }),
+        );
       },
     );
-
     return () => {
       socket.off("stockPrice");
     };
   }, []);
 
-  // 2) 사용자 로그인 상태 변경 시 즐겨찾기 리스트 동기화
+  // 2) Sync favorites on login change
   useEffect(() => {
     if (user) {
       fetchFavorites()
         .then((list) => setFavorites(list))
-        .catch((err) => {
-          console.error("즐겨찾기 조회 실패:", err);
-          setFavorites([]);
-        });
+        .catch(() => setFavorites([]));
     } else {
       setFavorites([]);
     }
   }, [user]);
 
-  // 3) 필터/정렬/검색 변경 시 페이지 리셋
+  // 3) Reset page on filters change
   useEffect(() => {
     setPage(1);
   }, [tab, viewMode, sortConfig, search]);
 
-  // 4) 데이터 가공: 탭 → 뷰 모드 → 정렬 → 검색 → 페이징
+  // 4) Filter / sort / search / paginate
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
@@ -179,6 +174,7 @@ const Market: React.FC = () => {
 
   const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el) return;
@@ -190,11 +186,10 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // 5) 즐겨찾기 토글 핸들러
+  // 5) Toggle favorite
   const toggleFav = async (id: number) => {
     if (!user) {
       alert("즐겨찾기를 추가하려면 로그인해주세요.");
-      // navigate("/auth/login");
       return;
     }
     const isFav = favorites.includes(id);
@@ -206,23 +201,21 @@ const Market: React.FC = () => {
         await addFavorite(id);
         setFavorites((prev) => [...prev, id]);
       }
-    } catch (err) {
-      console.error("즐겨찾기 업데이트 실패:", err);
+    } catch {
       alert("즐겨찾기 업데이트에 실패했습니다.");
     }
   };
 
-  // 6) 기타 핸들러
+  // 6) Sorting & view toggle
   const handleSort = (key: SortKey) => {
     if (search.trim()) return;
     setSortConfig((prev) =>
       prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
     );
   };
-
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // 7) 요약 지표 계산
+  // 7) Summary metrics
   const summary = byTab;
   const total = summary.length;
   const largeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
@@ -392,14 +385,14 @@ const Market: React.FC = () => {
               <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6 text-white">
                 <h2 className="text-xl font-bold text-center">{statusTitle}</h2>
 
-                {/* 5-step bar */}
+                {/* 5-step bar: 상승 좌측, 하락 우측 */}
                 <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                   {[
-                    { cnt: largeDown, color: "bg-red-700", label: `큰 하락: ${largeDown}` },
-                    { cnt: smallDown, color: "bg-red-400", label: `하락: ${smallDown}` },
-                    { cnt: zero, color: "bg-gray-500", label: `변동 없음: ${zero}` },
-                    { cnt: smallUp, color: "bg-green-400", label: `상승: ${smallUp}` },
                     { cnt: largeUp, color: "bg-green-700", label: `큰 상승: ${largeUp}` },
+                    { cnt: smallUp, color: "bg-green-400", label: `상승: ${smallUp}` },
+                    { cnt: zero, color: "bg-gray-500", label: `변동 없음: ${zero}` },
+                    { cnt: smallDown, color: "bg-red-400", label: `하락: ${smallDown}` },
+                    { cnt: largeDown, color: "bg-red-700", label: `큰 하락: ${largeDown}` },
                   ].map(({ cnt, color, label }) => {
                     const pct = total ? (cnt / total) * 100 : 0;
                     return (
