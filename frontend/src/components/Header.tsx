@@ -16,15 +16,16 @@ const Header: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 드롭다운 메뉴 상태 & ref
+  // 유저 메뉴
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 알림 팝오버 상태 & ref
+  // 알림 팝업
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifAnchorRef = useRef<HTMLButtonElement>(null);
+  // nullable HTMLButtonElement ref
+  const notifAnchorRef = useRef<HTMLButtonElement | null>(null);
 
-  // 외부 클릭 시 메뉴 닫기
+  // 외부 클릭으로 메뉴 닫기
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
       if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -35,7 +36,7 @@ const Header: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
 
-  // 검색 활성화/비활성화
+  // 검색 열기/닫기
   const activateSearch = () => {
     if (blurTimeout.current) clearTimeout(blurTimeout.current);
     setSearchActive(true);
@@ -48,20 +49,16 @@ const Header: React.FC = () => {
     }, 150);
   };
 
-  // nav items
   const navItems = [
     { key: "news", label: "뉴스", path: "/news" },
     { key: "market", label: "마켓", path: "/market" },
     { key: "community", label: "팬지's TALK", path: "/community" },
   ];
 
-  // 알림 버튼 클릭: 메뉴 닫고 알림 토글
   const handleNotifClick = () => {
     setMenuOpen(false);
     setNotifOpen((o) => !o);
   };
-
-  // 프로필 버튼 클릭: 알림 닫고 메뉴 토글
   const handleMenuClick = () => {
     setNotifOpen(false);
     setMenuOpen((o) => !o);
@@ -77,7 +74,7 @@ const Header: React.FC = () => {
             <span className="ml-2 text-xl font-bold hidden lg:inline">STOCKPANZEE</span>
           </Link>
 
-          {/* 중앙: 네비 + 검색 */}
+          {/* 중앙: 검색 + 네비 */}
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
             {!searchActive ? (
               <div className="flex items-center space-x-4">
@@ -123,11 +120,10 @@ const Header: React.FC = () => {
             )}
           </div>
 
-          {/* 우측: 메시지 / 사용자 메뉴 */}
+          {/* 우측: 알림 + 프로필 */}
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                {/* 알림 버튼 & 팝오버 */}
                 <div className="relative">
                   <button
                     ref={notifAnchorRef}
@@ -137,17 +133,14 @@ const Header: React.FC = () => {
                     <Icons name="messageDots" className="w-8 h-8" />
                   </button>
                   {notifOpen && (
-                    <div className="absolute right-0 mt-2">
-                      <Notification
-                        isOpen
-                        onClose={() => setNotifOpen(false)}
-                        anchorRef={notifAnchorRef}
-                      />
-                    </div>
+                    <Notification
+                      isOpen={notifOpen}
+                      onClose={() => setNotifOpen(false)}
+                      anchorRef={notifAnchorRef}
+                    />
                   )}
                 </div>
 
-                {/* 프로필 버튼 & 드롭다운 */}
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={handleMenuClick}
@@ -156,7 +149,7 @@ const Header: React.FC = () => {
                     <Icons name="user" className="w-8 h-8" />
                   </button>
                   {menuOpen && (
-                    <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded shadow-lg z-50 overflow-hidden">
+                    <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded shadow-lg overflow-hidden z-50">
                       <div className="px-4 py-2 border-b border-gray-200 font-semibold">
                         {user.username}
                       </div>

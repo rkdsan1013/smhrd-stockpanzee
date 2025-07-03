@@ -14,7 +14,8 @@ interface NotifiedAsset extends Asset {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLButtonElement>;
+  // allow nullable HTMLButtonElement
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
@@ -22,7 +23,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // load notifications when opened
+  // load data when opened
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
@@ -49,7 +50,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
       .finally(() => setLoading(false));
   }, [isOpen]);
 
-  // close on outside click
+  // close when clicking outside panel or anchor
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
