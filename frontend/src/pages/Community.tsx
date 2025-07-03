@@ -1,40 +1,18 @@
 // /frontend/src/pages/Community.tsx
 import React, { useState, useEffect, useContext, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Icons from "../components/Icons";
 import SkeletonCard from "../components/SkeletonCard";
+import CommunityCard from "../components/CommunityCard";
+import type { CommunityPost } from "../components/CommunityCard";
 import { AuthContext } from "../providers/AuthProvider";
-
-interface CommunityPost {
-  id: number;
-  category: string;
-  community_title: string;
-  community_contents: string;
-  community_likes: number;
-  community_views: number;
-  created_at: string;
-  nickname?: string;
-  name?: string;
-  comment_count?: number;
-  img_url?: string;
-}
 
 const SORT_OPTIONS = ["latest", "popular"] as const;
 type SortKey = (typeof SORT_OPTIONS)[number];
 const CATEGORY_LIST = ["전체", "국내", "해외", "암호화폐"];
 const POSTS_PER_PAGE = 12;
 const RECENT_DAYS = 3;
-
-function timeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  date.setHours(date.getHours() - 9);
-  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diff < 60) return `${diff}초 전`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-  return `${Math.floor(diff / 86400)}일 전`;
-}
 
 function getDisplayPages(total: number, current: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -57,16 +35,16 @@ const Community: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
-  const handleWrite = () => {
-  if (!user) {
-    alert("로그인이 필요합니다.");
-    return;
-  }
-  navigate("/post");
-};
-
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+
+  const handleWrite = () => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    navigate("/post");
+  };
 
   // 게시글 로드
   useEffect(() => {
@@ -81,13 +59,14 @@ const Community: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // 댓글 개수 동기화
+  // 댓글 수 동기화
   useEffect(() => {
     if (!posts.length) return;
-    // 현재 페이지에 보이는 게시글만 요청 (최적화)
+
     const processed = (() => {
       let arr = posts.slice();
       if (filterCat !== "전체") arr = arr.filter((p) => p.category === filterCat);
+
       if (sortKey === "latest") {
         arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
       } else {
@@ -102,19 +81,21 @@ const Community: React.FC = () => {
       }
       return arr;
     })();
-    const visible = processed.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
 
-    // 한 번만 요청하도록 중복 요청 방지
+    const visible = processed.slice(
+      (currentPage - 1) * POSTS_PER_PAGE,
+      currentPage * POSTS_PER_PAGE,
+    );
     const idsToFetch = visible.map((p) => p.id).filter((id) => !(id in commentCounts));
-    if (idsToFetch.length === 0) return;
+    if (!idsToFetch.length) return;
 
     Promise.all(
       idsToFetch.map((id) =>
         axios
           .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/commentcount`)
           .then((res) => [id, res.data.count || 0] as [number, number])
-          .catch(() => [id, 0] as [number, number])
-      )
+          .catch(() => [id, 0] as [number, number]),
+      ),
     ).then((results) => {
       setCommentCounts((prev) => {
         const updated = { ...prev };
@@ -124,20 +105,21 @@ const Community: React.FC = () => {
         return updated;
       });
     });
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, filterCat, sortKey, currentPage]);
 
-  // 스크롤 토글 (맨 위로 버튼)
+  // 스크롤 토글
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 300);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 정렬 + 필터 적용
+  // 정렬 + 필터
   const processed = useMemo(() => {
     let arr = posts.slice();
     if (filterCat !== "전체") arr = arr.filter((p) => p.category === filterCat);
+
     if (sortKey === "latest") {
       arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
     } else {
@@ -160,10 +142,11 @@ const Community: React.FC = () => {
     [processed, currentPage],
   );
 
+  // 페이지 변경 시 스크롤
   useEffect(() => {
     if (currentPage > 1) {
       const topY =
-        document.getElementById("posts-top")?.getBoundingClientRect().top! + window.scrollY;
+        document.getElementById("posts-top")!.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({ top: topY, behavior: "smooth" });
     }
   }, [currentPage]);
@@ -172,7 +155,6 @@ const Community: React.FC = () => {
     <section className="container mx-auto px-4 py-8">
       {/* 상단 컨트롤 */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-        {/* 정렬 옵션 */}
         <div className="flex items-center space-x-2">
           {SORT_OPTIONS.map((key) => (
             <button
@@ -191,8 +173,6 @@ const Community: React.FC = () => {
             </button>
           ))}
         </div>
-
-        {/* 카테고리 필터 */}
         <div className="flex items-center space-x-2">
           {CATEGORY_LIST.map((cat) => (
             <button
@@ -211,7 +191,6 @@ const Community: React.FC = () => {
             </button>
           ))}
         </div>
-
         <button
           onClick={handleWrite}
           className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow hover:from-blue-600 hover:to-blue-700 transition"
@@ -231,51 +210,7 @@ const Community: React.FC = () => {
           <div className="col-span-full text-center text-gray-400 py-12">게시글이 없습니다.</div>
         ) : (
           visiblePosts.map((post) => (
-            <Link
-              to={`/communitydetail/${post.id}`}
-              key={post.id}
-              className="flex flex-col h-full bg-gray-800 rounded-lg shadow hover:shadow-lg transition overflow-hidden"
-            >
-              <img
-                src={
-                  post.img_url
-                    ? post.img_url.startsWith("/uploads/")
-                      ? `${import.meta.env.VITE_API_BASE_URL}${post.img_url}`
-                      : post.img_url
-                    : "/panzee.webp"
-                }
-                alt="썸네일"
-                className="w-full aspect-video object-cover"
-              />
-              <div className="flex-1 flex flex-col p-4">
-                <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">
-                  {post.community_title}
-                </h3>
-                <p className="text-gray-300 text-sm flex-1 line-clamp-3 whitespace-pre-wrap">
-                  {post.community_contents}
-                </p>
-                <div className="mt-4 text-xs text-gray-400 flex justify-between">
-                  <span>{timeAgo(post.created_at)}</span>
-                  <div className="flex space-x-3">
-                    <span className="flex items-center">
-                      <Icons name="thumbsUp" className="w-4 h-4 mr-1" />
-                      {post.community_likes}
-                    </span>
-                    <span className="flex items-center">
-                      <Icons name="messageDots" className="w-4 h-4 mr-1" />
-                      {/* 댓글 갯수 fetch */}
-                      {typeof commentCounts[post.id] === "number"
-                        ? commentCounts[post.id]
-                        : post.comment_count ?? 0}
-                    </span>
-                    <span className="flex items-center">
-                      <Icons name="eye" className="w-4 h-4 mr-1" />
-                      {post.community_views}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
+            <CommunityCard key={post.id} post={post} commentCount={commentCounts[post.id]} />
           ))
         )}
       </div>
@@ -302,7 +237,7 @@ const Community: React.FC = () => {
             ) : (
               <button
                 key={i}
-                onClick={() => setCurrentPage(p)}
+                onClick={() => setCurrentPage(p as number)}
                 className={`px-3 py-1 rounded-md transition ${
                   p === currentPage ? "bg-blue-600 text-white" : "text-white hover:bg-gray-700"
                 }`}
