@@ -194,7 +194,7 @@ const Market: React.FC = () => {
   const toggleFav = async (id: number) => {
     if (!user) {
       alert("즐겨찾기를 추가하려면 로그인해주세요.");
-      navigate("/login");
+      // navigate("/auth/login");
       return;
     }
     const isFav = favorites.includes(id);
