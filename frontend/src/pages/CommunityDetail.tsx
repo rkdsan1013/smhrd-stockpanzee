@@ -228,7 +228,7 @@ const CommunityDetail: React.FC = () => {
           </button>
           <span className="flex items-center">
             <Icons name="messageDots" className="w-5 h-5 mr-1" />
-            {comments.length}
+            {totalCommentCount}
           </span>
           <span className="flex items-center">
             <Icons name="eye" className="w-5 h-5 mr-1" />
