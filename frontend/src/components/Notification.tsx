@@ -63,7 +63,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
   return (
     <div
       ref={panelRef}
-      className="absolute bg-white dark:bg-gray-800 rounded-lg shadow-lg w-80 max-h-96 overflow-y-auto z-50"
+      className="fixed bg-white dark:bg-gray-800 rounded-lg shadow-lg w-80 max-h-96 overflow-y-auto z-50"
       style={{ top: rect.bottom + 8, left: rect.left - 160 + rect.width / 2 }}
     >
       <div className="py-2 px-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
@@ -89,8 +89,20 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {asset.name} ({asset.symbol})
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {asset.priceChange.toFixed(2)}% ±{asset.thresholdCrossed}%
+                  <p className="text-xs">
+                    <span
+                      className={
+                        asset.priceChange >= 0
+                          ? "text-green-500 dark:text-green-400"
+                          : "text-red-500 dark:text-red-400"
+                      }
+                    >
+                      {(asset.priceChange >= 0 ? "+" : "") + asset.priceChange.toFixed(2)}%
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {" "}
+                      ±{asset.thresholdCrossed}%
+                    </span>
                   </p>
                 </div>
               </div>
