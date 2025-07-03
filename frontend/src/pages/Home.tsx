@@ -4,6 +4,7 @@ import { fetchNews } from "../services/newsService";
 import type { NewsItem } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 import Tooltip from "../components/Tooltip";
+import FavoriteAssetsWidget from "../components/FavoriteAssetsWidget";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -22,34 +23,33 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchNews()
-      .then((data) => {
+      .then((data) =>
         setNewsItems(
           data.sort(
             (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
           ),
-        );
-      })
+        ),
+      )
       .catch((e) => setError(e.message || "뉴스 로드 실패"))
       .finally(() => setLoading(false));
   }, []);
 
-  // 1) 카테고리 필터
+  // 카테고리 필터
   const filtered =
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
-  // 2) 히어로 + 서브 뉴스
+  // 히어로 + 서브 뉴스
   const hero = filtered[0];
   const subNews = filtered.slice(1, 5);
 
-  // 3) 최근 7일 필터
+  // 최근 7일 필터
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  // 4) 감정 분포 계산
+  // 감정 분포 계산
   type Level = 1 | 2 | 3 | 4 | 5;
   const LEVELS: Level[] = [1, 2, 3, 4, 5];
-
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = 0;
@@ -67,7 +67,6 @@ const Home: React.FC = () => {
 
   const totalRecent = recent.length || 1;
   const avgSentiment = sumWeighted / totalRecent;
-
   const distPct = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = (dist[lvl] / totalRecent) * 100;
@@ -84,8 +83,10 @@ const Home: React.FC = () => {
     5: "매우 긍정",
   };
 
-  // 5) 키워드 트렌드
-  const tagCounts: Record<string, number> = {};
+  // 키워드 트렌드 + 감정별 건수 계산
+  type TagStat = { total: number; pos: number; neg: number };
+  const tagStats: Record<string, TagStat> = {};
+
   recent.forEach((item) => {
     let tags: string[] = [];
     if (Array.isArray(item.tags)) tags = item.tags;
@@ -95,10 +96,19 @@ const Home: React.FC = () => {
         if (Array.isArray(parsed)) tags = parsed;
       } catch {}
     }
-    tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1));
+    const sentVal = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
+
+    tags.forEach((t) => {
+      const stat = tagStats[t] || { total: 0, pos: 0, neg: 0 };
+      stat.total += 1;
+      if (sentVal >= 4) stat.pos += 1;
+      else if (sentVal <= 2) stat.neg += 1;
+      tagStats[t] = stat;
+    });
   });
-  const topTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => b - a)
+
+  const topTags = Object.entries(tagStats)
+    .sort(([, a], [, b]) => b.total - a.total)
     .slice(0, 5);
 
   if (loading) {
@@ -143,21 +153,14 @@ const Home: React.FC = () => {
           </ul>
         </nav>
 
-        {/* 메인 그리드 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        {/* 메인 그리드: items-start 로 변경 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* 뉴스 영역 (2/3) */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
-            {hero && (
-              <div className="h-full">
-                <NewsCard newsItem={hero} variant="hero" />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+            {hero && <NewsCard newsItem={hero} variant="hero" />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {subNews.map((n) => (
-                <div key={n.id} className="h-full">
-                  <NewsCard newsItem={n} variant="compact" />
-                </div>
+                <NewsCard key={n.id} newsItem={n} variant="compact" />
               ))}
             </div>
           </div>
@@ -218,18 +221,36 @@ const Home: React.FC = () => {
                 키워드 트렌드 (최근 {RECENT_DAYS}일)
               </h3>
               {topTags.length > 0 ? (
-                <ul className="text-gray-300 space-y-2 text-sm">
-                  {topTags.map(([tag, cnt]) => (
-                    <li key={tag} className="flex justify-between px-2 py-1 bg-gray-700 rounded">
-                      <span>#{tag}</span>
-                      <span className="font-medium">{cnt}회</span>
-                    </li>
-                  ))}
+                <ul className="space-y-4">
+                  {topTags.map(([tag, stat]) => {
+                    const posPct = (stat.pos / stat.total) * 100;
+                    const negPct = (stat.neg / stat.total) * 100;
+                    const neuPct = 100 - posPct - negPct;
+                    return (
+                      <li key={tag} className="space-y-1">
+                        <div className="flex justify-between text-gray-300 text-sm">
+                          <span>{tag}</span>
+                          <span>{stat.total}건</span>
+                        </div>
+                        <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden flex">
+                          <div className="bg-green-400 h-full" style={{ width: `${posPct}%` }} />
+                          <div className="bg-gray-500 h-full" style={{ width: `${neuPct}%` }} />
+                          <div className="bg-red-400 h-full" style={{ width: `${negPct}%` }} />
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>긍정 {posPct.toFixed(1)}%</span>
+                          <span>부정 {negPct.toFixed(1)}%</span>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="text-gray-500 text-sm">최근 데이터 없음</p>
               )}
             </div>
+
+            <FavoriteAssetsWidget />
           </aside>
         </div>
       </div>
