@@ -5,14 +5,13 @@ export const SELECT_ALL_ASSETS = `
     a.symbol,
     a.name,
     a.market,
-    ai.current_price   AS current_price,
-    ai.price_change    AS price_change,
-    ai.market_cap      AS market_cap,
+    ai.current_price AS current_price,
+    ai.price_change AS price_change,
+    ai.market_cap AS market_cap,
     a.created_at,
     a.updated_at
-  FROM assets AS a
-  LEFT JOIN asset_info AS ai
-    ON ai.asset_id = a.id
+  FROM assets a
+  LEFT JOIN asset_info ai ON ai.asset_id = a.id
   ORDER BY a.id;
 `;
 
@@ -42,10 +41,13 @@ export const UPSERT_ASSET_INFO = `
 
 export const GET_ASSET_BY_SYMBOL_AND_MARKET = `
   SELECT
-    a.id, a.symbol, a.name, a.market, ai.market_cap
-  FROM assets AS a
-  LEFT JOIN asset_info AS ai
-    ON ai.asset_id = a.id
+    a.id,
+    a.symbol,
+    a.name,
+    a.market,
+    ai.market_cap
+  FROM assets a
+  LEFT JOIN asset_info ai ON ai.asset_id = a.id
   WHERE a.symbol = ? AND a.market = ?;
 `;
 
@@ -76,16 +78,13 @@ export const SELECT_STOCK_ASSETS = `
     a.symbol,
     a.name,
     a.market,
-    ai.current_price    AS current_price,
-    ai.price_change     AS price_change,
-    ai.market_cap       AS market_cap,
+    ai.current_price AS current_price,
+    ai.price_change AS price_change,
+    ai.market_cap AS market_cap,
     a.created_at,
     a.updated_at
-  FROM assets AS a
-  LEFT JOIN asset_info AS ai
-    ON ai.asset_id = a.id
+  FROM assets a
+  LEFT JOIN asset_info ai ON ai.asset_id = a.id
   WHERE a.market IN ('NYSE','NASDAQ')
   ORDER BY a.id;
 `;
-
-

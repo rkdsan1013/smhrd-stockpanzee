@@ -11,20 +11,22 @@ export const INSERT_USER = `
 `;
 
 export const INSERT_USER_PROFILE = `
-  INSERT INTO user_profiles (uuid, name)
-  VALUES (?, ?)
+  INSERT INTO user_profiles (uuid, name, avatar_url)
+  VALUES (?, ?, ?)
 `;
 
 export const SELECT_USER_BY_UUID = `
-  SELECT u.uuid, u.email, p.name AS username, p.avatar_url
+  SELECT
+    u.uuid,
+    u.email,
+    p.name   AS username,
+    p.avatar_url
   FROM users u
-  JOIN user_profiles p ON u.uuid = p.uuid
+  JOIN user_profiles p
+    ON u.uuid = p.uuid
   WHERE u.uuid = ?
 `;
 
-/**
- * 프로필 수정용 UPDATE 쿼리들
- */
 export const UPDATE_USER_EMAIL = `
   UPDATE users
   SET email = ?
@@ -43,7 +45,6 @@ export const UPDATE_USER_PROFILE = `
   WHERE uuid = ?
 `;
 
-
 export const DELETE_LIKES_BY_USER = `
   DELETE FROM likes
   WHERE user_uuid = ?
@@ -54,16 +55,14 @@ export const DELETE_FAVORITES_BY_USER = `
   WHERE user_uuid = ?
 `;
 
-// ⚠️ community_com의 실제 컬럼명 확인해서 넣기! (예: writer_uuid)
 export const DELETE_COMMENTS_BY_USER = `
   DELETE FROM community_com
-  WHERE uuid = ?
-
+  WHERE writer_uuid = ?
 `;
 
 export const DELETE_POSTS_BY_USER = `
   DELETE FROM community
-  WHERE uuid = ?
+  WHERE writer_uuid = ?
 `;
 
 export const DELETE_PROFILE_BY_USER = `
