@@ -1,4 +1,4 @@
-// frontend/src/components/Comments.tsx
+// /frontend/src/components/Comments.tsx
 import React, { useState, useContext } from "react";
 import Icons from "./Icons";
 import { AuthContext } from "../providers/AuthProvider";
@@ -42,6 +42,18 @@ function getFullImgUrl(img_url?: string) {
   return ORIGIN + img_url;
 }
 
+// ---------- 모든 댓글(대댓글 포함) 개수 카운트 ----------  // 👈 추가!
+function countAllComments(comments: Comment[]): number {
+  let total = 0;
+  for (const c of comments) {
+    total += 1;
+    if (c.replies && c.replies.length > 0) {
+      total += countAllComments(c.replies);
+    }
+  }
+  return total;
+}
+
 // ---------- 메인 Comments 컴포넌트 ----------
 const Comments: React.FC<{
   comments: Comment[];
@@ -67,7 +79,9 @@ const Comments: React.FC<{
 
   return (
     <div>
-      <div className="text-lg font-bold mb-2">{comments.length} 코멘트</div>
+      <div className="text-lg font-bold mb-2">
+        {countAllComments(comments)} 코멘트 {/* 👈 변경! */}
+      </div>
       <CommentInput onSubmit={handleCommentSubmit} />
       <div className="space-y-4 mt-4">
         {comments.map((comment, idx) => (
@@ -92,7 +106,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
   const { user } = useContext(AuthContext);
 
   return (
-   <form
+    <form
       className="flex flex-col gap-2"
       onSubmit={e => {
         e.preventDefault();
