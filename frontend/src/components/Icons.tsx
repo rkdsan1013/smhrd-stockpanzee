@@ -1,4 +1,9 @@
 // /frontend/src/components/Icons.tsx
+// <Icons name="user" />
+// <Icons name="close" className="w-4 h-4 text-red-500" />
+//
+// 'name'에는 'user' 또는 'close'와 같이 iconMap에 정의된 키 값을 전달하세요.
+// 'className'은 선택적으로 스타일을 커스터마이징할 수 있습니다.
 import React from "react";
 
 type IconProps = {
@@ -429,27 +434,27 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
       </svg>
     ),
 
-     volatility: (
-    <svg
-      className={className || "w-6 h-6 text-gray-800 dark:text-white"}
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M8 20V7m0 13-4-4m4 4 4-4m4-12v13m0-13 4 4m-4-4-4 4"
-      />
-    </svg>
-  ),
+    volatility: (
+      <svg
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M8 20V7m0 13-4-4m4 4 4-4m4-12v13m0-13 4 4m-4-4-4 4"
+        />
+      </svg>
+    ),
 
-      more: (
+    more: (
       <svg
         className={className || "w-6 h-6 text-gray-800 dark:text-white"}
         xmlns="http://www.w3.org/2000/svg"
@@ -515,14 +520,7 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
           strokeWidth="2"
           d="M7 6l1.3-1.95A1 1 0 0 1 9.13 4h5.74a1 1 0 0 1 .83.45L17 6m2 0a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14Zm-7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"
         />
-        <circle
-          cx="12"
-          cy="13"
-          r="2.5"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-        />
+        <circle cx="12" cy="13" r="2.5" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
 
@@ -552,9 +550,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-
-
-    
   };
 
   if (!iconMap[name]) {

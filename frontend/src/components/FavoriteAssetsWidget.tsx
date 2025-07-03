@@ -38,6 +38,7 @@ const COLOR: Record<Category, string> = {
   암호화폐: "text-yellow-300",
   기타: "text-gray-300",
 };
+
 const FavoriteAssetsWidget: React.FC = () => {
   const { user } = useContext(AuthContext);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -64,37 +65,31 @@ const FavoriteAssetsWidget: React.FC = () => {
     const isFav = favorites.includes(assetId);
     setFavorites((prev) => (isFav ? prev.filter((id) => id !== assetId) : [...prev, assetId]));
     try {
-      if (isFav) {
-        await removeFavorite(assetId);
-      } else {
-        await addFavorite(assetId);
-      }
+      if (isFav) await removeFavorite(assetId);
+      else await addFavorite(assetId);
     } catch {
-      // rollback
+      // rollback on error
       setFavorites((prev) => (isFav ? [...prev, assetId] : prev.filter((id) => id !== assetId)));
     }
   };
 
   function getDisplayList(): { cat: Category; items: Asset[] }[] {
     if (!assets.length) return [];
+    // if not logged in, show none
+    if (!user) return [];
 
-    if (user && favorites.length) {
-      const favAssets = assets
-        .filter((a) => favorites.includes(a.id))
-        .sort((a, b) => b.marketCap - a.marketCap);
-      return CATEGORY_ORDER.map((cat) => ({
-        cat,
-        items: favAssets.filter((a) => marketToCategory(a.market) === cat),
-      })).filter((grp) => grp.items.length);
-    }
+    // logged-in but no favorites
+    if (user && !favorites.length) return [];
+
+    // logged-in with favorites
+    const favAssets = assets
+      .filter((a) => favorites.includes(a.id))
+      .sort((a, b) => b.marketCap - a.marketCap);
 
     return CATEGORY_ORDER.map((cat) => ({
       cat,
-      items: assets
-        .filter((a) => marketToCategory(a.market) === cat)
-        .sort((a, b) => b.marketCap - a.marketCap)
-        .slice(0, 3),
-    }));
+      items: favAssets.filter((a) => marketToCategory(a.market) === cat),
+    })).filter((grp) => grp.items.length);
   }
 
   const list = getDisplayList();
@@ -115,13 +110,22 @@ const FavoriteAssetsWidget: React.FC = () => {
       <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">내 관심종목</h3>
 
       {list.length === 0 ? (
-        <div className="text-gray-400">표시할 종목이 없습니다.</div>
+        user ? (
+          <div className="text-gray-400 text-center py-8">아직 즐겨찾기한 종목이 없습니다.</div>
+        ) : (
+          <div className="text-gray-400 text-center py-8">
+            관심종목을 보려면{" "}
+            <button className="underline" onClick={() => navigate("/auth/login")}>
+              로그인
+            </button>{" "}
+            해주세요.
+          </div>
+        )
       ) : (
         <div className="space-y-6">
           {list.map(({ cat, items }) => (
             <div key={cat}>
               <div className={`mb-2 text-sm font-bold ${COLOR[cat]}`}>{LABEL[cat]}</div>
-
               <ul className="divide-y divide-gray-700 max-h-40 overflow-y-auto no-scrollbar">
                 {items.map((a) => (
                   <li
@@ -138,15 +142,15 @@ const FavoriteAssetsWidget: React.FC = () => {
                     </button>
 
                     <div
-                      className="flex-1 flex items-baseline space-x-1 cursor-pointer"
+                      className="flex-1 cursor-pointer"
                       onClick={() => navigate(`/asset/${a.id}`)}
                     >
-                      <span className="text-white font-semibold truncate">{a.name}</span>
-                      <span className="text-xs text-gray-400">{a.symbol}</span>
+                      <p className="text-white font-semibold truncate">{a.name}</p>
+                      <p className="text-gray-400 text-xs">{a.symbol}</p>
                     </div>
 
                     <span className="ml-4 font-bold text-white">
-                      {a.currentPrice?.toLocaleString() || "-"}
+                      {a.currentPrice.toLocaleString() || "-"}
                     </span>
 
                     <span
@@ -166,15 +170,6 @@ const FavoriteAssetsWidget: React.FC = () => {
               </ul>
             </div>
           ))}
-        </div>
-      )}
-
-      {user && !favorites.length && (
-        <div className="text-gray-400 text-xs mt-4">
-          아직 즐겨찾기한 종목이 없습니다.
-          <span className="underline cursor-pointer ml-1" onClick={() => navigate("/market")}>
-            마켓에서 추가해보세요!
-          </span>
         </div>
       )}
     </div>
