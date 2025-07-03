@@ -24,6 +24,7 @@ interface Post {
   img_url?: string;
 }
 
+// “방금 전”, “n분 전” 등을 계산
 function timeAgo(dateString: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -45,17 +46,17 @@ const CommunityDetail: React.FC = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // 게시글 조회
   const fetchPost = useCallback(() => {
     setLoading(true);
     axios
-      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`, {
-        withCredentials: true,
-      })
+      .get<Post>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}`, { withCredentials: true })
       .then((res) => setPost(res.data))
       .catch(() => setPost(null))
       .finally(() => setLoading(false));
   }, [id]);
 
+  // 댓글 조회
   const fetchComments = useCallback(() => {
     axios
       .get<Comment[]>(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
@@ -68,6 +69,7 @@ const CommunityDetail: React.FC = () => {
     fetchComments();
   }, [id, fetchPost, fetchComments]);
 
+  // 좋아요 상태
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   useEffect(() => {
@@ -75,6 +77,7 @@ const CommunityDetail: React.FC = () => {
     setLikeCount(post?.community_likes || 0);
   }, [post]);
 
+  // 좋아요 토글
   const handleLikeToggle = async () => {
     if (!post) return;
     try {
@@ -87,14 +90,22 @@ const CommunityDetail: React.FC = () => {
     }
   };
 
+  // 수정/삭제 드롭다운
   const [showMenu, setShowMenu] = useState(false);
   useEffect(() => {
     if (!showMenu) return;
-    const closeMenu = () => setShowMenu(false);
-    window.addEventListener("click", closeMenu);
-    return () => window.removeEventListener("click", closeMenu);
+    const close = () => setShowMenu(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
   }, [showMenu]);
 
+  const handleEdit = () => {
+    if (!user || !post || user.uuid !== post.uuid) {
+      alert("작성자가 아닙니다.");
+      return;
+    }
+    navigate(`/post/edit/${post.id}`);
+  };
   const handleDelete = async () => {
     if (!user || !post || user.uuid !== post.uuid) {
       alert("작성자가 아닙니다.");
@@ -116,17 +127,9 @@ const CommunityDetail: React.FC = () => {
     }
   };
 
-  const handleEdit = () => {
-    if (!user || !post || user.uuid !== post.uuid) {
-      alert("작성자가 아닙니다.");
-      return;
-    }
-    navigate(`/post/edit/${post.id}`);
-  };
-
   if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
 
-  // 이미지 URL 조합
+  // 이미지 URL 보정
   const rawBase = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
   const apiBase = rawBase.endsWith("/api") ? rawBase : `${rawBase}/api`;
   const imgPath = post.img_url?.replace(/^\/+/, "");
@@ -137,18 +140,19 @@ const CommunityDetail: React.FC = () => {
     : "/panzee.webp";
 
   return (
-    <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
+    <div className="mx-auto px-4 max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
+      {/* 상단 메타 + 메뉴 */}
       <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
-        <span>{post.category}</span>
+        <span className="uppercase">{post.category}</span>
         <span className="mx-2 text-gray-500">·</span>
         <span className="font-normal text-gray-300">{timeAgo(post.created_at)}</span>
         <div className="ml-auto relative">
           <button
-            className="ml-2 p-1 hover:bg-gray-700 rounded-full"
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu((v) => !v);
             }}
+            className="ml-2 p-1 hover:bg-gray-700 rounded-full"
             type="button"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,20 +167,14 @@ const CommunityDetail: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                onClick={handleEdit}
                 className="w-full px-4 py-2 text-left text-white hover:bg-gray-700"
-                onClick={() => {
-                  setShowMenu(false);
-                  handleEdit();
-                }}
               >
                 수정
               </button>
               <button
+                onClick={handleDelete}
                 className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700"
-                onClick={() => {
-                  setShowMenu(false);
-                  handleDelete();
-                }}
               >
                 삭제
               </button>
@@ -185,51 +183,49 @@ const CommunityDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* 제목 */}
       <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
 
+      {/* 이미지 */}
       <img
         src={imgSrc}
         alt={post.community_title}
-        className="w-full aspect-video object-contain rounded mb-3"
+        className="w-full aspect-video object-contain rounded mb-6"
       />
 
-      <div className="flex items-center mb-2">
-        <div className="text-base text-white font-semibold">
-          {post.nickname || post.name || "익명"}
+      {/* 본문 내용 */}
+      <div className="text-gray-200 whitespace-pre-wrap mb-8">{post.community_contents}</div>
+
+      {/* 작성자/좋아요/댓글/조회수 */}
+      <div className="flex items-center mb-8 space-x-6 text-gray-400">
+        <div className="flex items-center space-x-2">
+          <span className="text-white font-semibold">{post.nickname || post.name || "익명"}</span>
         </div>
-        <div className="flex items-center space-x-6 text-gray-400 ml-auto">
-          <button
-            onClick={handleLikeToggle}
-            className={`flex items-center transition-colors ${
-              isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"
-            }`}
-            title={isLiked ? "좋아요 취소" : "좋아요"}
-            type="button"
-          >
-            <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
-            {likeCount > 0 && <span>{likeCount}</span>}
-          </button>
-
-          <span className="flex items-center">
-            <Icons name="messageDots" className="w-5 h-5 mr-1" />
-            {comments.length}
-          </span>
-
-          <span className="flex items-center">
-            <Icons name="eye" className="w-5 h-5 mr-1" />
-            {post.community_views || 0}
-          </span>
+        <button
+          onClick={handleLikeToggle}
+          className={`flex items-center transition-colors ${
+            isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"
+          }`}
+          title={isLiked ? "좋아요 취소" : "좋아요"}
+          type="button"
+        >
+          <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
+          {likeCount}
+        </button>
+        <div className="flex items-center">
+          <Icons name="messageDots" className="w-5 h-5 mr-1" />
+          {comments.length}
+        </div>
+        <div className="flex items-center">
+          <Icons name="eye" className="w-5 h-5 mr-1" />
+          {post.community_views}
         </div>
       </div>
 
-      <div className="text-gray-200 mb-8 whitespace-pre-wrap">{post.community_contents}</div>
+      <hr className="border-gray-700 opacity-50 mb-6" />
 
-      <hr className="border-black opacity-60 my-6" />
-
-      {/* 댓글 영역 */}
-      <div className="mb-6">
-        <Comments comments={comments} fetchComments={fetchComments} postId={id!} />
-      </div>
+      {/* 댓글 섹션 */}
+      <Comments comments={comments} fetchComments={fetchComments} postId={id!} />
     </div>
   );
 };
