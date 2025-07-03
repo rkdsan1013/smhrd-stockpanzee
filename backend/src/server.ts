@@ -22,6 +22,7 @@ import redditRoutes from "./routes/redditRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import userRoutes from "./routes/userRoutes";
 import favoriteRouter from "./routes/favoriteRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use("/api/reddit", redditRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/favorites", favoriteRouter);
+app.use("/api", notificationRoutes);
 
 // 정적 파일 제공: /api/uploads/*
 const uploadsPath = path.resolve(__dirname, "../uploads");

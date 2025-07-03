@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { fetchAssets } from "../services/assetService";
 import type { Asset } from "../services/assetService";
 import { fetchFavorites } from "../services/favoriteService";
+import { fetchDismissedNotifications, dismissNotification } from "../services/notificationService";
 import Icons from "./Icons";
 
 interface NotifiedAsset extends Asset {
@@ -20,7 +21,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // 위치 계산 함수
+  // 위치 계산
   const updatePosition = useCallback(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
@@ -31,7 +32,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     }
   }, [anchorRef]);
 
-  // 클릭 외 영역 닫기
+  // 클릭 외 영역 및 리사이즈 처리
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -45,10 +46,8 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     }
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      // 초기 위치
-      updatePosition();
-      // 리사이즈 시 위치 업데이트
       window.addEventListener("resize", updatePosition);
+      updatePosition();
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -56,14 +55,17 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     };
   }, [isOpen, onClose, anchorRef, updatePosition]);
 
-  // 알림 리스트 fetch
+  // 알림 리스트 fetch + 필터링
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetchFavorites()
-      .then((favIds) => {
+    Promise.all([fetchFavorites(), fetchDismissedNotifications()])
+      .then(([favIds, dismissedIds]) => {
         const favSet = new Set(favIds);
-        return fetchAssets().then((assets) => assets.filter((a) => favSet.has(a.id)));
+        const dismissedSet = new Set(dismissedIds);
+        return fetchAssets().then((assets) =>
+          assets.filter((a) => favSet.has(a.id) && !dismissedSet.has(a.id)),
+        );
       })
       .then((favAssets) => {
         const results = favAssets
@@ -80,8 +82,13 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
   if (!isOpen || !anchorRef.current) return null;
 
   // 개별 알림 닫기
-  const dismiss = (id: number) => {
-    setNotifiedAssets((prev) => prev.filter((a) => a.id !== id));
+  const handleDismiss = async (id: number) => {
+    try {
+      await dismissNotification(id);
+      setNotifiedAssets((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -125,7 +132,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
                 </p>
               </div>
               <button
-                onClick={() => dismiss(asset.id)}
+                onClick={() => handleDismiss(asset.id)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               >
                 <Icons name="close" className="w-4 h-4 text-gray-500 dark:text-gray-400" />
