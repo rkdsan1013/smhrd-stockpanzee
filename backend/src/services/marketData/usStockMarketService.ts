@@ -1,4 +1,4 @@
-// /backend/src/services/polygonPriceStream.ts
+// /backend/src/services/marketData/usStockMarketService.ts
 import dotenv from "dotenv";
 dotenv.config();
 
