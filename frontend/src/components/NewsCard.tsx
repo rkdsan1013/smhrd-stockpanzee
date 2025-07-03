@@ -5,7 +5,6 @@ import Icons from "../components/Icons";
 import type { NewsItem } from "../services/newsService";
 
 export interface NewsCardProps {
-  /** "hero" | "default" | "compact" */
   variant?: "hero" | "default" | "compact";
   newsItem: NewsItem;
 }
@@ -52,9 +51,9 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
       className="flex flex-col h-full bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:scale-[1.02] transition"
       aria-label={newsItem.title_ko || newsItem.title}
     >
-      {/* hero/default 모드의 이미지 */}
+      {/* 이미지 (hero, default 버전에서만) */}
       {variant !== "compact" && (
-        <div className={`flex-shrink-0 w-full ${variant === "hero" ? "h-80" : "h-48"} relative`}>
+        <div className={`relative w-full ${variant === "hero" ? "h-80" : "h-48"}`}>
           <img
             src={newsItem.image || "/panzee.webp"}
             alt={newsItem.title}
@@ -67,7 +66,6 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
         </div>
       )}
 
-      {/* 본문 */}
       <div className={`flex flex-col flex-1 ${variant === "compact" ? "p-4" : "p-6"}`}>
         {/* 배지 */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -84,18 +82,15 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
 
         {variant === "compact" ? (
           <>
-            {/* 제목 */}
             <h3 className="text-white font-semibold text-base line-clamp-2">
               {newsItem.title_ko || newsItem.title}
             </h3>
-            {/* 짧은 요약문 */}
             <p className="mt-1 text-gray-300 text-sm line-clamp-2">
               {newsItem.brief_summary || newsItem.summary}
             </p>
           </>
         ) : (
           <>
-            {/* 태그 */}
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
                 {tags.map((t, i) => (
@@ -108,8 +103,6 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
                 ))}
               </div>
             )}
-
-            {/* 제목 */}
             <h3
               className={`text-white font-bold mb-2 line-clamp-2 ${
                 variant === "hero" ? "text-3xl" : "text-lg"
@@ -117,23 +110,21 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
             >
               {newsItem.title_ko || newsItem.title}
             </h3>
-
-            {/* 요약 */}
             <p className="text-gray-300 text-sm flex-1 line-clamp-3">
               {newsItem.brief_summary || newsItem.summary}
             </p>
           </>
         )}
 
-        {/* 푸터: 퍼블리셔/날짜/조회수 */}
+        {/* 푸터 */}
         <div className="mt-auto pt-4 flex justify-between items-center text-xs text-gray-400">
           <div className="space-y-1">
             <div>{newsItem.publisher}</div>
             <div>{new Date(newsItem.published_at).toLocaleString()}</div>
           </div>
           <div className="flex items-center space-x-1">
-            <Icons name="eyeOpen" />
-            <span>{(newsItem.view_count ?? 0).toLocaleString()}</span>
+            <Icons name="eyeOpen" className="w-4 h-4" />
+            <span className="text-sm">{(newsItem.view_count ?? 0).toLocaleString()}</span>
           </div>
         </div>
       </div>

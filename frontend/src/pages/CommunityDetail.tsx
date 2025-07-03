@@ -96,7 +96,7 @@ const CommunityDetail: React.FC = () => {
   }, [showMenu]);
 
   const handleDelete = async () => {
-    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+    if (!user || !post || user.uuid !== post.uuid) {
       alert("작성자가 아닙니다.");
       return;
     }
@@ -117,7 +117,7 @@ const CommunityDetail: React.FC = () => {
   };
 
   const handleEdit = () => {
-    if (!user || !post || !user.uuid || !post.uuid || user.uuid !== post.uuid) {
+    if (!user || !post || user.uuid !== post.uuid) {
       alert("작성자가 아닙니다.");
       return;
     }
@@ -125,6 +125,16 @@ const CommunityDetail: React.FC = () => {
   };
 
   if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
+
+  // 이미지 URL 조합
+  const rawBase = import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "");
+  const apiBase = rawBase.endsWith("/api") ? rawBase : `${rawBase}/api`;
+  const imgPath = post.img_url?.replace(/^\/+/, "");
+  const imgSrc = post.img_url
+    ? post.img_url.startsWith("http")
+      ? post.img_url
+      : `${apiBase}/${imgPath}`
+    : "/panzee.webp";
 
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
@@ -174,18 +184,15 @@ const CommunityDetail: React.FC = () => {
           )}
         </div>
       </div>
+
       <h1 className="text-3xl font-bold text-white mb-4">{post.community_title}</h1>
+
       <img
-        src={
-          post.img_url
-            ? post.img_url.startsWith("/uploads/")
-              ? `http://localhost:5000${post.img_url}`
-              : post.img_url
-            : "/panzee.webp"
-        }
+        src={imgSrc}
         alt={post.community_title}
         className="w-full aspect-video object-contain rounded mb-3"
       />
+
       <div className="flex items-center mb-2">
         <div className="text-base text-white font-semibold">
           {post.nickname || post.name || "익명"}
@@ -193,25 +200,32 @@ const CommunityDetail: React.FC = () => {
         <div className="flex items-center space-x-6 text-gray-400 ml-auto">
           <button
             onClick={handleLikeToggle}
-            className={`flex items-center transition-colors ${isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"}`}
+            className={`flex items-center transition-colors ${
+              isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"
+            }`}
             title={isLiked ? "좋아요 취소" : "좋아요"}
             type="button"
           >
             <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
+
           <span className="flex items-center">
             <Icons name="messageDots" className="w-5 h-5 mr-1" />
             {comments.length}
           </span>
+
           <span className="flex items-center">
             <Icons name="eye" className="w-5 h-5 mr-1" />
             {post.community_views || 0}
           </span>
         </div>
       </div>
+
       <div className="text-gray-200 mb-8 whitespace-pre-wrap">{post.community_contents}</div>
+
       <hr className="border-black opacity-60 my-6" />
+
       {/* 댓글 영역 */}
       <div className="mb-6">
         <Comments comments={comments} fetchComments={fetchComments} postId={id!} />
