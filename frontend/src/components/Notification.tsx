@@ -55,37 +55,42 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
     };
   }, [isOpen, onClose, anchorRef, updatePosition]);
 
-  // 알림 리스트 fetch + 필터링
+  // 알림 리스트 fetch + 필터링 (assetId + threshold)
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
     Promise.all([fetchFavorites(), fetchDismissedNotifications()])
-      .then(([favIds, dismissedIds]) => {
-        const favSet = new Set(favIds);
-        const dismissedSet = new Set(dismissedIds);
-        return fetchAssets().then((assets) =>
-          assets.filter((a) => favSet.has(a.id) && !dismissedSet.has(a.id)),
+      .then(([favIds, dismissedList]) => {
+        const favSet = new Set<number>(favIds);
+        const dismissedSet = new Set<string>(
+          dismissedList.map((d) => `${d.assetId}_${d.threshold}`),
         );
+        return fetchAssets()
+          .then((assets) => assets.filter((a) => favSet.has(a.id)))
+          .then((favAssets) =>
+            favAssets
+              .map((asset) => {
+                const thresholdCrossed = Math.floor(Math.abs(asset.priceChange) / 5) * 5;
+                return { ...asset, thresholdCrossed };
+              })
+              .filter(
+                (a) => a.thresholdCrossed > 0 && !dismissedSet.has(`${a.id}_${a.thresholdCrossed}`),
+              ),
+          );
       })
-      .then((favAssets) => {
-        const results = favAssets
-          .map((asset) => ({
-            ...asset,
-            thresholdCrossed: Math.floor(Math.abs(asset.priceChange) / 5) * 5,
-          }))
-          .filter((a) => a.thresholdCrossed > 0);
-        setNotifiedAssets(results);
-      })
+      .then((results) => setNotifiedAssets(results))
       .finally(() => setLoading(false));
   }, [isOpen]);
 
   if (!isOpen || !anchorRef.current) return null;
 
   // 개별 알림 닫기
-  const handleDismiss = async (id: number) => {
+  const handleDismiss = async (id: number, threshold: number) => {
     try {
-      await dismissNotification(id);
-      setNotifiedAssets((prev) => prev.filter((a) => a.id !== id));
+      await dismissNotification(id, threshold);
+      setNotifiedAssets((prev) =>
+        prev.filter((a) => !(a.id === id && a.thresholdCrossed === threshold)),
+      );
     } catch (err) {
       console.error(err);
     }
@@ -112,7 +117,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
         <ul className="py-2">
           {notifiedAssets.map((asset) => (
             <li
-              key={asset.id}
+              key={`${asset.id}-${asset.thresholdCrossed}`}
               className="px-4 py-2 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               <div>
@@ -132,7 +137,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
                 </p>
               </div>
               <button
-                onClick={() => handleDismiss(asset.id)}
+                onClick={() => handleDismiss(asset.id, asset.thresholdCrossed)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
               >
                 <Icons name="close" className="w-4 h-4 text-gray-500 dark:text-gray-400" />
