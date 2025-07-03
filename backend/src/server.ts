@@ -67,7 +67,7 @@ async function start() {
     console.log(`Server running on port ${PORT}`);
 
     // (옵션) Polygon 실시간 주가
-    // startPolygonPriceStream(io).catch(err => console.error(err));
+    // startPolygonPriceStream(io).catch((err) => console.error(err));
 
     // (옵션) 암호화폐 DB 업데이트
     // setInterval(updateCryptoAssetInfoPeriodically, 5000);
