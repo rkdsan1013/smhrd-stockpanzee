@@ -26,6 +26,8 @@ router.delete("/:id", authenticate, communityController.deleteCommunityPost);
 // 댓글 라우트 
 router.get("/:id/comments", communityController.getComments);
 router.post("/:id/comments", authenticate, upload.single("image"), communityController.createComment);
+router.get("/:id/commentCount", communityController.getCommentCount);
+
 
 // 게시글 좋아요
 router.post("/:id/like", authenticate, communityController.toggleCommunityLike);

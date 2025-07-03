@@ -37,6 +37,18 @@ function timeAgo(dateString: string): string {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
+// 🟡 댓글 + 대댓글 합산 함수
+function countAllComments(comments: Comment[]): number {
+  let total = 0;
+  for (const c of comments) {
+    total += 1;
+    if ((c as any).replies && Array.isArray((c as any).replies)) {
+      total += countAllComments((c as any).replies);
+    }
+  }
+  return total;
+}
+
 const CommunityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<Post | null>(null);
@@ -126,6 +138,9 @@ const CommunityDetail: React.FC = () => {
 
   if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
 
+  // 🟡 대댓글까지 합산해서 댓글 수 표시
+  const totalCommentCount = countAllComments(comments);
+
   return (
     <div className="w-full max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4">
       <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
@@ -202,7 +217,7 @@ const CommunityDetail: React.FC = () => {
           </button>
           <span className="flex items-center">
             <Icons name="messageDots" className="w-5 h-5 mr-1" />
-            {comments.length}
+            {totalCommentCount}
           </span>
           <span className="flex items-center">
             <Icons name="eye" className="w-5 h-5 mr-1" />

@@ -51,7 +51,6 @@ app.use("/api", notificationRoutes);
 
 // 정적 파일 제공: /api/uploads/*
 const uploadsPath = path.resolve(__dirname, "../uploads");
-console.log("Serving uploads from:", uploadsPath);
 app.use("/api/uploads", express.static(uploadsPath));
 
 // 기본 경로

@@ -111,8 +111,8 @@ const Community: React.FC = () => {
     Promise.all(
       idsToFetch.map((id) =>
         axios
-          .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
-          .then((res) => [id, Array.isArray(res.data) ? res.data.length : 0] as [number, number])
+          .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/commentcount`)
+          .then((res) => [id, res.data.count || 0] as [number, number])
           .catch(() => [id, 0] as [number, number])
       )
     ).then((results) => {

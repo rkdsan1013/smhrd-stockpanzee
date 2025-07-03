@@ -56,8 +56,8 @@ const CommunityPopularWidget: React.FC<Props> = ({ selectedTab }) => {
     Promise.all(
       filtered.map((post) =>
         axios
-          .get(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}/comments`)
-          .then((res) => [post.id, Array.isArray(res.data) ? res.data.length : 0] as [number, number])
+          .get(`${import.meta.env.VITE_API_BASE_URL}/community/${post.id}/commentcount`)
+          .then((res) => [post.id, res.data.count || 0] as [number, number])
           .catch(() => [post.id, 0] as [number, number])
       )
     ).then((results) => {

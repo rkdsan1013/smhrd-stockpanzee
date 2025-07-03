@@ -397,3 +397,24 @@ export const deleteCommunityPost = async (
     next(err);
   }
 };
+
+// 게시글의 전체 댓글(대댓글 포함) 개수 반환
+export const getCommentCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const comm_id = Number(req.params.id);
+    const [rows] = await pool.query(
+      `SELECT COUNT(*) AS total_count FROM comments WHERE target_type='community' AND target_id=?`,
+      [comm_id]
+    );
+    // MySQL2의 rows는 RowDataPacket[] 타입
+    const total_count = (rows as any)[0]?.total_count ?? 0;
+    res.json({ count: total_count });
+  } catch (err) {
+    next(err);
+  }
+};
+
