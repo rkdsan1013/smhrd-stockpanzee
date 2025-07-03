@@ -12,7 +12,7 @@ import { updateCryptoAssetInfoPeriodically } from "./services/marketData/cryptoM
 import { emitMockTop25 } from "./services/marketData/krxMarketService";
 
 // 뉴스 스케줄러 import
-//import "./services/news/newsScheduler";
+import "./services/news/newsScheduler";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -72,7 +72,7 @@ async function start() {
     // startPolygonPriceStream(io).catch((err) => console.error(err));
 
     // (옵션) 암호화폐 DB 업데이트
-    setInterval(updateCryptoAssetInfoPeriodically, 5000);
+    // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
     // (옵션) KRX 주가 emit
     // emitMockTop25(io).then(() => console.log("KRX emit started"));

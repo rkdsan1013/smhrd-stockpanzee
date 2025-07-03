@@ -83,9 +83,16 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
         </div>
 
         {variant === "compact" ? (
-          <h3 className="text-white font-semibold text-base line-clamp-2">
-            {newsItem.title_ko || newsItem.title}
-          </h3>
+          <>
+            {/* 제목 */}
+            <h3 className="text-white font-semibold text-base line-clamp-2">
+              {newsItem.title_ko || newsItem.title}
+            </h3>
+            {/* 짧은 요약문 */}
+            <p className="mt-1 text-gray-300 text-sm line-clamp-2">
+              {newsItem.brief_summary || newsItem.summary}
+            </p>
+          </>
         ) : (
           <>
             {/* 태그 */}
