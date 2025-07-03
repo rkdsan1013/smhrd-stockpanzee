@@ -123,6 +123,32 @@ const Home: React.FC = () => {
     .sort(([, a], [, b]) => b.total - a.total)
     .slice(0, 5);
 
+  // 평균 감정 레이블, 이모지, 색상 계산
+  const sentimentCategory =
+    avgSentiment >= 4
+      ? "매우 긍정"
+      : avgSentiment >= 3.5
+        ? "긍정"
+        : avgSentiment >= 2.5
+          ? "중립"
+          : avgSentiment >= 2
+            ? "부정"
+            : "매우 부정";
+
+  const sentimentEmoji =
+    avgSentiment >= 4
+      ? "😄"
+      : avgSentiment >= 3.5
+        ? "🙂"
+        : avgSentiment >= 2.5
+          ? "😐"
+          : avgSentiment >= 2
+            ? "😕"
+            : "😞";
+
+  const sentimentColorClass =
+    avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
+
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-12">
@@ -185,19 +211,27 @@ const Home: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="mt-3 text-white flex items-center justify-between">
+
+              {/* 이모지 + 라벨 + 소수 표시 + 미니 게이지 */}
+              <div className="mt-3 text-white">
                 <span className="text-sm">평균 감정</span>
-                <span
-                  className={`text-lg font-semibold ${
-                    avgSentiment >= 3.5
-                      ? "text-green-300"
-                      : avgSentiment <= 2.5
-                        ? "text-red-300"
-                        : "text-gray-300"
-                  }`}
-                >
-                  {avgSentiment.toFixed(2)}
-                </span>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className="text-2xl">{sentimentEmoji}</span>
+                  <span className={`text-lg font-semibold ${sentimentColorClass}`}>
+                    {sentimentCategory}
+                  </span>
+                  <span className="text-sm text-gray-400">({avgSentiment.toFixed(1)})</span>
+                </div>
+                <div className="relative w-full h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className="absolute h-full bg-blue-500"
+                    style={{ width: `${((avgSentiment - 1) / 4) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>부정</span>
+                  <span>긍정</span>
+                </div>
               </div>
             </div>
 
