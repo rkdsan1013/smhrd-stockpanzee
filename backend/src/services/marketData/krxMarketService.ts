@@ -1,4 +1,4 @@
-// ✅ korStock.ts - 실전투자 DB 저장 (25개씩) + 모의투자 실시간 emit
+// /backend/src/services/marketData/krxMarketService.ts
 import axios from "axios";
 import dotenv from "dotenv";
 import pool from "../../config/db";
@@ -29,7 +29,7 @@ async function getAccessToken() {
         appkey: process.env.APP_KEY,
         appsecret: process.env.APP_SECRET,
       },
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     accessToken = res.data.access_token;
     console.log("🔐 실전투자 토큰 발급 완료");
@@ -48,7 +48,7 @@ async function getMockToken() {
         appkey: process.env.MOCK_KEY,
         appsecret: process.env.MOCK_SECRET,
       },
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     mockToken = res.data.access_token;
     console.log("🔐 모의투자 토큰 발급 완료");
@@ -80,7 +80,7 @@ async function fetchStock(symbol: string, type: "real" | "mock") {
           fid_cond_mrkt_div_code: "J",
           fid_input_iscd: symbol,
         },
-      }
+      },
     );
 
     const o = res.data.output;
@@ -100,7 +100,10 @@ async function fetchStock(symbol: string, type: "real" | "mock") {
       marketCap,
     };
   } catch (err: any) {
-    console.error(`❌ 조회 실패 - ${type.toUpperCase()} ${symbol}:`, err.response?.data || err.message);
+    console.error(
+      `❌ 조회 실패 - ${type.toUpperCase()} ${symbol}:`,
+      err.response?.data || err.message,
+    );
     return {
       symbol,
       name: "",
@@ -140,7 +143,7 @@ export async function emitMockTop25(io: Server) {
     for (let i = 0; i < rows.length; i += 3) {
       const chunk = rows.slice(i, i + 3);
       const results = await Promise.all(
-        chunk.map((stock: any) => fetchStock(stock.symbol, "mock"))
+        chunk.map((stock: any) => fetchStock(stock.symbol, "mock")),
       );
 
       for (const res of results) {
@@ -186,7 +189,7 @@ export async function updateRealToDB() {
   for (let i = 0; i < rows.length; i += 25) {
     const chunk = rows.slice(i, i + 25);
     const results = await Promise.all(
-      chunk.map((asset: { symbol: string; }) => fetchStock(asset.symbol, "real"))
+      chunk.map((asset: { symbol: string }) => fetchStock(asset.symbol, "real")),
     );
 
     for (let j = 0; j < chunk.length; j++) {
@@ -210,7 +213,7 @@ export async function updateRealToDB() {
              price_change = VALUES(price_change),
              market_cap = VALUES(market_cap),
              last_updated = NOW()`,
-          [asset.id, res.price, rate, res.marketCap]
+          [asset.id, res.price, rate, res.marketCap],
         );
 
         successCount++;

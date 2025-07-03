@@ -9,10 +9,11 @@ import path from "path";
 import { setupSocket } from "./socket";
 import { startPolygonPriceStream } from "./services/marketData/usStockMarketService";
 import { updateCryptoAssetInfoPeriodically } from "./services/marketData/cryptoMarketService";
-import { emitMockTop25 } from "./services/marketData/krxMarketService";
+import { emitMockTop25, updateRealToDB } from "./services/marketData/krxMarketService";
+import { listAssets } from "./services/assetService";
 
-// 뉴스 스케줄러 import
-// import "./services/news/newsScheduler";
+// 뉴스 스케줄러 호출
+import { startNewsScheduler } from "./services/news/newsScheduler";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
@@ -49,32 +50,61 @@ app.use("/api/user", userRoutes);
 app.use("/api/favorites", favoriteRouter);
 app.use("/api", notificationRoutes);
 
-// 정적 파일 제공: /api/uploads/*
+// 정적 파일 제공
 const uploadsPath = path.resolve(__dirname, "../uploads");
 app.use("/api/uploads", express.static(uploadsPath));
 
-// 기본 경로
+// 기본 엔드포인트
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from Express with WebSocket!");
 });
 
-// 서버 + 소켓 실행
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 실전 KRX 데이터 루프
+async function startKrXRealLoop(io: ReturnType<typeof setupSocket>) {
+  while (true) {
+    console.log("🚀 실전 KRX 종목 수집 및 브로드캐스트 시작");
+    await updateRealToDB();
+
+    const assets = await listAssets();
+    assets.forEach((a) => {
+      io.to(`asset_${a.id}`).emit("stockPrice", {
+        assetId: a.id,
+        symbol: a.symbol,
+        priceChange: a.priceChange,
+      });
+    });
+
+    console.log("✅ KRX 실전 데이터 emit 완료 → 5초 대기");
+    await sleep(5000);
+  }
+}
+
 async function start() {
   const server = http.createServer(app);
-  const io = await setupSocket(server);
+  const io = setupSocket(server);
 
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 
-    // (옵션) Polygon 실시간 주가
-    // startPolygonPriceStream(io).catch((err) => console.error(err));
+    // KRX 실전 데이터 루프
+    // startKrXRealLoop(io).catch(console.error);
 
-    // (옵션) 암호화폐 DB 업데이트
+    // 모의투자 상위 25개 종목 emit
+    // emitMockTop25(io).catch(console.error);
+
+    // Polygon 실시간 주가 스트림 (옵션)
+    // startPolygonPriceStream(io).catch(console.error);
+
+    // 암호화폐 DB 업데이트 주기 (옵션)
     // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
-    // (옵션) KRX 주가 emit
-    // emitMockTop25(io).then(() => console.log("KRX emit started"));
+    // 뉴스 스케줄러 시작
+    // startNewsScheduler();
   });
 }
 

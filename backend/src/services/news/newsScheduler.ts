@@ -9,6 +9,9 @@ import { fetchAndProcessCryptoNews } from "./cryptoNewsService";
 
 dotenv.config();
 
+/**
+ * 환경 변수 기반 벡터 백업 실행
+ */
 function backupVectorData() {
   const {
     PG_HOST = "db",
@@ -33,17 +36,14 @@ function backupVectorData() {
     return;
   }
 
-  // 컨테이너 내부 경로
   const dumpPath = "/backup/vectordata.dump";
-
-  // docker exec 로 DB 컨테이너 내부 pg_dump(v16) 호출
   const dockerArgs = [
     "exec",
     "-i",
     "stockpanzee-db",
     "pg_dump",
     "-h",
-    "localhost", // 컨테이너 내부에서 localhost
+    "localhost",
     "-U",
     PG_USER,
     "-Fc",
@@ -70,38 +70,28 @@ function backupVectorData() {
   });
 }
 
-// 00분: 전체 수집 + 백업
-cron.schedule(
-  "0 * * * *",
-  async () => {
-    console.log("⏰ 00분: 전체 뉴스 수집");
-    try {
-      await Promise.all([
-        fetchAndProcessKrxNews(),
-        fetchAndProcessCryptoNews(),
-        fetchAndProcessUsStockNews(),
-      ]);
-      backupVectorData();
-    } catch (err) {
-      console.error("❌ 수집 오류:", err);
-    }
-  },
-  { timezone: "Asia/Seoul" },
-);
+/**
+ * 뉴스 수집 스케줄러 시작
+ * - 매 정각: 국내·미국·암호화폐 뉴스 전량 수집 후 백업
+ */
+export function startNewsScheduler() {
+  cron.schedule(
+    "0 * * * *",
+    async () => {
+      console.log("⏰ 00분: 전체 뉴스 수집 시작");
+      try {
+        await Promise.all([
+          fetchAndProcessKrxNews(),
+          fetchAndProcessCryptoNews(),
+          fetchAndProcessUsStockNews(),
+        ]);
+        backupVectorData();
+      } catch (err) {
+        console.error("❌ 뉴스 수집 오류:", err);
+      }
+    },
+    { timezone: "Asia/Seoul" },
+  );
 
-// 10,20,30,40,50분: 일부 수집 + 백업
-// cron.schedule(
-//   "10,20,30,40,50 * * * *",
-//   async () => {
-//     console.log("⏰ 10분 간격: 국내+암호화폐 수집");
-//     try {
-//       await Promise.all([fetchAndProcessKrxNews(), fetchAndProcessCryptoNews()]);
-//       backupVectorData();
-//     } catch (err) {
-//       console.error("❌ 수집 오류:", err);
-//     }
-//   },
-//   { timezone: "Asia/Seoul" },
-// );
-
-console.log("🔔 뉴스 스케줄러 및 벡터 백업 등록 완료");
+  console.log("🔔 뉴스 스케줄러 등록 완료");
+}
