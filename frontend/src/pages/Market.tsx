@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import Tooltip from "../components/Tooltip";
+import MarketSkeleton from "../components/skeletons/MarketSkeleton";
 import { fetchAssets } from "../services/assetService";
 import { fuzzySearch } from "../utils/search";
 import { formatCurrency, formatPercentage } from "../utils/formats";
@@ -29,6 +30,9 @@ const Market: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
+  // loading state for skeleton
+  const [loading, setLoading] = useState(true);
+
   // State & refs
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
@@ -44,83 +48,87 @@ const Market: React.FC = () => {
   const prevPrices = useRef<Map<number, number>>(new Map());
   const highlight = useRef<Map<number, "up" | "down">>(new Map());
   const [, rerender] = useState(0);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 1) Load data & highlight changes
+  // 1) 초기 데이터 로드 & highlight
   useEffect(() => {
-    const load = () =>
-      fetchAssets()
-        .then((assets) => {
-          const list = assets.map<StockItem>((a) => ({
-            id: a.id,
-            name: a.name,
-            symbol: a.symbol,
-            currentPrice: a.currentPrice,
-            priceChange: a.priceChange,
-            marketCap: a.marketCap,
-            category: ["KOSPI", "KOSDAQ"].includes(a.market)
-              ? "국내"
-              : ["NASDAQ", "NYSE"].includes(a.market)
-                ? "해외"
-                : a.market === "Binance"
-                  ? "암호화폐"
-                  : "기타",
-          }));
+    const loadAssets = async () => {
+      try {
+        const assets = await fetchAssets();
+        const list = assets.map<StockItem>((a) => ({
+          id: a.id,
+          name: a.name,
+          symbol: a.symbol,
+          currentPrice: a.currentPrice,
+          priceChange: a.priceChange,
+          marketCap: a.marketCap,
+          category: ["KOSPI", "KOSDAQ"].includes(a.market)
+            ? "국내"
+            : ["NASDAQ", "NYSE"].includes(a.market)
+              ? "해외"
+              : a.market === "Binance"
+                ? "암호화폐"
+                : "기타",
+        }));
 
-          list.forEach((item) => {
-            const prev = prevPrices.current.get(item.id);
-            if (prev !== undefined && prev !== item.currentPrice) {
-              highlight.current.set(item.id, item.currentPrice > prev ? "up" : "down");
-              setTimeout(() => {
-                highlight.current.delete(item.id);
-                rerender((v) => v + 1);
-              }, 500);
-            }
-            prevPrices.current.set(item.id, item.currentPrice);
-          });
+        list.forEach((item) => {
+          const prev = prevPrices.current.get(item.id);
+          if (prev !== undefined && prev !== item.currentPrice) {
+            highlight.current.set(item.id, item.currentPrice > prev ? "up" : "down");
+            setTimeout(() => {
+              highlight.current.delete(item.id);
+              rerender((v) => v + 1);
+            }, 500);
+          }
+          prevPrices.current.set(item.id, item.currentPrice);
+        });
 
-          setData(list);
-        })
-        .catch(console.error);
+        setData(list);
+      } catch {
+        // handle error if needed
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    load();
-    const iv = setInterval(load, 5000);
+    loadAssets();
+    const iv = setInterval(loadAssets, 5000);
     return () => clearInterval(iv);
   }, []);
 
+  // 2) 실시간 업데이트
   useEffect(() => {
-    socket.on(
-      "stockPrice",
-      (data: { symbol: string; price: number; rate: number; marketCap: number }) => {
-        setData((prev) =>
-          prev.map((stock) => {
-            if (stock.symbol === data.symbol && stock.category === "국내") {
-              const prevPrice = stock.currentPrice;
-              const newPrice = Number(data.price);
-              if (prevPrice !== newPrice) {
-                highlight.current.set(stock.id, newPrice > prevPrice ? "up" : "down");
-                setTimeout(() => {
-                  highlight.current.delete(stock.id);
-                  rerender((v) => v + 1);
-                }, 500);
-              }
-              return {
-                ...stock,
-                currentPrice: newPrice,
-                priceChange: Number(data.rate),
-                marketCap: Number(data.marketCap),
-              };
+    const handler = (upd: { symbol: string; price: number; rate: number; marketCap: number }) => {
+      setData((prev) =>
+        prev.map((stock) => {
+          if (stock.symbol === upd.symbol && stock.category === "국내") {
+            const prevPrice = stock.currentPrice;
+            if (prevPrice !== upd.price) {
+              highlight.current.set(stock.id, upd.price > prevPrice ? "up" : "down");
+              setTimeout(() => {
+                highlight.current.delete(stock.id);
+                rerender((v) => v + 1);
+              }, 500);
             }
-            return stock;
-          }),
-        );
-      },
-    );
+            return {
+              ...stock,
+              currentPrice: upd.price,
+              priceChange: upd.rate,
+              marketCap: upd.marketCap,
+            };
+          }
+          return stock;
+        }),
+      );
+    };
+
+    socket.on("stockPrice", handler);
     return () => {
-      socket.off("stockPrice");
+      socket.off("stockPrice", handler);
     };
   }, []);
 
-  // 2) Sync favorites on login change
+  // 3) 즐겨찾기 동기화
   useEffect(() => {
     if (user) {
       fetchFavorites()
@@ -131,12 +139,12 @@ const Market: React.FC = () => {
     }
   }, [user]);
 
-  // 3) Reset page on filters change
+  // 4) 페이지 리셋
   useEffect(() => {
     setPage(1);
   }, [tab, viewMode, sortConfig, search]);
 
-  // 4) Filter / sort / search / paginate
+  // 5) 필터·정렬·검색·페이징
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
@@ -164,17 +172,14 @@ const Market: React.FC = () => {
   const finalList = useMemo(
     () =>
       search.trim()
-        ? fuzzySearch(sorted, search, {
-            keys: ["name", "symbol"],
-            threshold: 0.3,
-          })
+        ? fuzzySearch(sorted, search, { keys: ["name", "symbol"], threshold: 0.3 })
         : sorted,
     [sorted, search],
   );
 
   const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // infinite scroll
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el) return;
@@ -186,7 +191,7 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // 5) Toggle favorite
+  // 6) 즐겨찾기 토글
   const toggleFav = async (id: number) => {
     if (!user) {
       alert("즐겨찾기를 추가하려면 로그인해주세요.");
@@ -206,7 +211,7 @@ const Market: React.FC = () => {
     }
   };
 
-  // 6) Sorting & view toggle
+  // 7) 정렬 핸들러 & 뷰 토글
   const handleSort = (key: SortKey) => {
     if (search.trim()) return;
     setSortConfig((prev) =>
@@ -215,21 +220,19 @@ const Market: React.FC = () => {
   };
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // 7) Summary metrics
+  // 8) 요약 메트릭 계산
   const summary = byTab;
-  const total = summary.length;
+  const total = summary.length || 1;
   const largeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
   const smallDown = summary.filter((s) => s.priceChange < 0 && s.priceChange >= -BIG_CHANGE).length;
   const zero = summary.filter((s) => s.priceChange === 0).length;
   const smallUp = summary.filter((s) => s.priceChange > 0 && s.priceChange <= BIG_CHANGE).length;
   const largeUp = summary.filter((s) => s.priceChange > BIG_CHANGE).length;
 
-  const upPct = total ? ((smallUp + largeUp) / total) * 100 : 0;
-  const downPct = total ? ((smallDown + largeDown) / total) * 100 : 0;
-  const meanChange = total ? summary.reduce((sum, s) => sum + s.priceChange, 0) / total : 0;
-  const variance = total
-    ? summary.reduce((sum, s) => sum + (s.priceChange - meanChange) ** 2, 0) / total
-    : 0;
+  const upPct = ((smallUp + largeUp) / total) * 100;
+  const downPct = ((smallDown + largeDown) / total) * 100;
+  const meanChange = summary.reduce((sum, s) => sum + s.priceChange, 0) / total;
+  const variance = summary.reduce((sum, s) => sum + (s.priceChange - meanChange) ** 2, 0) / total;
   const volatility = Math.sqrt(variance);
 
   const topGainers = [...summary].sort((a, b) => b.priceChange - a.priceChange).slice(0, 3);
@@ -243,6 +246,11 @@ const Market: React.FC = () => {
   ] as const;
 
   const statusTitle = `${tab} 시장 현황`;
+
+  // 로딩 중일 때 스켈레톤 렌더링
+  if (loading) {
+    return <MarketSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -282,7 +290,6 @@ const Market: React.FC = () => {
           {/* Stock list */}
           <div className="w-full md:w-2/3 space-y-2">
             <div className="flex items-center px-4 py-2 bg-gray-800 rounded-lg">
-              <div className="w-8" />
               {headerCols.map((col) => (
                 <div key={col.key} className={col.width}>
                   <button
@@ -385,7 +392,7 @@ const Market: React.FC = () => {
               <div className="bg-gray-800 rounded-lg shadow-lg p-6 space-y-6 text-white">
                 <h2 className="text-xl font-bold text-center">{statusTitle}</h2>
 
-                {/* 5-step bar: 상승 좌측, 하락 우측 */}
+                {/* 5-step bar */}
                 <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                   {[
                     { cnt: largeUp, color: "bg-green-700", label: `큰 상승: ${largeUp}` },

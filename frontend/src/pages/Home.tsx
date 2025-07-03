@@ -6,6 +6,7 @@ import NewsCard from "../components/NewsCard";
 import Tooltip from "../components/Tooltip";
 import FavoriteAssetsWidget from "../components/FavoriteAssetsWidget";
 import CommunityPopularWidget from "../components/CommunityPopularWidget";
+import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -18,7 +19,6 @@ const RECENT_DAYS = 7;
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
 type Level = (typeof LEVELS)[number];
-// reversed order: 긍정(5,4) 좌측, 중립(3), 부정(2,1) 우측
 const ORDERED_LEVELS: Level[] = [5, 4, 3, 2, 1];
 
 const levelLabels: Record<Level, string> = {
@@ -48,7 +48,18 @@ const Home: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // 필터링
+  if (loading) {
+    return <HomeSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
+        오류: {error}
+      </div>
+    );
+  }
+
   const filtered =
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
@@ -59,7 +70,6 @@ const Home: React.FC = () => {
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  // 감정 분포 계산
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = 0;
@@ -86,7 +96,6 @@ const Home: React.FC = () => {
     {} as Record<Level, number>,
   );
 
-  // 키워드 통계
   type TagStat = { total: number; pos: number; neg: number };
   const tagStats: Record<string, TagStat> = {};
 
@@ -114,25 +123,9 @@ const Home: React.FC = () => {
     .sort(([, a], [, b]) => b.total - a.total)
     .slice(0, 5);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
-        뉴스 로딩 중…
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
-        오류: {error}
-      </div>
-    );
-  }
-
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-12">
-        {/* 탭 */}
         <nav className="overflow-x-auto pb-2">
           <ul className="flex space-x-3">
             {TABS.map((t) => (
@@ -152,9 +145,7 @@ const Home: React.FC = () => {
           </ul>
         </nav>
 
-        {/* 그리드 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 뉴스 영역 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
             {hero && <NewsCard newsItem={hero} variant="hero" />}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -165,9 +156,7 @@ const Home: React.FC = () => {
             <CommunityPopularWidget selectedTab={selectedTab} />
           </div>
 
-          {/* 사이드바 */}
           <aside className="space-y-6">
-            {/* 감정 분석 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
@@ -212,7 +201,6 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* 키워드 트렌드 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 키워드 트렌드 (최근 {RECENT_DAYS}일)

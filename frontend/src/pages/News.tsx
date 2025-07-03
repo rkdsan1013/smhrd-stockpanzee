@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
-import SkeletonCard from "../components/SkeletonCard";
+import SkeletonCard from "../components/skeletons/SkeletonCard";
 import Icons from "../components/Icons";
 import { fetchFavorites } from "../services/favoriteService";
 import { fetchAssets, type Asset } from "../services/assetService";
@@ -56,26 +56,29 @@ const News: React.FC = () => {
       setAssets([]);
       return;
     }
-    fetchFavorites().then(setFavorites).catch(() => setFavorites([]));
-    fetchAssets().then(setAssets).catch(() => setAssets([]));
+    fetchFavorites()
+      .then(setFavorites)
+      .catch(() => setFavorites([]));
+    fetchAssets()
+      .then(setAssets)
+      .catch(() => setAssets([]));
   }, [user]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedTab]);
 
-    // id → symbol 맵핑
+  // id → symbol 맵핑
   const favoriteSymbols = React.useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     // favorites: number[] (assetId)
     // assets: Asset[] (id, symbol, ...)
     return favorites
-      .map(fid => assets.find(a => a.id === fid)?.symbol)
+      .map((fid) => assets.find((a) => a.id === fid)?.symbol)
       .filter((s): s is string => !!s);
   }, [favorites, assets]);
 
- 
-    // 기존 필터 확장
+  // 기존 필터 확장
   const filtered =
     selectedTab === "all"
       ? newsItems
@@ -86,7 +89,9 @@ const News: React.FC = () => {
             let tags: string[] = [];
             try {
               tags = Array.isArray(n.tags) ? n.tags : JSON.parse(n.tags);
-            } catch { return false; }
+            } catch {
+              return false;
+            }
             // favoriteSymbols 중 하나라도 tags에 포함
             return tags.some((t) => favoriteSymbols.includes(t));
           })
@@ -114,15 +119,14 @@ const News: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-    const handleTabClick = (key: TabKey) => {
-      if (key === "favorites" && !user) {
-        alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
-        return;
-      }
-      setSelectedTab(key);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
+  const handleTabClick = (key: TabKey) => {
+    if (key === "favorites" && !user) {
+      alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
+      return;
+    }
+    setSelectedTab(key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <section className="container mx-auto px-4 py-8">
