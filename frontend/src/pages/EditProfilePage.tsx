@@ -13,13 +13,13 @@ const EditProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [mode, setMode] = useState<Mode>("view");
   const [page, setPage] = useState<Page>("profile");
-  const [error, setError] = useState("");
+  
 
   // 내 정보 조회
   useEffect(() => {
     userService.fetchUserProfile()
       .then((profile) => setProfile(profile))
-      .catch(() => setError("프로필 불러오기 실패"));
+      .catch(() => {});
   }, []);
 
   // 회원탈퇴
