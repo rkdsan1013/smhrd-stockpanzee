@@ -4,6 +4,7 @@ import { fetchNews } from "../services/newsService";
 import type { NewsItem } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 import Tooltip from "../components/Tooltip";
+import FavoriteAssetsWidget from "../components/FavoriteAssetsWidget";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -230,6 +231,7 @@ const Home: React.FC = () => {
                 <p className="text-gray-500 text-sm">최근 데이터 없음</p>
               )}
             </div>
+            <FavoriteAssetsWidget />
           </aside>
         </div>
       </div>
