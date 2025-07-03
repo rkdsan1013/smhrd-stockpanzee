@@ -1,5 +1,4 @@
 // /frontend/src/pages/Community.tsx
-// cSpell:ignore communitydetail panzee
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
@@ -7,7 +6,6 @@ import Icons from "../components/Icons";
 import SkeletonCard from "../components/SkeletonCard";
 import { AuthContext } from "../providers/AuthProvider";
 
-// 게시글 타입
 interface CommunityPost {
   id: number;
   category: string;
@@ -22,17 +20,12 @@ interface CommunityPost {
   img_url?: string;
 }
 
-// 정렬 옵션 및 카테고리
 const SORT_OPTIONS = ["latest", "popular"] as const;
 type SortKey = (typeof SORT_OPTIONS)[number];
 const CATEGORY_LIST = ["전체", "국내", "해외", "암호화폐"];
-
-// 페이지네이션 상수
 const POSTS_PER_PAGE = 12;
-// 최근 기준 (7일)
 const RECENT_DAYS = 3;
 
-// “몇 초/분 전” 표시 헬퍼
 function timeAgo(dateString: string): string {
   const date = new Date(dateString);
   date.setHours(date.getHours() - 9);
@@ -43,7 +36,6 @@ function timeAgo(dateString: string): string {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
-// 페이지네이션 페이지 목록 생성
 function getDisplayPages(total: number, current: number): (number | "...")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "...")[] = [1];
@@ -58,42 +50,82 @@ function getDisplayPages(total: number, current: number): (number | "...")[] {
 
 const Community: React.FC = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [filterCat, setFilterCat] = useState<string>("전체");
   const [currentPage, setCurrentPage] = useState(1);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
+  const handleWrite = () => {
+  if (!user) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+  navigate("/post");
+};
+
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-
-  // 글쓰기 버튼 핸들러
-  const handleWrite = () => {
-    if (!user) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-    navigate("/post");
-  };
 
   // 게시글 로드
   useEffect(() => {
     setLoading(true);
     axios
       .get<CommunityPost[]>(`${import.meta.env.VITE_API_BASE_URL}/community`)
-      .then((res) => {
-        const data = res.data.map((p) => ({
-          ...p,
-          comment_count: p.comment_count ?? 0,
-        }));
-        setPosts(data);
-      })
+      .then((res) => setPosts(res.data))
       .catch((err) => {
         console.error(err);
         alert("게시글 불러오기 실패");
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // 댓글 개수 동기화
+  useEffect(() => {
+    if (!posts.length) return;
+    // 현재 페이지에 보이는 게시글만 요청 (최적화)
+    const processed = (() => {
+      let arr = posts.slice();
+      if (filterCat !== "전체") arr = arr.filter((p) => p.category === filterCat);
+      if (sortKey === "latest") {
+        arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+      } else {
+        const cutoff = Date.now() - RECENT_DAYS * 24 * 3600 * 1000;
+        const recent = arr
+          .filter((p) => new Date(p.created_at).getTime() >= cutoff)
+          .sort((a, b) => b.community_views - a.community_views);
+        const older = arr
+          .filter((p) => new Date(p.created_at).getTime() < cutoff)
+          .sort((a, b) => b.community_views - a.community_views);
+        arr = [...recent, ...older];
+      }
+      return arr;
+    })();
+    const visible = processed.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
+
+    // 한 번만 요청하도록 중복 요청 방지
+    const idsToFetch = visible.map((p) => p.id).filter((id) => !(id in commentCounts));
+    if (idsToFetch.length === 0) return;
+
+    Promise.all(
+      idsToFetch.map((id) =>
+        axios
+          .get(`${import.meta.env.VITE_API_BASE_URL}/community/${id}/comments`)
+          .then((res) => [id, Array.isArray(res.data) ? res.data.length : 0] as [number, number])
+          .catch(() => [id, 0] as [number, number])
+      )
+    ).then((results) => {
+      setCommentCounts((prev) => {
+        const updated = { ...prev };
+        results.forEach(([id, cnt]) => {
+          updated[id] = cnt;
+        });
+        return updated;
+      });
+    });
+    // eslint-disable-next-line
+  }, [posts, filterCat, sortKey, currentPage]);
 
   // 스크롤 토글 (맨 위로 버튼)
   useEffect(() => {
@@ -102,18 +134,13 @@ const Community: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 정렬 + 필터 적용 (popular: 최근 7일 우선)
+  // 정렬 + 필터 적용
   const processed = useMemo(() => {
     let arr = posts.slice();
-    // 필터
-    if (filterCat !== "전체") {
-      arr = arr.filter((p) => p.category === filterCat);
-    }
+    if (filterCat !== "전체") arr = arr.filter((p) => p.category === filterCat);
     if (sortKey === "latest") {
-      // 최신순
       arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
     } else {
-      // 인기순: 최근 7일 글 먼저, 조회수 순으로, 그 다음 오래된 글 조회수 순
       const cutoff = Date.now() - RECENT_DAYS * 24 * 3600 * 1000;
       const recent = arr
         .filter((p) => new Date(p.created_at).getTime() >= cutoff)
@@ -126,7 +153,6 @@ const Community: React.FC = () => {
     return arr;
   }, [posts, sortKey, filterCat]);
 
-  // 페이지네이션 계산
   const totalPages = Math.ceil(processed.length / POSTS_PER_PAGE) || 1;
   const displayPages = getDisplayPages(totalPages, currentPage);
   const visiblePosts = useMemo(
@@ -134,7 +160,6 @@ const Community: React.FC = () => {
     [processed, currentPage],
   );
 
-  // 페이지 변경 시 스크롤
   useEffect(() => {
     if (currentPage > 1) {
       const topY =
@@ -238,7 +263,10 @@ const Community: React.FC = () => {
                     </span>
                     <span className="flex items-center">
                       <Icons name="messageDots" className="w-4 h-4 mr-1" />
-                      {post.comment_count}
+                      {/* 댓글 갯수 fetch */}
+                      {typeof commentCounts[post.id] === "number"
+                        ? commentCounts[post.id]
+                        : post.comment_count ?? 0}
                     </span>
                     <span className="flex items-center">
                       <Icons name="eye" className="w-4 h-4 mr-1" />

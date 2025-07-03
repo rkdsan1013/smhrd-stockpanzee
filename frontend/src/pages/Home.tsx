@@ -5,6 +5,7 @@ import type { NewsItem } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 import Tooltip from "../components/Tooltip";
 import FavoriteAssetsWidget from "../components/FavoriteAssetsWidget";
+import CommunityPopularWidget from "../components/CommunityPopularWidget";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -161,6 +162,7 @@ const Home: React.FC = () => {
                 <NewsCard key={n.id} newsItem={n} variant="compact" />
               ))}
             </div>
+            <CommunityPopularWidget selectedTab={selectedTab} />
           </div>
 
           {/* 사이드바 */}

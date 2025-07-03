@@ -12,7 +12,7 @@ import { updateCryptoAssetInfoPeriodically } from "./services/marketData/cryptoM
 import { emitMockTop25 } from "./services/marketData/krxMarketService";
 
 // 뉴스 스케줄러 import
-import "./services/news/newsScheduler";
+//import "./services/news/newsScheduler";
 
 import authRoutes from "./routes/authRoutes";
 import assetsRoutes from "./routes/assetsRoutes";
