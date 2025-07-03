@@ -9,8 +9,8 @@ import { renderTradingViewChart, getTradingViewSymbol } from "../services/tradin
 import NewsCard from "../components/NewsCard";
 import AssetComments from "../components/AssetComments";
 import Icons from "../components/Icons";
-
 import { fetchFavorites, addFavorite, removeFavorite } from "../services/favoriteService";
+import AssetDetailSkeleton from "../components/skeletons/AssetDetailSkeleton";
 
 const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +79,7 @@ const AssetDetail: React.FC = () => {
     }
   };
 
-  // 자산 정보
+  // 자산 정보 로드
   useEffect(() => {
     fetchAssetById(assetId)
       .then((data) => {
@@ -120,7 +120,7 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [asset]);
 
-  // TradingView 차트
+  // TradingView 차트 렌더링
   useEffect(() => {
     if (!asset || selectedTab !== "chart") return;
     const containerId = `tv-chart-${asset.id}`;
@@ -148,12 +148,9 @@ const AssetDetail: React.FC = () => {
     return () => clearInterval(timer);
   }, [asset, assetId]);
 
+  // 초기 로딩 스켈레톤
   if (!asset || !liveData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        로딩 중…
-      </div>
-    );
+    return <AssetDetailSkeleton />;
   }
 
   const { currentPrice, priceChange } = liveData;
@@ -222,16 +219,14 @@ const AssetDetail: React.FC = () => {
       {/* 본문 */}
       {selectedTab === "chart" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {/* 차트 영역 */}
+          {/* 차트 & 최신 뉴스 */}
           <div className="md:col-span-2 flex flex-col space-y-6">
             <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-700">
               <div id={chartContainerId} className="w-full h-80 md:h-[500px]" />
             </div>
 
-            {/* 좌측 최신 뉴스 헤더 */}
             <div className="text-xl md:text-2xl font-bold">{asset.name} 최신 뉴스</div>
 
-            {/* 최신 뉴스 카드 */}
             {detailNews ? (
               <div className="bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col space-y-4 hover:shadow-xl transition">
                 <h2 className="text-2xl font-semibold leading-snug">
@@ -276,7 +271,7 @@ const AssetDetail: React.FC = () => {
             )}
           </div>
 
-          {/* 우측 뉴스 리스트 */}
+          {/* 관련 뉴스 리스트 */}
           <aside className="flex flex-col">
             <div className="text-xl md:text-2xl font-bold mb-4">{asset.name} 관련 뉴스</div>
             <div className="flex flex-col gap-4">

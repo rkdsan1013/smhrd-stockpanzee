@@ -6,6 +6,7 @@ import Comments from "../components/Comments";
 import type { Comment } from "../components/Comments";
 import axios from "axios";
 import { AuthContext } from "../providers/AuthProvider";
+import CommunityDetailSkeleton from "../components/skeletons/CommunityDetailSkeleton";
 
 interface Post {
   id: number;
@@ -38,13 +39,14 @@ function timeAgo(dateString: string): string {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
-// 🟡 댓글 + 대댓글 합산 함수
+// 댓글 + 대댓글 합산 함수
 function countAllComments(comments: Comment[]): number {
   let total = 0;
   for (const c of comments) {
     total += 1;
-    if ((c as any).replies && Array.isArray((c as any).replies)) {
-      total += countAllComments((c as any).replies);
+    const replies = (c as any).replies;
+    if (replies && Array.isArray(replies)) {
+      total += countAllComments(replies);
     }
   }
   return total;
@@ -79,14 +81,16 @@ const CommunityDetail: React.FC = () => {
   useEffect(() => {
     fetchPost();
     fetchComments();
-  }, [id, fetchPost, fetchComments]);
+  }, [fetchPost, fetchComments]);
 
   // 좋아요 상태
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   useEffect(() => {
-    setIsLiked(Boolean(post?.isLiked));
-    setLikeCount(post?.community_likes || 0);
+    if (post) {
+      setIsLiked(Boolean(post.isLiked));
+      setLikeCount(post.community_likes || 0);
+    }
   }, [post]);
 
   // 좋아요 토글
@@ -102,13 +106,13 @@ const CommunityDetail: React.FC = () => {
     }
   };
 
-  // 수정/삭제 드롭다운
+  // 수정/삭제 메뉴
   const [showMenu, setShowMenu] = useState(false);
   useEffect(() => {
     if (!showMenu) return;
-    const close = () => setShowMenu(false);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
+    const onClick = () => setShowMenu(false);
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
   }, [showMenu]);
 
   const handleEdit = () => {
@@ -130,18 +134,16 @@ const CommunityDetail: React.FC = () => {
       });
       alert("삭제되었습니다.");
       navigate("/community");
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || "삭제 실패");
-      } else {
-        alert("삭제 실패(알 수 없는 오류)");
-      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || "삭제 실패");
     }
   };
 
-  if (loading || !post) return <div className="text-center py-16">불러오는 중...</div>;
+  if (loading || !post) {
+    return <CommunityDetailSkeleton />;
+  }
 
-  // 🟡 대댓글까지 합산해서 댓글 수 표시
+  // 대댓글 포함 댓글 수
   const totalCommentCount = countAllComments(comments);
 
   // 이미지 URL 보정
@@ -152,11 +154,11 @@ const CommunityDetail: React.FC = () => {
     ? post.img_url.startsWith("http")
       ? post.img_url
       : `${apiBase}/${imgPath}`
-    : "/panzee.webp";
+    : "/placeholder.webp";
 
   return (
-    <div className="mx-auto px-4 max-w-full md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
-      {/* 상단 메타 + 메뉴 */}
+    <div className="mx-auto px-4 py-8 max-w-4xl">
+      {/* 메타 + 메뉴 */}
       <div className="flex items-center text-lg font-semibold text-white mb-2 relative">
         <span className="uppercase">{post.category}</span>
         <span className="mx-2 text-gray-500">·</span>
@@ -170,11 +172,7 @@ const CommunityDetail: React.FC = () => {
             className="ml-2 p-1 hover:bg-gray-700 rounded-full"
             type="button"
           >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="5" cy="12" r="1.5" />
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="19" cy="12" r="1.5" />
-            </svg>
+            <Icons name="moreHorizontal" className="w-6 h-6 text-gray-400" />
           </button>
           {showMenu && (
             <div
@@ -208,38 +206,38 @@ const CommunityDetail: React.FC = () => {
         className="w-full aspect-video object-contain rounded mb-6"
       />
 
-      {/* 본문 내용 */}
+      {/* 내용 */}
       <div className="text-gray-200 whitespace-pre-wrap mb-8">{post.community_contents}</div>
 
-      {/* 작성자/좋아요/댓글/조회수 */}
+      {/* 액션 바 */}
       <div className="flex items-center mb-8 space-x-6 text-gray-400">
         <div className="flex items-center space-x-2">
           <span className="text-white font-semibold">{post.nickname || post.name || "익명"}</span>
         </div>
-        <div className="flex items-center space-x-6 text-gray-400 ml-auto">
+        <div className="flex items-center space-x-6 ml-auto">
           <button
             onClick={handleLikeToggle}
-            className={`flex items-center transition-colors ${isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"}`}
-            title={isLiked ? "좋아요 취소" : "좋아요"}
-            type="button"
+            className={`flex items-center transition-colors ${
+              isLiked ? "text-pink-500 font-bold" : "hover:text-pink-400"
+            }`}
           >
             <Icons name="thumbsUp" className="w-5 h-5 mr-1" />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
           <span className="flex items-center">
-            <Icons name="messageDots" className="w-5 h-5 mr-1" />
+            <Icons name="messageCircle" className="w-5 h-5 mr-1" />
             {totalCommentCount}
           </span>
           <span className="flex items-center">
             <Icons name="eye" className="w-5 h-5 mr-1" />
-            {post.community_views || 0}
+            {post.community_views}
           </span>
         </div>
       </div>
 
       <hr className="border-gray-700 opacity-50 mb-6" />
 
-      {/* 댓글 섹션 */}
+      {/* 댓글 */}
       <Comments comments={comments} fetchComments={fetchComments} postId={id!} />
     </div>
   );

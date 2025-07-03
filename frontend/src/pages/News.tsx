@@ -1,9 +1,9 @@
 // /frontend/src/pages/News.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
-import SkeletonCard from "../components/skeletons/SkeletonCard";
+import NewsSkeleton from "../components/skeletons/NewsSkeleton";
 import Icons from "../components/Icons";
 import { fetchFavorites } from "../services/favoriteService";
 import { fetchAssets, type Asset } from "../services/assetService";
@@ -18,11 +18,10 @@ const tabs = [
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
-// 한 줄에 3개씩 로드
 const itemsPerPage = 3;
 
 const News: React.FC = () => {
-  const { user } = React.useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [loading, setLoading] = useState(true);
@@ -68,23 +67,18 @@ const News: React.FC = () => {
     setCurrentPage(1);
   }, [selectedTab]);
 
-  // id → symbol 맵핑
-  const favoriteSymbols = React.useMemo(() => {
+  const favoriteSymbols = useMemo(() => {
     if (!favorites.length || !assets.length) return [];
-    // favorites: number[] (assetId)
-    // assets: Asset[] (id, symbol, ...)
     return favorites
       .map((fid) => assets.find((a) => a.id === fid)?.symbol)
-      .filter((s): s is string => !!s);
+      .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
-  // 기존 필터 확장
   const filtered =
     selectedTab === "all"
       ? newsItems
       : selectedTab === "favorites"
         ? newsItems.filter((n) => {
-            // 태그가 없는 경우 제외
             if (!n.tags) return false;
             let tags: string[] = [];
             try {
@@ -92,7 +86,6 @@ const News: React.FC = () => {
             } catch {
               return false;
             }
-            // favoriteSymbols 중 하나라도 tags에 포함
             return tags.some((t) => favoriteSymbols.includes(t));
           })
         : newsItems.filter((n) => n.category === selectedTab);
@@ -128,9 +121,14 @@ const News: React.FC = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Show full-page skeleton (including tabs) while loading
+  if (loading) {
+    return <NewsSkeleton itemsPerPage={itemsPerPage} />;
+  }
+
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* 헤더 + 탭 */}
+      {/* Header + Tabs */}
       <header className="flex flex-col sm:flex-row justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-white">최신 뉴스</h1>
         <nav className="mt-4 sm:mt-0">
@@ -139,14 +137,11 @@ const News: React.FC = () => {
               <li key={t.key}>
                 <button
                   onClick={() => handleTabClick(t.key)}
-                  className={`
-                    text-sm font-medium pb-2
-                    ${
-                      selectedTab === t.key
-                        ? "border-b-2 border-blue-500 text-white"
-                        : "text-gray-400 hover:text-white hover:border-gray-600"
-                    }
-                  `}
+                  className={`text-sm font-medium pb-2 ${
+                    selectedTab === t.key
+                      ? "border-b-2 border-blue-500 text-white"
+                      : "text-gray-400 hover:text-white hover:border-gray-600"
+                  }`}
                 >
                   {t.label}
                 </button>
@@ -156,19 +151,8 @@ const News: React.FC = () => {
         </nav>
       </header>
 
-      {/* 로딩 스켈레톤 */}
-      {loading && (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-          {Array.from({ length: itemsPerPage }).map((_, i) => (
-            <li key={i}>
-              <SkeletonCard />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* 에러 */}
-      {!loading && error && (
+      {/* Error */}
+      {error && (
         <div className="text-center text-red-400">
           <p className="mb-4">오류가 발생했습니다: {error}</p>
           <button
@@ -181,13 +165,13 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {/* 결과 없음 */}
-      {!loading && !error && visibleNews.length === 0 && (
+      {/* No Results */}
+      {!error && visibleNews.length === 0 && (
         <div className="text-center text-gray-300">조건에 맞는 뉴스가 없습니다.</div>
       )}
 
-      {/* 뉴스 카드 그리드 */}
-      {!loading && !error && visibleNews.length > 0 && (
+      {/* News Grid */}
+      {!error && visibleNews.length > 0 && (
         <>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {visibleNews.map((item) => (
@@ -197,7 +181,7 @@ const News: React.FC = () => {
             ))}
           </ul>
 
-          {/* 무한 스크롤 로딩 표시 */}
+          {/* Infinite Scroll Loader */}
           {visibleNews.length < filtered.length && (
             <div ref={loadMoreRef} className="mt-8 flex justify-center items-center text-gray-500">
               로딩 중...
@@ -206,7 +190,7 @@ const News: React.FC = () => {
         </>
       )}
 
-      {/* 맨 위로 버튼 */}
+      {/* Scroll to Top */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
