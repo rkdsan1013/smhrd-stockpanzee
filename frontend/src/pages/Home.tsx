@@ -15,6 +15,19 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 const RECENT_DAYS = 7;
 
+const LEVELS = [1, 2, 3, 4, 5] as const;
+type Level = (typeof LEVELS)[number];
+// reversed order: 긍정(5,4) 좌측, 중립(3), 부정(2,1) 우측
+const ORDERED_LEVELS: Level[] = [5, 4, 3, 2, 1];
+
+const levelLabels: Record<Level, string> = {
+  1: "매우 부정",
+  2: "부정",
+  3: "중립",
+  4: "긍정",
+  5: "매우 긍정",
+};
+
 const Home: React.FC = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
@@ -34,22 +47,18 @@ const Home: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // 카테고리 필터
+  // 필터링
   const filtered =
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
-  // 히어로 + 서브 뉴스
   const hero = filtered[0];
   const subNews = filtered.slice(1, 5);
 
-  // 최근 7일 필터
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
   // 감정 분포 계산
-  type Level = 1 | 2 | 3 | 4 | 5;
-  const LEVELS: Level[] = [1, 2, 3, 4, 5];
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = 0;
@@ -67,6 +76,7 @@ const Home: React.FC = () => {
 
   const totalRecent = recent.length || 1;
   const avgSentiment = sumWeighted / totalRecent;
+
   const distPct = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = (dist[lvl] / totalRecent) * 100;
@@ -75,15 +85,7 @@ const Home: React.FC = () => {
     {} as Record<Level, number>,
   );
 
-  const levelLabels: Record<Level, string> = {
-    1: "매우 부정",
-    2: "부정",
-    3: "중립",
-    4: "긍정",
-    5: "매우 긍정",
-  };
-
-  // 키워드 트렌드 + 감정별 건수 계산
+  // 키워드 통계
   type TagStat = { total: number; pos: number; neg: number };
   const tagStats: Record<string, TagStat> = {};
 
@@ -129,22 +131,18 @@ const Home: React.FC = () => {
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-12">
-        {/* 카테고리 탭 */}
+        {/* 탭 */}
         <nav className="overflow-x-auto pb-2">
           <ul className="flex space-x-3">
             {TABS.map((t) => (
               <li key={t.key}>
                 <button
                   onClick={() => setSelectedTab(t.key)}
-                  className={`
-                    px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
-                    transition-colors
-                    ${
-                      selectedTab === t.key
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-300 hover:bg-blue-500 hover:text-white"
-                    }
-                  `}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedTab === t.key
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                  }`}
                 >
                   {t.label}
                 </button>
@@ -153,9 +151,9 @@ const Home: React.FC = () => {
           </ul>
         </nav>
 
-        {/* 메인 그리드: items-start 로 변경 */}
+        {/* 그리드 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 뉴스 영역 (2/3) */}
+          {/* 뉴스 영역 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
             {hero && <NewsCard newsItem={hero} variant="hero" />}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -165,33 +163,33 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* 사이드바 (1/3) */}
+          {/* 사이드바 */}
           <aside className="space-y-6">
-            {/* 뉴스 감정 분석 */}
+            {/* 감정 분석 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
               </h3>
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
-                {LEVELS.map((lvl) => {
+                {ORDERED_LEVELS.map((lvl) => {
                   const pct = distPct[lvl].toFixed(1);
                   const color =
-                    lvl <= 2
-                      ? lvl === 1
-                        ? "bg-red-600"
-                        : "bg-red-400"
+                    lvl >= 4
+                      ? lvl === 5
+                        ? "bg-green-600"
+                        : "bg-green-400"
                       : lvl === 3
                         ? "bg-gray-500"
-                        : lvl === 4
-                          ? "bg-green-400"
-                          : "bg-green-600";
+                        : lvl === 2
+                          ? "bg-red-400"
+                          : "bg-red-600";
                   return (
                     <Tooltip
                       key={lvl}
                       label={`${levelLabels[lvl]}: ${pct}%`}
                       style={{ width: `${pct}%` }}
                     >
-                      <div className={`${color} w-full h-full`} />
+                      <div className={`${color} h-full`} />
                     </Tooltip>
                   );
                 })}
@@ -199,16 +197,13 @@ const Home: React.FC = () => {
               <div className="mt-3 text-white flex items-center justify-between">
                 <span className="text-sm">평균 감정</span>
                 <span
-                  className={`
-                    text-lg font-semibold
-                    ${
-                      avgSentiment >= 3.5
-                        ? "text-green-300"
-                        : avgSentiment <= 2.5
-                          ? "text-red-300"
-                          : "text-gray-300"
-                    }
-                  `}
+                  className={`text-lg font-semibold ${
+                    avgSentiment >= 3.5
+                      ? "text-green-300"
+                      : avgSentiment <= 2.5
+                        ? "text-red-300"
+                        : "text-gray-300"
+                  }`}
                 >
                   {avgSentiment.toFixed(2)}
                 </span>

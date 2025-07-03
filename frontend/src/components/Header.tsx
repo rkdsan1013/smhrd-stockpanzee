@@ -1,3 +1,4 @@
+// /frontend/src/components/Header.tsx
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icons from "./Icons";
@@ -15,32 +16,31 @@ const Header: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 드롭다운 메뉴 상태
+  // 드롭다운 메뉴 상태 & ref
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 알림 팝오버 상태 및 anchor
+  // 알림 팝오버 상태 & ref
   const [notifOpen, setNotifOpen] = useState(false);
   const notifAnchorRef = useRef<HTMLButtonElement>(null);
 
-  // 외부 클릭 시 드롭다운 닫기
+  // 외부 클릭 시 메뉴 닫기
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     }
-    if (menuOpen) document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
 
-  // 검색 활성화
+  // 검색 활성화/비활성화
   const activateSearch = () => {
     if (blurTimeout.current) clearTimeout(blurTimeout.current);
     setSearchActive(true);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
-  // 검색 비활성화
   const deactivateSearch = () => {
     blurTimeout.current = setTimeout(() => {
       setSearchActive(false);
@@ -48,16 +48,29 @@ const Header: React.FC = () => {
     }, 150);
   };
 
+  // nav items
   const navItems = [
     { key: "news", label: "뉴스", path: "/news" },
     { key: "market", label: "마켓", path: "/market" },
     { key: "community", label: "팬지's TALK", path: "/community" },
   ];
 
+  // 알림 버튼 클릭: 메뉴 닫고 알림 토글
+  const handleNotifClick = () => {
+    setMenuOpen(false);
+    setNotifOpen((o) => !o);
+  };
+
+  // 프로필 버튼 클릭: 알림 닫고 메뉴 토글
+  const handleMenuClick = () => {
+    setNotifOpen(false);
+    setMenuOpen((o) => !o);
+  };
+
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black to-transparent text-white px-6 py-4">
-        <div className="relative container mx-auto flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black to-transparent px-6 py-4">
+        <div className="container mx-auto flex items-center justify-between text-white">
           {/* 로고 */}
           <Link to="/" className="flex items-center">
             <img src="/logo.svg" alt="Logo" className="h-10 w-auto" />
@@ -93,10 +106,7 @@ const Header: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div
-                className="flex flex-col items-center transition-all duration-300 ease-in-out"
-                style={{ width: "20rem" }}
-              >
+              <div className="flex flex-col items-center" style={{ width: "20rem" }}>
                 <div className="relative w-full">
                   <input
                     ref={inputRef}
@@ -113,23 +123,34 @@ const Header: React.FC = () => {
             )}
           </div>
 
-          {/* 우측: 로그인 / 메시지 / 사용자 메뉴 */}
-          <div className="flex items-center space-x-4" ref={menuRef}>
+          {/* 우측: 메시지 / 사용자 메뉴 */}
+          <div className="flex items-center space-x-4">
             {user ? (
               <>
-                {/* 메시지 아이콘 버튼 */}
-                <button
-                  ref={notifAnchorRef}
-                  onClick={() => setNotifOpen((o) => !o)}
-                  className="p-2 hover:bg-white/30 rounded-full transition"
-                >
-                  <Icons name="messageDots" className="w-8 h-8" />
-                </button>
-
-                {/* 사용자 아이콘 및 드롭다운 */}
+                {/* 알림 버튼 & 팝오버 */}
                 <div className="relative">
                   <button
-                    onClick={() => setMenuOpen((o) => !o)}
+                    ref={notifAnchorRef}
+                    onClick={handleNotifClick}
+                    className="p-2 hover:bg-white/30 rounded-full transition"
+                  >
+                    <Icons name="messageDots" className="w-8 h-8" />
+                  </button>
+                  {notifOpen && (
+                    <div className="absolute right-0 mt-2">
+                      <Notification
+                        isOpen
+                        onClose={() => setNotifOpen(false)}
+                        anchorRef={notifAnchorRef}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 프로필 버튼 & 드롭다운 */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={handleMenuClick}
                     className="p-2 hover:bg-white/30 rounded-full transition"
                   >
                     <Icons name="user" className="w-8 h-8" />
@@ -168,13 +189,6 @@ const Header: React.FC = () => {
           </div>
         </div>
       </header>
-
-      {/* Notification 팝오버 */}
-      <Notification
-        isOpen={notifOpen}
-        onClose={() => setNotifOpen(false)}
-        anchorRef={notifAnchorRef}
-      />
     </>
   );
 };
