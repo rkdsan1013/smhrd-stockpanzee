@@ -9,7 +9,7 @@ import CommunityPopularWidget from "../components/CommunityPopularWidget";
 import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 import { fetchAssets, getAssetDictSync, type Asset } from "../services/assetService";
 
-/* ───────── 상수 ───────── */
+/* ───────── 탭 & 기간 상수 ───────── */
 const TABS = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
@@ -18,12 +18,17 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-const RECENT_DAYS = 7;
+const PERIODS = [
+  { key: "today", label: "오늘", days: 1 },
+  { key: "7", label: "최근 7일", days: 7 },
+  { key: "30", label: "최근 30일", days: 30 },
+] as const;
+type PeriodKey = (typeof PERIODS)[number]["key"];
 
+/* ───────── 감정 레벨 ───────── */
 const LEVELS = [1, 2, 3, 4, 5] as const;
 type Level = (typeof LEVELS)[number];
 const ORDERED_LEVELS: Level[] = [5, 4, 3, 2, 1];
-
 const levelLabels: Record<Level, string> = {
   1: "매우 부정",
   2: "부정",
@@ -31,9 +36,17 @@ const levelLabels: Record<Level, string> = {
   4: "긍정",
   5: "매우 긍정",
 };
+/* 레벨별 가중치 (기본) */
+const LEVEL_WEIGHTS: Record<Level, number> = {
+  1: 2,
+  2: 1.5,
+  3: 1,
+  4: 1.5,
+  5: 2,
+};
 
 /* ───────── market → category ───────── */
-/** 주식 거래소가 아니면 모두 crypto 로 간주 (Binance·Coinbase 등도 포함) */
+/** 주식 거래소 목록 외의 마켓은 전부 crypto 로 간주 */
 const marketCategory = (m: string): NewsItem["category"] => {
   const upper = m.toUpperCase();
   if (/KRX|KOSPI|KOSDAQ|KONEX/.test(upper)) return "domestic";
@@ -45,6 +58,7 @@ const Home: React.FC = () => {
   /* ---------- 상태 ---------- */
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("today");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +101,7 @@ const Home: React.FC = () => {
         (cat === "crypto" && marketCategory(prev.market) !== "crypto") ||
         (cat === "domestic" && marketCategory(prev.market) === "international")
       ) {
-        best[a.symbol] = a; // 우선순위: crypto > domestic > international
+        best[a.symbol] = a; // crypto > domestic > international
       }
     });
     return best;
@@ -102,21 +116,56 @@ const Home: React.FC = () => {
       </div>
     );
 
-  /* ---------- 탭별 뉴스 ---------- */
+  /* ---------- 뉴스 필터 ---------- */
   const filtered =
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
   const hero = filtered[0];
   const subNews = filtered.slice(1, 5);
 
+  /* 기간 필터 */
+  const periodObj = PERIODS.find((p) => p.key === selectedPeriod)!;
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
+  cutoff.setDate(cutoff.getDate() - periodObj.days);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  /* ---------- 통계 ---------- */
-  const dist: Record<Level, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  let sumWeighted = 0;
+  /* ---------- 감정 통계 ---------- */
+  const dist = LEVELS.reduce<Record<Level, number>>(
+    (acc, l) => ((acc[l] = 0), acc),
+    {} as Record<Level, number>,
+  );
 
+  let sumWeighted = 0;
+  let sumWeights = 0;
+  const weightedEntries: Array<{ level: Level; weight: number }> = [];
+
+  recent.forEach((n) => {
+    const lvl = Math.min(5, Math.max(1, Number(n.sentiment) || 3)) as Level;
+    dist[lvl] += 1;
+
+    /* 시간 가중치 */
+    const daysAgo = (Date.now() - new Date(n.published_at).getTime()) / (1000 * 60 * 60 * 24);
+    const timeWeight = Math.max(0.1, (periodObj.days - daysAgo) / periodObj.days);
+    const weight = LEVEL_WEIGHTS[lvl] * timeWeight;
+    sumWeighted += lvl * weight;
+    sumWeights += weight;
+    weightedEntries.push({ level: lvl, weight });
+  });
+
+  const avgSentiment = sumWeights ? sumWeighted / sumWeights : 3;
+  const stdDev = Math.sqrt(
+    weightedEntries.reduce(
+      (s, { level, weight }) => s + weight * Math.pow(level - avgSentiment, 2),
+      0,
+    ) / (sumWeights || 1),
+  );
+
+  const distPct: Record<Level, number> = LEVELS.reduce(
+    (acc, l) => ((acc[l] = (dist[l] / (recent.length || 1)) * 100), acc),
+    {} as Record<Level, number>,
+  );
+
+  /* ---------- 키워드 통계 ---------- */
   type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
@@ -129,14 +178,12 @@ const Home: React.FC = () => {
         if (Array.isArray(p)) tags = p;
       } catch {}
 
-    const sentVal = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
-    dist[sentVal] += 1;
-    sumWeighted += sentVal;
+    const lvl = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
 
     tags.forEach((sym) => {
       const asset = primaryAssetOfSym[sym];
       if (!asset) return;
-      if (marketCategory(asset.market) !== item.category) return; // 카테고리 불일치 제외
+      if (marketCategory(asset.market) !== item.category) return; // 카테고리 불일치
 
       const key = asset.id;
       const stat = tagStats[key] || {
@@ -146,23 +193,17 @@ const Home: React.FC = () => {
         asset,
       };
       stat.total += 1;
-      if (sentVal >= 4) stat.pos += 1;
-      else if (sentVal <= 2) stat.neg += 1;
+      if (lvl >= 4) stat.pos += 1;
+      else if (lvl <= 2) stat.neg += 1;
       tagStats[key] = stat;
     });
   });
-
-  const totalRecent = recent.length || 1;
-  const avgSentiment = sumWeighted / totalRecent;
-  const distPct: Record<Level, number> = LEVELS.reduce(
-    (acc, l) => ({ ...acc, [l]: (dist[l] / totalRecent) * 100 }),
-    {} as Record<Level, number>,
-  );
 
   const topTags = Object.values(tagStats)
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
+  /* ---------- 시각화 라벨 ---------- */
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -188,21 +229,23 @@ const Home: React.FC = () => {
   const sentimentColorClass =
     avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
 
+  const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
+
   /* ───────── Render ───────── */
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
-      <div className="max-w-screen-xl mx-auto space-y-12">
-        {/* 탭 */}
-        <nav className="overflow-x-auto pb-2">
-          <ul className="flex space-x-3">
+      <div className="max-w-screen-xl mx-auto space-y-8">
+        {/* 카테고리 탭 */}
+        <nav className="overflow-x-auto">
+          <ul className="flex space-x-6 border-b border-gray-700">
             {TABS.map((t) => (
               <li key={t.key}>
                 <button
                   onClick={() => setSelectedTab(t.key)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`px-4 py-2 -mb-px text-sm font-medium transition-colors ${
                     selectedTab === t.key
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                      ? "text-white border-b-2 border-blue-500"
+                      : "text-gray-400 hover:text-gray-200"
                   }`}
                 >
                   {t.label}
@@ -213,7 +256,7 @@ const Home: React.FC = () => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 메인 영역 */}
+          {/* 메인 & 서브 뉴스 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
             {hero && <NewsCard newsItem={hero} variant="hero" />}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -224,12 +267,32 @@ const Home: React.FC = () => {
             <CommunityPopularWidget selectedTab={selectedTab} />
           </div>
 
-          {/* 사이드 위젯 */}
+          {/* 우측 분석 영역 */}
           <aside className="space-y-6">
+            {/* 기간 선택 */}
+            <nav className="overflow-x-auto pb-2">
+              <ul className="flex space-x-3">
+                {PERIODS.map((p) => (
+                  <li key={p.key}>
+                    <button
+                      onClick={() => setSelectedPeriod(p.key)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                        selectedPeriod === p.key
+                          ? "bg-green-600 text-white"
+                          : "text-gray-300 hover:bg-green-500 hover:text-white"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
             {/* 감정 분석 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
-                뉴스 감정 분석 (최근 {RECENT_DAYS}일)
+                {selectedTabLabel} 뉴스 감정 분석 ({periodObj.label})
               </h3>
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                 {ORDERED_LEVELS.map((lvl) => {
@@ -264,18 +327,18 @@ const Home: React.FC = () => {
                   </span>
                   <span className="text-sm text-gray-400">({avgSentiment.toFixed(1)})</span>
                 </div>
+                <p className="text-xs text-gray-400 mt-1">표준편차: {stdDev.toFixed(2)}</p>
               </div>
             </div>
 
             {/* 키워드 트렌드 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
-                키워드 트렌드 (최근 {RECENT_DAYS}일)
+                {selectedTabLabel} 키워드 트렌드 ({periodObj.label})
               </h3>
               {topTags.length ? (
                 <ul className="space-y-4">
-                  {topTags.map((stat) => {
-                    const { asset, total, pos, neg } = stat;
+                  {topTags.map(({ asset, total, pos, neg }) => {
                     const posPct = (pos / total) * 100;
                     const negPct = (neg / total) * 100;
                     const neuPct = 100 - posPct - negPct;

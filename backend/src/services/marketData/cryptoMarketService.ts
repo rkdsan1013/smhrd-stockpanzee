@@ -1,4 +1,4 @@
-// /backend/src/services/binanceService.ts
+// /backend/src/services/marketData/cryptoMarketService.ts
 import dotenv from "dotenv";
 dotenv.config();
 

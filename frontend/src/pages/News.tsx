@@ -1,5 +1,5 @@
 // /frontend/src/pages/News.tsx
-import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
@@ -16,7 +16,6 @@ const tabs = [
   { key: "crypto", label: "암호화폐" },
   { key: "favorites", label: "즐겨찾기" },
 ] as const;
-
 type TabKey = (typeof tabs)[number]["key"];
 const itemsPerPage = 3;
 
@@ -67,30 +66,34 @@ const News: React.FC = () => {
     setCurrentPage(1);
   }, [selectedTab]);
 
-  const favoriteSymbols = useMemo(() => {
+  const favoriteSymbols = React.useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     return favorites
       .map((fid) => assets.find((a) => a.id === fid)?.symbol)
       .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
-  const filtered =
-    selectedTab === "all"
-      ? newsItems
-      : selectedTab === "favorites"
-        ? newsItems.filter((n) => {
-            if (!n.tags) return false;
-            let tags: string[] = [];
-            try {
-              tags = Array.isArray(n.tags) ? n.tags : JSON.parse(n.tags);
-            } catch {
-              return false;
-            }
-            return tags.some((t) => favoriteSymbols.includes(t));
-          })
-        : newsItems.filter((n) => n.category === selectedTab);
+  const filtered = React.useMemo(() => {
+    if (selectedTab === "all") return newsItems;
+    if (selectedTab === "favorites") {
+      return newsItems.filter((n) => {
+        if (!n.tags) return false;
+        let tags: string[] = [];
+        try {
+          tags = Array.isArray(n.tags) ? n.tags : JSON.parse(n.tags);
+        } catch {
+          return false;
+        }
+        return tags.some((t) => favoriteSymbols.includes(t));
+      });
+    }
+    return newsItems.filter((n) => n.category === selectedTab);
+  }, [newsItems, selectedTab, favoriteSymbols]);
 
-  const visibleNews = filtered.slice(0, currentPage * itemsPerPage);
+  const visibleNews = React.useMemo(
+    () => filtered.slice(0, currentPage * itemsPerPage),
+    [filtered, currentPage],
+  );
 
   useEffect(() => {
     if (!loadMoreRef.current) return;
@@ -121,35 +124,45 @@ const News: React.FC = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Show full-page skeleton (including tabs) while loading
   if (loading) {
     return <NewsSkeleton itemsPerPage={itemsPerPage} />;
   }
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* Header + Tabs */}
-      <header className="flex flex-col sm:flex-row justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-white">최신 뉴스</h1>
-        <nav className="mt-4 sm:mt-0">
-          <ul className="flex space-x-4">
-            {tabs.map((t) => (
+      {/* 상단 탭 (언더라인은 탭 너비만큼) */}
+      <nav className="overflow-x-auto mb-8 flex justify-center">
+        <ul className="inline-flex space-x-6 border-b border-gray-700">
+          <li>
+            <button
+              onClick={() => handleTabClick("favorites")}
+              className={`px-4 py-2 -mb-px cursor-pointer transition-colors ${
+                selectedTab === "favorites"
+                  ? "text-yellow-400 border-b-2 border-yellow-400"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              <Icons name="banana" className="w-5 h-5" />
+            </button>
+          </li>
+          {tabs
+            .filter((t) => t.key !== "favorites")
+            .map((t) => (
               <li key={t.key}>
                 <button
                   onClick={() => handleTabClick(t.key)}
-                  className={`text-sm font-medium pb-2 ${
+                  className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
                     selectedTab === t.key
-                      ? "border-b-2 border-blue-500 text-white"
-                      : "text-gray-400 hover:text-white hover:border-gray-600"
+                      ? "text-white border-b-2 border-blue-500"
+                      : "text-gray-400 hover:text-gray-200"
                   }`}
                 >
                   {t.label}
                 </button>
               </li>
             ))}
-          </ul>
-        </nav>
-      </header>
+        </ul>
+      </nav>
 
       {/* Error */}
       {error && (

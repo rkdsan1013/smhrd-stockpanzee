@@ -22,7 +22,7 @@ const parseTimePublished = (raw: string): Date => {
 
 export const fetchAndProcessUsStockNews = async (): Promise<void> => {
   try {
-    // 1) NASDAQ/NYSE 심볼 조회 (제네릭으로 RowDataPacket[] 지정)
+    // 1) NASDAQ/NYSE 심볼 조회
     const [rows] = await pool.query<RowDataPacket[] & { symbol: string }[]>(
       "SELECT symbol FROM assets WHERE market IN ('NASDAQ','NYSE')",
     );
@@ -85,8 +85,7 @@ export const fetchAndProcessUsStockNews = async (): Promise<void> => {
       const filteredTags = tagsArr.filter((t) => symbolSet.has(t.toUpperCase()));
 
       if (filteredTags.length === 0) {
-        console.log("연관 종목 없음, 스킵");
-        continue;
+        console.log("연관 종목 없음, 빈 태그로 저장합니다");
       }
 
       // 3-8) DB 저장 준비

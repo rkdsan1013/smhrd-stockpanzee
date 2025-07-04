@@ -31,16 +31,15 @@ const Market: React.FC = () => {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
 
-  // core states
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [search, setSearch] = useState("");
   const [data, setData] = useState<StockItem[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
-    key: "marketCap",
-    dir: "desc",
-  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    dir: "asc" | "desc";
+  }>({ key: "marketCap", dir: "desc" });
   const [page, setPage] = useState(1);
 
   const prevPrices = useRef<Map<number, number>>(new Map());
@@ -68,6 +67,7 @@ const Market: React.FC = () => {
                 ? "암호화폐"
                 : "기타",
         }));
+
         list.forEach((item) => {
           const prev = prevPrices.current.get(item.id);
           if (prev !== undefined && prev !== item.currentPrice) {
@@ -79,11 +79,10 @@ const Market: React.FC = () => {
           }
           prevPrices.current.set(item.id, item.currentPrice);
         });
+
         setData(list);
-      } catch {
-      } finally {
-        setLoading(false);
-      }
+      } catch {}
+      setLoading(false);
     };
 
     load();
@@ -95,53 +94,55 @@ const Market: React.FC = () => {
   useEffect(() => {
     const handler = (upd: { symbol: string; price: number; rate: number; marketCap: number }) => {
       setData((prev) =>
-        prev.map((stock) => {
-          if (stock.symbol === upd.symbol && stock.category === "국내") {
-            const prevPrice = stock.currentPrice;
+        prev.map((s) => {
+          if (s.symbol === upd.symbol && s.category === "국내") {
+            const prevPrice = s.currentPrice;
             if (prevPrice !== upd.price) {
-              highlight.current.set(stock.id, upd.price > prevPrice ? "up" : "down");
+              highlight.current.set(s.id, upd.price > prevPrice ? "up" : "down");
               setTimeout(() => {
-                highlight.current.delete(stock.id);
+                highlight.current.delete(s.id);
                 rerender((v) => v + 1);
               }, 500);
             }
             return {
-              ...stock,
+              ...s,
               currentPrice: upd.price,
               priceChange: upd.rate,
               marketCap: upd.marketCap,
             };
           }
-          return stock;
+          return s;
         }),
       );
     };
+
     socket.on("stockPrice", handler);
     return () => void socket.off("stockPrice", handler);
   }, []);
 
-  // 3) favorites
+  // 3) favorites load
   useEffect(() => {
     if (user) {
       fetchFavorites()
-        .then((list) => setFavorites(list))
+        .then(setFavorites)
         .catch(() => setFavorites([]));
     } else {
       setFavorites([]);
     }
   }, [user]);
 
-  // 4) reset page
+  // 4) reset pagination
   useEffect(() => {
     setPage(1);
   }, [tab, viewMode, sortConfig, search]);
 
-  // 5) filter/sort/search/paginate
+  // filtered by tab
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
   );
 
+  // prioritize or filter favorites
   const byView = useMemo(() => {
     if (viewMode === "즐겨찾기") {
       return byTab.filter((s) => favorites.includes(s.id));
@@ -151,6 +152,7 @@ const Market: React.FC = () => {
     );
   }, [byTab, viewMode, favorites]);
 
+  // sorting vs search
   const sorted = useMemo(() => {
     if (search.trim()) return byView;
     const mult = sortConfig.dir === "asc" ? 1 : -1;
@@ -161,15 +163,21 @@ const Market: React.FC = () => {
     );
   }, [byView, sortConfig, search]);
 
+  // fuzzy-search if needed
   const finalList = useMemo(
     () =>
       search.trim()
-        ? fuzzySearch(sorted, search, { keys: ["name", "symbol"], threshold: 0.3 })
+        ? fuzzySearch(sorted, search, {
+            keys: ["name", "symbol"],
+            threshold: 0.3,
+          })
         : sorted,
     [sorted, search],
   );
+
   const visible = finalList.slice(0, page * ITEMS_PER_PAGE);
 
+  // infinite scroll
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el) return;
@@ -181,7 +189,7 @@ const Market: React.FC = () => {
     return () => obs.disconnect();
   }, [visible.length, finalList.length]);
 
-  // 6) toggle fav
+  // toggle favorite
   const toggleFav = async (id: number) => {
     if (!user) {
       alert("로그인이 필요합니다.");
@@ -191,26 +199,28 @@ const Market: React.FC = () => {
     try {
       if (isFav) {
         await removeFavorite(id);
-        setFavorites((prev) => prev.filter((x) => x !== id));
+        setFavorites((f) => f.filter((x) => x !== id));
       } else {
         await addFavorite(id);
-        setFavorites((prev) => [...prev, id]);
+        setFavorites((f) => [...f, id]);
       }
     } catch {
       alert("즐겨찾기 업데이트 실패");
     }
   };
 
-  // 7) sort & view toggle
+  // sort handler
   const handleSort = (key: SortKey) => {
     if (search.trim()) return;
     setSortConfig((prev) =>
       prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" },
     );
   };
+
+  // toggle 전체/즐겨찾기 view
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
-  // 8) compute summary
+  // summary stats
   const summary = byTab;
   const total = summary.length || 1;
   const largeDown = summary.filter((s) => s.priceChange < -BIG_CHANGE).length;
@@ -244,31 +254,40 @@ const Market: React.FC = () => {
       <header className="py-4 text-center">
         <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
       </header>
+
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-        {/* Nav tabs */}
-        <div className="flex mb-4">
-          <div className="inline-flex bg-gray-800 p-2 rounded-full space-x-2">
-            <button onClick={toggleView} className="p-2 rounded-full">
-              <Icons
-                name="banana"
-                className={`w-5 h-5 ${viewMode === "즐겨찾기" ? "text-yellow-400" : "text-gray-500"}`}
-              />
-            </button>
-            {(["전체", "국내", "해외", "암호화폐"] as const).map((t) => (
+        {/* Nav tabs with left-side banana icon */}
+        <nav className="overflow-x-auto">
+          <ul className="flex space-x-6 border-b border-gray-700">
+            <li>
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors duration-300 ${
-                  tab === t
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                onClick={toggleView}
+                className={`px-4 py-2 -mb-px cursor-pointer transition-colors ${
+                  viewMode === "즐겨찾기"
+                    ? "text-yellow-400 border-b-2 border-yellow-400"
+                    : "text-gray-400 hover:text-gray-200"
                 }`}
               >
-                {t}
+                <Icons name="banana" className="w-5 h-5" />
               </button>
+            </li>
+            {(["전체", "국내", "해외", "암호화폐"] as const).map((t) => (
+              <li key={t}>
+                <button
+                  onClick={() => setTab(t)}
+                  className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
+                    tab === t
+                      ? "text-white border-b-2 border-blue-500"
+                      : "text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {t}
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </nav>
+
         <div className="flex flex-col md:flex-row gap-4">
           {/* Left list */}
           <div className="w-full md:w-2/3 space-y-2">
@@ -290,12 +309,15 @@ const Market: React.FC = () => {
                             : "caretDown"
                           : "caretDown"
                       }
-                      className={`w-4 h-4 ${sortConfig.key === col.key ? "text-white" : "text-transparent"}`}
+                      className={`w-4 h-4 ${
+                        sortConfig.key === col.key ? "text-white" : "text-transparent"
+                      }`}
                     />
                   </button>
                 </div>
               ))}
             </div>
+
             {visible.map((s) => {
               const hl = highlight.current.get(s.id);
               const border =
@@ -304,6 +326,7 @@ const Market: React.FC = () => {
                   : hl === "down"
                     ? "border-red-400"
                     : "border-transparent";
+
               return (
                 <div
                   key={s.id}
@@ -315,33 +338,49 @@ const Market: React.FC = () => {
                       e.stopPropagation();
                       toggleFav(s.id);
                     }}
-                    className={`w-8 h-8 flex items-center justify-center transition-all ${!user ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-8 h-8 flex items-center justify-center transition-all ${
+                      !user ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
                     <Icons
                       name="banana"
-                      className={`w-5 h-5 ${favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"}`}
+                      className={`w-5 h-5 ${
+                        favorites.includes(s.id) ? "text-yellow-400" : "text-gray-500"
+                      }`}
                     />
                   </button>
+
                   <div className="flex-1 ml-2">
                     <p className="text-white font-medium">{s.name}</p>
                     <p className="text-gray-400 text-xs">{s.symbol}</p>
                   </div>
+
                   <div className="w-28 text-right text-white font-medium">
-                    {s.currentPrice.toLocaleString()} 원
+                    {s.currentPrice > 0 ? `${s.currentPrice.toLocaleString()} 원` : "N/A"}
                   </div>
+
                   <div
-                    className={`w-20 text-right font-semibold ml-2 ${s.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}
+                    className={`w-20 text-right font-semibold ml-2 ${
+                      s.priceChange > 0
+                        ? "text-green-400"
+                        : s.priceChange < 0
+                          ? "text-red-400"
+                          : "text-gray-400"
+                    }`}
                   >
                     {formatPercentage(s.priceChange)}
                   </div>
+
                   <div className="w-36 text-right text-gray-200 ml-2">
-                    {formatCurrency(s.marketCap)}
+                    {s.marketCap > 0 ? formatCurrency(s.marketCap) : "N/A"}
                   </div>
                 </div>
               );
             })}
+
             {visible.length < finalList.length && <div ref={loadMoreRef} className="h-2" />}
           </div>
+
           {/* Right sidebar */}
           <div className="w-full md:w-1/3">
             <MarketSidebar
@@ -359,7 +398,9 @@ const Market: React.FC = () => {
               topGainers={topGainers}
               topLosers={topLosers}
               onMomentumClick={(id) =>
-                navigate(`/asset/${id}`, { state: { asset: summary.find((s) => s.id === id)! } })
+                navigate(`/asset/${id}`, {
+                  state: { asset: summary.find((s) => s.id === id)! },
+                })
               }
             />
           </div>
