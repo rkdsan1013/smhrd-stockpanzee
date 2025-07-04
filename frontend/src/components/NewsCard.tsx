@@ -72,11 +72,8 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
           <span className="px-2 py-1 bg-gray-700 text-xs font-semibold rounded-full">
             {categoryLabel}
           </span>
-          <span
-            className={`flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full ${sentiment.color}`}
-          >
-            <Icons name={sentiment.iconName} />
-            <span>{sentiment.label}</span>
+          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${sentiment.color}`}>
+            {sentiment.label}
           </span>
         </div>
 
