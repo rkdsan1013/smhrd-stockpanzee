@@ -19,7 +19,6 @@ interface StockItem {
   market: string;
 }
 
-// ✅ 실전투자 토큰 발급
 async function getAccessToken() {
   try {
     const res = await axios.post<TokenResponse>(
@@ -38,7 +37,6 @@ async function getAccessToken() {
   }
 }
 
-// ✅ 모의투자 토큰 발급
 async function getMockToken() {
   try {
     const res = await axios.post<TokenResponse>(
@@ -57,7 +55,6 @@ async function getMockToken() {
   }
 }
 
-// ✅ 주식 정보 조회
 async function fetchStock(symbol: string, type: "real" | "mock") {
   const isMock = type === "mock";
   const baseURL = isMock
@@ -116,15 +113,12 @@ async function fetchStock(symbol: string, type: "real" | "mock") {
   }
 }
 
-// ✅ 슬립 유틸
 function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
-// ✅ 모의투자 상위 25개 종목 실시간 emit
 export async function emitMockTop25(io: Server) {
   if (!mockToken) await getMockToken();
-
   while (true) {
     console.log("🚀 모의투자 수집 시작 (상위 25개)");
 
@@ -132,7 +126,7 @@ export async function emitMockTop25(io: Server) {
       SELECT a.symbol, a.name, a.market
       FROM asset_info i
       JOIN assets a ON i.asset_id = a.id
-      WHERE a.market IN ('KOSPI', 'KOSDAQ')
+      WHERE a.market IN ('KOSPI','KOSDAQ')
       ORDER BY i.market_cap DESC
       LIMIT 25
     `);
@@ -147,17 +141,18 @@ export async function emitMockTop25(io: Server) {
       );
 
       for (const res of results) {
-        if (res.price && res.prevPrice) {
-          const rate = ((res.diff! / res.prevPrice!) * 100).toFixed(2);
+        if (res.price != null && res.prevPrice != null) {
+          // 0~100 범위의 퍼센트 값으로 변환
+          const rate = Number(((res.diff! / res.prevPrice!) * 100).toFixed(2));
+
           io.emit("stockPrice", {
             symbol: res.symbol,
             price: res.price,
             diff: res.diff,
             prevPrice: res.prevPrice,
-            rate,
+            rate, // 퍼센트 단위
             marketCap: res.marketCap,
           });
-
           successCount++;
         } else {
           failCount++;
@@ -172,15 +167,13 @@ export async function emitMockTop25(io: Server) {
   }
 }
 
-// ✅ 실전 종목 DB 저장
 export async function updateRealToDB() {
   console.log("🚀 실전 종목 수집 시작");
-
   if (!accessToken) await getAccessToken();
 
   const [rows]: any = await pool.query(`
-    SELECT id, symbol, name, market FROM assets
-    WHERE market IN ('KOSPI', 'KOSDAQ')
+    SELECT id, symbol FROM assets
+    WHERE market IN ('KOSPI','KOSDAQ')
   `);
 
   let successCount = 0;
@@ -188,9 +181,7 @@ export async function updateRealToDB() {
 
   for (let i = 0; i < rows.length; i += 25) {
     const chunk = rows.slice(i, i + 25);
-    const results = await Promise.all(
-      chunk.map((asset: { symbol: string }) => fetchStock(asset.symbol, "real")),
-    );
+    const results = await Promise.all(chunk.map((a: any) => fetchStock(a.symbol, "real")));
 
     for (let j = 0; j < chunk.length; j++) {
       const asset = chunk[j];
@@ -205,19 +196,18 @@ export async function updateRealToDB() {
         const rate = Number(((res.diff! / res.prevPrice!) * 100).toFixed(2));
 
         await pool.execute(
-          `INSERT INTO asset_info 
-            (asset_id, current_price, price_change, market_cap, last_updated)
+          `INSERT INTO asset_info
+             (asset_id, current_price, price_change, market_cap, last_updated)
            VALUES (?, ?, ?, ?, NOW())
            ON DUPLICATE KEY UPDATE
              current_price = VALUES(current_price),
-             price_change = VALUES(price_change),
-             market_cap = VALUES(market_cap),
-             last_updated = NOW()`,
+             price_change  = VALUES(price_change),
+             market_cap    = VALUES(market_cap),
+             last_updated  = NOW()`,
           [asset.id, res.price, rate, res.marketCap],
         );
-
         successCount++;
-      } catch (e: any) {
+      } catch {
         failCount++;
       }
     }
