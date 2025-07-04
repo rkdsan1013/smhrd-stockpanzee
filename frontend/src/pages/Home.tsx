@@ -9,7 +9,7 @@ import CommunityPopularWidget from "../components/CommunityPopularWidget";
 import HomeSkeleton from "../components/skeletons/HomeSkeleton";
 import { fetchAssets, getAssetDictSync, type Asset } from "../services/assetService";
 
-/* ---------------- 상수 ---------------- */
+/* ───────── 상수 ───────── */
 const TABS = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
@@ -32,14 +32,23 @@ const levelLabels: Record<Level, string> = {
   5: "매우 긍정",
 };
 
+/* ───────── market → category ───────── */
+/** 주식 거래소가 아니면 모두 crypto 로 간주 (Binance·Coinbase 등도 포함) */
+const marketCategory = (m: string): NewsItem["category"] => {
+  const upper = m.toUpperCase();
+  if (/KRX|KOSPI|KOSDAQ|KONEX/.test(upper)) return "domestic";
+  if (/NASDAQ|NYSE|AMEX|OTC|TSX|LSE|HKEX|ARCA|SSE|SZSE/.test(upper)) return "international";
+  return "crypto";
+};
+
 const Home: React.FC = () => {
-  /* ---------------- 상태 ---------------- */
+  /* ---------- 상태 ---------- */
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* ---------------- 자산 딕셔너리 ---------------- */
+  /* ---------- 자산 딕셔너리 ---------- */
   const dictRef = useRef<Record<string, Asset>>(getAssetDictSync());
   const [dictReady, setDictReady] = useState(Object.keys(dictRef.current).length > 0);
 
@@ -52,7 +61,7 @@ const Home: React.FC = () => {
     }
   }, [dictReady]);
 
-  /* ---------------- 뉴스 로드 ---------------- */
+  /* ---------- 뉴스 로드 ---------- */
   useEffect(() => {
     fetchNews()
       .then((data) =>
@@ -66,30 +75,34 @@ const Home: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  /* ---------------- assetsBySymbol (항상 호출) ---------------- */
-  const assetsBySymbol = useMemo(() => {
-    if (!dictReady) return {};
-    const map: Record<string, Asset[]> = {};
+  /* ---------- 심볼별 대표 자산 ---------- */
+  const primaryAssetOfSym = useMemo(() => {
+    if (!dictReady) return {} as Record<string, Asset>;
+    const best: Record<string, Asset> = {};
     Object.values(dictRef.current).forEach((a) => {
-      (map[a.symbol] ||= []).push(a);
+      const cat = marketCategory(a.market);
+      const prev = best[a.symbol];
+      if (
+        !prev ||
+        (cat === "crypto" && marketCategory(prev.market) !== "crypto") ||
+        (cat === "domestic" && marketCategory(prev.market) === "international")
+      ) {
+        best[a.symbol] = a; // 우선순위: crypto > domestic > international
+      }
     });
-    return map;
+    return best;
   }, [dictReady]);
 
-  /* ---------------- 로딩/오류 ---------------- */
-  if (loading || !dictReady) {
-    return <HomeSkeleton />;
-  }
-
-  if (error) {
+  /* ---------- 로딩/오류 ---------- */
+  if (loading || !dictReady) return <HomeSkeleton />;
+  if (error)
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
         오류: {error}
       </div>
     );
-  }
 
-  /* ---------------- 필터링 ---------------- */
+  /* ---------- 탭별 뉴스 ---------- */
   const filtered =
     selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
 
@@ -100,57 +113,30 @@ const Home: React.FC = () => {
   cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  /* ---------------- 평균 감정 ---------------- */
+  /* ---------- 통계 ---------- */
   const dist: Record<Level, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sumWeighted = 0;
-  recent.forEach((n) => {
-    const v = Math.min(5, Math.max(1, Number(n.sentiment) || 3)) as Level;
-    dist[v] += 1;
-    sumWeighted += v;
-  });
 
-  const totalRecent = recent.length || 1;
-  const avgSentiment = sumWeighted / totalRecent;
-  const distPct: Record<Level, number> = {
-    1: (dist[1] / totalRecent) * 100,
-    2: (dist[2] / totalRecent) * 100,
-    3: (dist[3] / totalRecent) * 100,
-    4: (dist[4] / totalRecent) * 100,
-    5: (dist[5] / totalRecent) * 100,
-  };
-
-  /* ---------------- 키워드 트렌드 ---------------- */
   type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
   recent.forEach((item) => {
-    /* 태그 파싱 */
     let tags: string[] = [];
     if (Array.isArray(item.tags)) tags = item.tags;
-    else if (typeof item.tags === "string") {
+    else if (typeof item.tags === "string")
       try {
-        const parsed = JSON.parse(item.tags);
-        if (Array.isArray(parsed)) tags = parsed;
-      } catch {
-        /* ignore */
-      }
-    }
+        const p = JSON.parse(item.tags);
+        if (Array.isArray(p)) tags = p;
+      } catch {}
 
     const sentVal = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
+    dist[sentVal] += 1;
+    sumWeighted += sentVal;
 
     tags.forEach((sym) => {
-      const cands = assetsBySymbol[sym];
-      if (!cands || cands.length === 0) return;
-
-      /* 뉴스 category와 시장 매칭 우선 */
-      const asset =
-        cands.find((a) =>
-          item.category === "crypto"
-            ? a.market.toUpperCase().includes("CRYPTO")
-            : item.category === "domestic"
-              ? a.market.includes("KRX")
-              : /NASDAQ|NYSE/.test(a.market),
-        ) || cands[0];
+      const asset = primaryAssetOfSym[sym];
+      if (!asset) return;
+      if (marketCategory(asset.market) !== item.category) return; // 카테고리 불일치 제외
 
       const key = asset.id;
       const stat = tagStats[key] || {
@@ -166,11 +152,17 @@ const Home: React.FC = () => {
     });
   });
 
+  const totalRecent = recent.length || 1;
+  const avgSentiment = sumWeighted / totalRecent;
+  const distPct: Record<Level, number> = LEVELS.reduce(
+    (acc, l) => ({ ...acc, [l]: (dist[l] / totalRecent) * 100 }),
+    {} as Record<Level, number>,
+  );
+
   const topTags = Object.values(tagStats)
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  /* ---------------- 평균 감정 라벨 ---------------- */
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -196,7 +188,7 @@ const Home: React.FC = () => {
   const sentimentColorClass =
     avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
 
-  /* ---------------- Render ---------------- */
+  /* ───────── Render ───────── */
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-12">
@@ -221,7 +213,7 @@ const Home: React.FC = () => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 왼쪽: 뉴스 & 커뮤니티 */}
+          {/* 메인 영역 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
             {hero && <NewsCard newsItem={hero} variant="hero" />}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -232,15 +224,13 @@ const Home: React.FC = () => {
             <CommunityPopularWidget selectedTab={selectedTab} />
           </div>
 
-          {/* 오른쪽: 분석 & 위젯 */}
+          {/* 사이드 위젯 */}
           <aside className="space-y-6">
-            {/* 뉴스 감정 분석 */}
+            {/* 감정 분석 */}
             <div className="bg-gray-800 p-6 rounded-lg shadow">
               <h3 className="text-xl font-semibold text-white mb-4">
                 뉴스 감정 분석 (최근 {RECENT_DAYS}일)
               </h3>
-
-              {/* 누적 게이지 */}
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                 {ORDERED_LEVELS.map((lvl) => {
                   const pct = distPct[lvl].toFixed(1);
@@ -265,8 +255,6 @@ const Home: React.FC = () => {
                   );
                 })}
               </div>
-
-              {/* 평균 감정 미니바 */}
               <div className="mt-3 text-white">
                 <span className="text-sm">평균 감정</span>
                 <div className="flex items-center space-x-2 mt-1">
@@ -276,18 +264,6 @@ const Home: React.FC = () => {
                   </span>
                   <span className="text-sm text-gray-400">({avgSentiment.toFixed(1)})</span>
                 </div>
-                <div className="relative w-full h-2 bg-gray-700 rounded-full mt-2 overflow-hidden">
-                  <div
-                    className="absolute h-full bg-blue-500"
-                    style={{
-                      width: `${((avgSentiment - 1) / 4) * 100}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>부정</span>
-                  <span>긍정</span>
-                </div>
               </div>
             </div>
 
@@ -296,33 +272,26 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-semibold text-white mb-4">
                 키워드 트렌드 (최근 {RECENT_DAYS}일)
               </h3>
-
-              {topTags.length > 0 ? (
+              {topTags.length ? (
                 <ul className="space-y-4">
                   {topTags.map((stat) => {
                     const { asset, total, pos, neg } = stat;
                     const posPct = (pos / total) * 100;
                     const negPct = (neg / total) * 100;
                     const neuPct = 100 - posPct - negPct;
-
                     return (
                       <li key={asset.id} className="space-y-1">
-                        {/* 회사명 + 링크 */}
                         <div className="flex justify-between text-gray-300 text-sm">
                           <Link to={`/asset/${asset.id}`} className="hover:underline">
                             {asset.name}
                           </Link>
                           <span>{total}건</span>
                         </div>
-
-                        {/* 감정 막대 */}
                         <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden flex">
                           <div className="bg-green-400 h-full" style={{ width: `${posPct}%` }} />
                           <div className="bg-gray-500 h-full" style={{ width: `${neuPct}%` }} />
                           <div className="bg-red-400 h-full" style={{ width: `${negPct}%` }} />
                         </div>
-
-                        {/* 퍼센트 라벨 */}
                         <div className="flex justify-between text-xs text-gray-400">
                           <span>긍정 {posPct.toFixed(1)}%</span>
                           <span>부정 {negPct.toFixed(1)}%</span>
