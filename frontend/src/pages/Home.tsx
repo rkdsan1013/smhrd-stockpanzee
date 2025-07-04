@@ -82,10 +82,9 @@ const Home: React.FC = () => {
   cutoff.setDate(cutoff.getDate() - periodObj.days);
   const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
 
-  // 탭 레이블
   const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
 
-  // 감정 분포 카운트
+  // 감정 분포 초기화
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, lvl) => {
       acc[lvl] = 0;
@@ -104,7 +103,6 @@ const Home: React.FC = () => {
 
     const daysAgo = (Date.now() - new Date(n.published_at).getTime()) / (1000 * 60 * 60 * 24);
     const timeWeight = Math.max(0.1, (periodObj.days - daysAgo) / periodObj.days);
-
     const w = LEVEL_WEIGHTS[v] * timeWeight;
     sumWeighted += v * w;
     sumWeights += w;
@@ -139,7 +137,6 @@ const Home: React.FC = () => {
         if (Array.isArray(parsed)) tags = parsed;
       } catch {}
     }
-
     const sentVal = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
     tags.forEach((t) => {
       const stat = tagStats[t] || { total: 0, pos: 0, neg: 0 };
@@ -180,17 +177,17 @@ const Home: React.FC = () => {
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-8">
-        {/* 카테고리 탭 */}
-        <nav className="overflow-x-auto pb-4">
-          <ul className="flex space-x-3">
+        {/* 카테고리 탭 (디자인 개선) */}
+        <nav className="overflow-x-auto">
+          <ul className="flex space-x-6 border-b border-gray-700">
             {TABS.map((t) => (
               <li key={t.key}>
                 <button
                   onClick={() => setSelectedTab(t.key)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
                     selectedTab === t.key
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-blue-500 hover:text-white"
+                      ? "text-white border-b-2 border-blue-500"
+                      : "text-gray-400 hover:text-gray-200"
                   }`}
                 >
                   {t.label}
