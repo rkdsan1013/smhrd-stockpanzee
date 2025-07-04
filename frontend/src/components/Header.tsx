@@ -10,6 +10,9 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
 
+  // 현재 경로
+  const pathname = location.pathname;
+
   // 검색 상태
   const [searchActive, setSearchActive] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +25,6 @@ const Header: React.FC = () => {
 
   // 알림 팝업
   const [notifOpen, setNotifOpen] = useState(false);
-  // nullable HTMLButtonElement ref
   const notifAnchorRef = useRef<HTMLButtonElement | null>(null);
 
   // 외부 클릭으로 메뉴 닫기
@@ -86,12 +88,16 @@ const Header: React.FC = () => {
                 </button>
                 {navItems.map((item) => {
                   const isActive =
-                    location.pathname === item.path || location.pathname.startsWith(item.path);
+                    pathname === item.path ||
+                    pathname.startsWith(item.path) ||
+                    // '/asset/*' 경로도 '마켓' 탭으로 간주
+                    (item.key === "market" && pathname.startsWith("/asset"));
+
                   return (
                     <Link
                       key={item.key}
                       to={item.path}
-                      className={`px-4 py-1 whitespace-nowrap rounded-full transition focus:outline-none ${
+                      className={`px-4 py-1 whitespace-nowrap rounded-full transition ${
                         isActive
                           ? "text-blue-500"
                           : "text-gray-300 hover:bg-white/30 hover:text-white"
