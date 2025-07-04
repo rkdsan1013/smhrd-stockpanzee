@@ -1,6 +1,5 @@
 // /backend/src/services/news/krxNewsService.ts
 import axios from "axios";
-import cron from "node-cron";
 import * as cheerio from "cheerio";
 import { JSDOM } from "jsdom";
 
@@ -51,13 +50,13 @@ async function getArticleTitleAndContent(url: string): Promise<{ title: string; 
 }
 
 /**
- * 3) 국내 뉴스 처리 (success 플래그 적용)
+ * 국내 뉴스 파이프라인 실행
  */
 export async function fetchAndProcessKrxNews(): Promise<void> {
   console.log("📢 국내 뉴스 파이프라인 시작");
 
   try {
-    // 3-1) NAVER 뉴스 API 호출
+    // 1) NAVER 뉴스 API 호출
     const resp = await axios.get<{ items: NaverNewsApiItem[] }>(NAVER_API_URL, {
       params: { query: "주식", display: 20, sort: "date" },
       headers: {
@@ -67,11 +66,11 @@ export async function fetchAndProcessKrxNews(): Promise<void> {
     });
     const rawItems = resp.data.items;
 
-    // 3-2) 중복 링크 제거
+    // 2) 중복 링크 제거
     const newItems = rawItems.filter((it) => !collectedLinks.has(it.link));
     newItems.forEach((it) => collectedLinks.add(it.link));
 
-    // 3-3) 본문 크롤링 + 썸네일 동시 처리
+    // 3) 본문 크롤링 + 썸네일 수집
     const [thumbnails, crawled] = await Promise.all([
       Promise.all(newItems.map((it) => getThumbnail(it.link))),
       Promise.all(newItems.map((it) => getArticleTitleAndContent(it.link))),
@@ -79,28 +78,33 @@ export async function fetchAndProcessKrxNews(): Promise<void> {
     const titles = crawled.map((c) => c.title);
     const contents = crawled.map((c) => c.content);
 
-    // 3-4) mapper 호출
+    // 4) mapper 호출 및 본문 유효성 필터링
     let newsItems: INews[] = mapKrxNews(newItems, thumbnails, contents, titles, crawled).filter(
       (n) => n.content.trim().length > 0,
     );
     console.log(`▶️ 처리 대상 뉴스: ${newsItems.length}건`);
 
-    // 3-5) 자산 심볼 집합 생성
+    // 5) 자산 심볼 집합 생성 (KOSPI/KOSDAQ)
     const allAssets = await findAllAssets();
-    const domAssets = allAssets.filter((a) => a.market === "KOSPI" || a.market === "KOSDAQ");
-    const symbolSet = new Set(domAssets.map((a) => a.symbol.toUpperCase()));
+    const symbolSet = new Set(
+      allAssets
+        .filter((a) => a.market === "KOSPI" || a.market === "KOSDAQ")
+        .map((a) => a.symbol.toUpperCase()),
+    );
 
-    // 3-6) 뉴스별 파이프라인
+    // 6) 뉴스별 파이프라인
     for (const news of newsItems) {
+      // 중복 저장 방지
       if (await findNewsByLink(news.news_link)) {
         console.log(`이미 처리됨, 스킵: ${news.news_link}`);
         continue;
       }
 
+      // 게시일 문자열화
       const publishedAt =
         news.published_at instanceof Date ? news.published_at.toISOString() : news.published_at;
 
-      // GPT 분석
+      // GPT 뉴스 분석
       const analysis: AnalysisResult = await analyzeNews(news.title, news.content, publishedAt);
 
       // success 플래그 검사
@@ -108,24 +112,23 @@ export async function fetchAndProcessKrxNews(): Promise<void> {
         console.log("❌ 관련 없는 뉴스(또는 광고)로 판단되어 스킵");
         continue;
       }
-      console.log("🔍 GPT 분석:", {
+      console.log("🔍 GPT 분석 결과:", {
         sentiment: analysis.news_sentiment,
         tags: analysis.tags,
       });
 
-      // 태그·긍부정 기본값
+      // 긍정·부정, 태그 기본값
       const positives = analysis.news_positive || [];
       const negatives = analysis.news_negative || [];
       const tagsList = analysis.tags || [];
 
-      // 3-6-2) 국내 자산 심볼만 필터링
+      // 7) 국내 자산 심볼만 필터링
       const filteredTags = tagsList.filter((t) => symbolSet.has(t.toUpperCase()));
       if (filteredTags.length === 0) {
-        console.log("연관 종목 없음, 스킵");
-        continue;
+        console.log("연관 종목 없음, 빈 태그로 저장합니다");
       }
 
-      // 3-6-3) DB에 뉴스 + 분석 결과 저장
+      // 8) DB에 뉴스 + 분석 결과 저장
       const preparedNews: INews = {
         ...news,
         news_category: "domestic",
@@ -142,7 +145,7 @@ export async function fetchAndProcessKrxNews(): Promise<void> {
       const newsId = await createNewsWithAnalysis(preparedNews, analysisData, analysis.title_ko!);
       console.log(`✅ DB 저장 완료 (ID=${newsId})`);
 
-      // 3-6-4) 임베딩 → 벡터 스토어 업데이트
+      // 9) 임베딩 생성 및 벡터 저장
       const vectorText = `${news.title} ${publishedAt} ${analysis.summary}`;
       const values = await getEmbedding(vectorText);
       const nv: NewsVector = {
