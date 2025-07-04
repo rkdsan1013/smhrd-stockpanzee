@@ -1,5 +1,6 @@
+// /frontend/src/components/TickerTape.tsx
 // cspell:ignore KOSPI KOSDAQ NASDAQ NYSE S&P500 Binance Upbit
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useEffect, useRef, useState, useContext, useLayoutEffect, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../providers/AuthProvider";
@@ -43,14 +44,15 @@ function TickerTape() {
   const [showFav, setShowFav] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+
   const tapeInnerRef = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState(0);
-  const { user } = useContext(AuthContext);
+  const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   // 1) 5초마다 시세 불러오기
   useEffect(() => {
-    let running = true;
+    let active = true;
     const load = async () => {
       try {
         const data = await fetchTickers();
@@ -58,11 +60,11 @@ function TickerTape() {
       } catch {
         setTickers([]);
       }
-      if (running) setTimeout(load, 5000);
+      if (active) setTimeout(load, 5000);
     };
     load();
     return () => {
-      running = false;
+      active = false;
     };
   }, []);
 
@@ -82,7 +84,6 @@ function TickerTape() {
 
     setFlashStates(newFlash);
 
-    // 0.8초 후에 원상복구
     Object.entries(newFlash).forEach(([id, state]) => {
       if (state) {
         const timer = window.setTimeout(() => {
@@ -116,50 +117,76 @@ function TickerTape() {
   }, [user]);
 
   // top10 리스트
-  const koreaTop = tickers
-    .filter((t) => getCategory(t.market) === "한국")
-    .sort((a, b) => b.marketCap - a.marketCap)
-    .slice(0, 5);
-  const globalTop = tickers
-    .filter((t) => getCategory(t.market) === "해외")
-    .sort((a, b) => b.marketCap - a.marketCap)
-    .slice(0, 5);
-  const cryptoTop = tickers
-    .filter((t) => getCategory(t.market) === "암호화폐")
-    .sort((a, b) => b.marketCap - a.marketCap)
-    .slice(0, 5);
+  const koreaTop = useMemo(
+    () =>
+      tickers
+        .filter((t) => getCategory(t.market) === "한국")
+        .sort((a, b) => b.marketCap - a.marketCap)
+        .slice(0, 5),
+    [tickers],
+  );
+  const globalTop = useMemo(
+    () =>
+      tickers
+        .filter((t) => getCategory(t.market) === "해외")
+        .sort((a, b) => b.marketCap - a.marketCap)
+        .slice(0, 5),
+    [tickers],
+  );
+  const cryptoTop = useMemo(
+    () =>
+      tickers
+        .filter((t) => getCategory(t.market) === "암호화폐")
+        .sort((a, b) => b.marketCap - a.marketCap)
+        .slice(0, 5),
+    [tickers],
+  );
 
-  let displayTickers: Ticker[] = [];
-  if (showFav && user && favorites.length > 0) {
-    displayTickers = tickers.filter((t) => favorites.includes(t.id));
-    displayTickers = [...displayTickers, ...displayTickers];
-  } else {
-    displayTickers = [
-      ...koreaTop,
-      ...globalTop,
-      ...cryptoTop,
-      ...koreaTop,
-      ...globalTop,
-      ...cryptoTop,
-    ];
-  }
-
-  // tape 길이 계산
-  const [tapeWidth, setTapeWidth] = useState(0);
-  useEffect(() => {
-    if (tapeInnerRef.current) {
-      setTapeWidth(tapeInnerRef.current.scrollWidth / 2);
+  // baseTickers 정의
+  const baseTickers = useMemo(() => {
+    if (showFav && user && favorites.length > 0) {
+      return tickers.filter((t) => favorites.includes(t.id));
     }
-  }, [tickers, favorites, showFav]);
+    return [...koreaTop, ...globalTop, ...cryptoTop];
+  }, [showFav, user, favorites, tickers, koreaTop, globalTop, cryptoTop]);
+
+  // 반복 횟수 계산 (항목이 적어도 화면 가로를 두 번 덮도록)
+  const [repeatTimes, setRepeatTimes] = useState(2);
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const containerWidth = containerRef.current.clientWidth || window.innerWidth;
+    const estimatedItemWidth = 130; // gap 포함 최소 너비
+    const baseWidth = baseTickers.length * estimatedItemWidth || 1;
+    const times = Math.ceil((containerWidth * 2) / baseWidth);
+    setRepeatTimes(Math.max(2, times));
+  }, [baseTickers]);
+
+  // 최종 보여줄 tickers
+  const displayTickers = useMemo(
+    () => new Array(repeatTimes).fill(baseTickers).flat(),
+    [baseTickers, repeatTimes],
+  );
+
+  // tapeWidth 계산 (한 사이클 너비)
+  const [tapeWidth, setTapeWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (tapeInnerRef.current) {
+      setTapeWidth(tapeInnerRef.current.scrollWidth / repeatTimes);
+    }
+  }, [displayTickers, repeatTimes]);
 
   // tape 애니메이션
   const speed = 30;
   const lastTimeRef = useRef<number | null>(null);
+  const [offset, setOffset] = useState(0);
+
   useEffect(() => {
     let running = true;
+
     function step(ts: number) {
       if (!running) return;
       if (lastTimeRef.current === null) lastTimeRef.current = ts;
+
       if (!isPaused && tapeWidth > 0) {
         const dt = ts - (lastTimeRef.current ?? ts);
         setOffset((prev) => {
@@ -168,19 +195,22 @@ function TickerTape() {
           return next;
         });
       }
+
       lastTimeRef.current = ts;
       requestAnimationFrame(step);
     }
-    const raf = requestAnimationFrame(step);
+
+    const rafId = requestAnimationFrame(step);
     return () => {
       running = false;
       lastTimeRef.current = null;
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafId);
     };
   }, [isPaused, tapeWidth]);
 
   return (
     <div
+      ref={containerRef}
       className="fixed left-0 right-0 bottom-0 w-screen z-[99] bg-[#161b22] border-t border-gray-800 overflow-hidden flex items-center"
       style={{
         height: 48,
@@ -256,7 +286,11 @@ function TickerTape() {
                   key={`${ticker.id}-${i}`}
                   className="flex items-center gap-1 px-5 hover:bg-gray-800 rounded cursor-pointer"
                   onClick={() => navigate(`/asset/${ticker.id}`)}
-                  style={{ transition: "background 0.2s", minWidth: 120, height: "100%" }}
+                  style={{
+                    transition: "background 0.2s",
+                    minWidth: 120,
+                    height: "100%",
+                  }}
                 >
                   <span className="font-semibold text-white">{ticker.name}</span>
                   <span className="ml-1 text-gray-400 text-xs">{ticker.symbol}</span>
