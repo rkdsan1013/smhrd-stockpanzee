@@ -1,8 +1,11 @@
-// /frontend/src/pages/AssetDetail.tsx
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import type { Asset } from "../services/assetService";
-import { fetchAssetById } from "../services/assetService";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  fetchAssetById,
+  fetchAssets,
+  getAssetDictSync,
+  type Asset,
+} from "../services/assetService";
 import type { NewsItem } from "../services/newsService";
 import { fetchLatestNewsByAsset } from "../services/newsService";
 import { renderTradingViewChart, getTradingViewSymbol } from "../services/tradingViewService";
@@ -14,15 +17,25 @@ import AssetDetailSkeleton from "../components/skeletons/AssetDetailSkeleton";
 
 const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  if (!id) {
+  const navigate = useNavigate();
+
+  /* ───────── 파라미터 검증 ───────── */
+  if (!id || Number.isNaN(Number(id))) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        올바르지 않은 요청입니다.
+      <div className="min-h-screen flex flex-col gap-6 items-center justify-center bg-gray-900 text-white">
+        <p>올바르지 않은 요청입니다.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
+        >
+          뒤로가기
+        </button>
       </div>
     );
   }
   const assetId = Number(id);
 
+  /* ───────── 상태 ───────── */
   const [asset, setAsset] = useState<Asset | null>(null);
   const [liveData, setLiveData] = useState<{
     currentPrice: number;
@@ -33,13 +46,29 @@ const AssetDetail: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<"chart" | "community">("chart");
   const [isFavorite, setIsFavorite] = useState(false);
 
+  /* ───────── 심볼 → Asset 딕셔너리 (메모리 + localStorage) ───────── */
+  const dictRef = React.useRef<Record<string, Asset>>(getAssetDictSync());
+  const [dictReady, setDictReady] = useState(Object.keys(dictRef.current).length > 0);
+
+  useEffect(() => {
+    if (!dictReady) {
+      fetchAssets().then(() => {
+        dictRef.current = getAssetDictSync();
+        setDictReady(true); // 재렌더
+      });
+    }
+  }, [dictReady]);
+
+  /* ───────── 공통 유틸 ───────── */
   const parseTags = (tags: string | string[] | null): string[] => {
     if (Array.isArray(tags)) return tags;
     if (typeof tags === "string") {
       try {
         const parsed = JSON.parse(tags);
         if (Array.isArray(parsed)) return parsed;
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     }
     return [];
   };
@@ -47,7 +76,7 @@ const AssetDetail: React.FC = () => {
   const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"] as const;
   function getSentiment(v: number | string | null) {
     const num = Number(v);
-    const x = Math.min(5, Math.max(1, isNaN(num) ? 3 : num));
+    const x = Math.min(5, Math.max(1, Number.isNaN(num) ? 3 : num));
     const label = SENT_LABELS[x - 1];
     const style =
       x <= 2
@@ -58,7 +87,7 @@ const AssetDetail: React.FC = () => {
     return { label, style };
   }
 
-  // 즐겨찾기 로드
+  /* ───────── 즐겨찾기 로드 ───────── */
   useEffect(() => {
     fetchFavorites()
       .then((list) => setIsFavorite(list.includes(assetId)))
@@ -79,7 +108,7 @@ const AssetDetail: React.FC = () => {
     }
   };
 
-  // 자산 정보 로드
+  /* ───────── 자산 정보 로드 ───────── */
   useEffect(() => {
     fetchAssetById(assetId)
       .then((data) => {
@@ -92,7 +121,7 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [assetId]);
 
-  // 뉴스 불러오기
+  /* ───────── 뉴스 로드 ───────── */
   useEffect(() => {
     if (!asset) return;
     const category: "domestic" | "international" | "crypto" = asset.market.includes("KRX")
@@ -120,7 +149,7 @@ const AssetDetail: React.FC = () => {
       .catch(console.error);
   }, [asset]);
 
-  // TradingView 차트 렌더링
+  /* ───────── TradingView 차트 ───────── */
   useEffect(() => {
     if (!asset || selectedTab !== "chart") return;
     const containerId = `tv-chart-${asset.id}`;
@@ -132,7 +161,7 @@ const AssetDetail: React.FC = () => {
     }
   }, [asset, selectedTab]);
 
-  // 실시간 가격 갱신
+  /* ───────── 실시간 가격 갱신 ───────── */
   useEffect(() => {
     if (!asset) return;
     const timer = setInterval(() => {
@@ -148,7 +177,7 @@ const AssetDetail: React.FC = () => {
     return () => clearInterval(timer);
   }, [asset, assetId]);
 
-  // 초기 로딩 스켈레톤
+  /* ───────── 초기 스켈레톤 ───────── */
   if (!asset || !liveData) {
     return <AssetDetailSkeleton />;
   }
@@ -156,9 +185,10 @@ const AssetDetail: React.FC = () => {
   const { currentPrice, priceChange } = liveData;
   const chartContainerId = `tv-chart-${asset.id}`;
 
+  /* ───────── Render ───────── */
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-8">
-      {/* 헤더 */}
+      {/* ------------- 헤더 ------------- */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <div className="flex items-center space-x-2">
@@ -192,6 +222,8 @@ const AssetDetail: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* ------------- 탭 ------------- */}
         <nav className="flex space-x-6 border-b border-gray-700 pt-2">
           <button
             onClick={() => setSelectedTab("chart")}
@@ -216,10 +248,10 @@ const AssetDetail: React.FC = () => {
         </nav>
       </header>
 
-      {/* 본문 */}
+      {/* ------------- 본문 ------------- */}
       {selectedTab === "chart" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {/* 차트 & 최신 뉴스 */}
+          {/* -------- 차트 & 최신 뉴스 -------- */}
           <div className="md:col-span-2 flex flex-col space-y-6">
             <div className="rounded-2xl shadow-lg overflow-hidden border border-gray-700">
               <div id={chartContainerId} className="w-full h-80 md:h-[500px]" />
@@ -232,18 +264,32 @@ const AssetDetail: React.FC = () => {
                 <h2 className="text-2xl font-semibold leading-snug">
                   {detailNews.title_ko || detailNews.title}
                 </h2>
+
+                {/* ───── 뉴스 태그 (회사명) ───── */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className={`${getSentiment(detailNews.sentiment).style} px-3 py-1 text-sm rounded-full`}
                   >
                     {getSentiment(detailNews.sentiment).label}
                   </span>
-                  {parseTags(detailNews.tags).map((tag, idx) => (
-                    <span key={idx} className="px-2 py-1 text-sm bg-blue-600 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
+
+                  {/* 심볼 → 회사명 매핑 */}
+                  {dictReady &&
+                    parseTags(detailNews.tags).map((sym) => {
+                      const a = dictRef.current[sym];
+                      if (!a) return null;
+                      return (
+                        <Link
+                          key={sym}
+                          to={`/asset/${a.id}`}
+                          className="px-2 py-1 text-sm bg-blue-600 rounded-full hover:bg-blue-500 transition"
+                        >
+                          {a.name}
+                        </Link>
+                      );
+                    })}
                 </div>
+
                 <p
                   className="text-gray-300 overflow-hidden"
                   style={{
@@ -271,7 +317,7 @@ const AssetDetail: React.FC = () => {
             )}
           </div>
 
-          {/* 관련 뉴스 리스트 */}
+          {/* -------- 관련 뉴스 리스트 -------- */}
           <aside className="flex flex-col">
             <div className="text-xl md:text-2xl font-bold mb-4">{asset.name} 관련 뉴스</div>
             <div className="flex flex-col gap-4">
@@ -284,6 +330,7 @@ const AssetDetail: React.FC = () => {
           </aside>
         </div>
       ) : (
+        /* -------- 토론방 -------- */
         <section className="bg-gray-800 rounded-2xl shadow p-6">
           <AssetComments assetId={asset.id} />
         </section>
