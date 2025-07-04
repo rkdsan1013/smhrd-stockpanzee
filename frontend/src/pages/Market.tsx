@@ -67,6 +67,7 @@ const Market: React.FC = () => {
                 ? "암호화폐"
                 : "기타",
         }));
+
         list.forEach((item) => {
           const prev = prevPrices.current.get(item.id);
           if (prev !== undefined && prev !== item.currentPrice) {
@@ -78,10 +79,12 @@ const Market: React.FC = () => {
           }
           prevPrices.current.set(item.id, item.currentPrice);
         });
+
         setData(list);
       } catch {}
       setLoading(false);
     };
+
     load();
     const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
@@ -112,6 +115,7 @@ const Market: React.FC = () => {
         }),
       );
     };
+
     socket.on("stockPrice", handler);
     return () => void socket.off("stockPrice", handler);
   }, []);
@@ -352,19 +356,23 @@ const Market: React.FC = () => {
                   </div>
 
                   <div className="w-28 text-right text-white font-medium">
-                    {s.currentPrice.toLocaleString()} 원
+                    {s.currentPrice > 0 ? `${s.currentPrice.toLocaleString()} 원` : "N/A"}
                   </div>
 
                   <div
                     className={`w-20 text-right font-semibold ml-2 ${
-                      s.priceChange >= 0 ? "text-green-400" : "text-red-400"
+                      s.priceChange > 0
+                        ? "text-green-400"
+                        : s.priceChange < 0
+                          ? "text-red-400"
+                          : "text-gray-400"
                     }`}
                   >
                     {formatPercentage(s.priceChange)}
                   </div>
 
                   <div className="w-36 text-right text-gray-200 ml-2">
-                    {formatCurrency(s.marketCap)}
+                    {s.marketCap > 0 ? formatCurrency(s.marketCap) : "N/A"}
                   </div>
                 </div>
               );
