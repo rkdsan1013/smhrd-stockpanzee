@@ -49,4 +49,4 @@ build/
 *.tmp
 
 # Database dumps
-# _db/vectordata.dump
+_db/vectordata.dump
