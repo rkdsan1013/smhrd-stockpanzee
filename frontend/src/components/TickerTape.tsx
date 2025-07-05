@@ -1,6 +1,6 @@
 // /frontend/src/components/TickerTape.tsx
 // cspell:ignore KOSPI KOSDAQ NASDAQ NYSE S&P500 Binance Upbit
-import React, { useEffect, useRef, useState, useContext, useLayoutEffect, useMemo } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../providers/AuthProvider";
@@ -44,11 +44,17 @@ function TickerTape() {
   const [showFav, setShowFav] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [repeatTimes, setRepeatTimes] = useState(2);
+  const [tapeWidth, setTapeWidth] = useState(0);
 
-  const tapeInnerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  const tapeInnerRef = useRef<HTMLDivElement>(null);
+  const lastTimeRef = useRef<number | null>(null);
+
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const speed = 30; // px per second
 
   // 1) 5초마다 시세 불러오기
   useEffect(() => {
@@ -87,13 +93,15 @@ function TickerTape() {
     Object.entries(newFlash).forEach(([id, state]) => {
       if (state) {
         const timer = window.setTimeout(() => {
-          setFlashStates((fs) => ({ ...fs, [Number(id)]: null }));
+          setFlashStates((fs) => ({
+            ...fs,
+            [Number(id)]: null,
+          }));
         }, 800);
         timers.push(timer);
       }
     });
 
-    // prevTickers 갱신
     const map: Record<number, Ticker> = {};
     tickers.forEach((t) => {
       map[t.id] = t;
@@ -105,7 +113,7 @@ function TickerTape() {
     };
   }, [tickers]);
 
-  // 즐겨찾기 불러오기
+  // 3) 즐겨찾기 불러오기
   useEffect(() => {
     if (user) {
       fetchFavorites()
@@ -116,70 +124,46 @@ function TickerTape() {
     }
   }, [user]);
 
-  // top10 리스트
-  const koreaTop = useMemo(
-    () =>
-      tickers
-        .filter((t) => getCategory(t.market) === "한국")
-        .sort((a, b) => b.marketCap - a.marketCap)
-        .slice(0, 5),
-    [tickers],
-  );
-  const globalTop = useMemo(
-    () =>
-      tickers
-        .filter((t) => getCategory(t.market) === "해외")
-        .sort((a, b) => b.marketCap - a.marketCap)
-        .slice(0, 5),
-    [tickers],
-  );
-  const cryptoTop = useMemo(
-    () =>
-      tickers
-        .filter((t) => getCategory(t.market) === "암호화폐")
-        .sort((a, b) => b.marketCap - a.marketCap)
-        .slice(0, 5),
-    [tickers],
-  );
+  // 4) 베이스 티커 목록 결정
+  const koreaTop = tickers
+    .filter((t) => getCategory(t.market) === "한국")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
+  const globalTop = tickers
+    .filter((t) => getCategory(t.market) === "해외")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
+  const cryptoTop = tickers
+    .filter((t) => getCategory(t.market) === "암호화폐")
+    .sort((a, b) => b.marketCap - a.marketCap)
+    .slice(0, 5);
 
-  // baseTickers 정의
-  const baseTickers = useMemo(() => {
-    if (showFav && user && favorites.length > 0) {
-      return tickers.filter((t) => favorites.includes(t.id));
-    }
-    return [...koreaTop, ...globalTop, ...cryptoTop];
-  }, [showFav, user, favorites, tickers, koreaTop, globalTop, cryptoTop]);
+  const baseTickers =
+    showFav && user && favorites.length > 0
+      ? tickers.filter((t) => favorites.includes(t.id))
+      : [...koreaTop, ...globalTop, ...cryptoTop];
 
-  // 반복 횟수 계산 (항목이 적어도 화면 가로를 두 번 덮도록)
-  const [repeatTimes, setRepeatTimes] = useState(2);
-  useLayoutEffect(() => {
+  // 5) 반복 횟수 계산 (화면 두 배 너비 덮기)
+  useEffect(() => {
     if (!containerRef.current) return;
-    const containerWidth = containerRef.current.clientWidth || window.innerWidth;
-    const estimatedItemWidth = 130; // gap 포함 최소 너비
-    const baseWidth = baseTickers.length * estimatedItemWidth || 1;
-    const times = Math.ceil((containerWidth * 2) / baseWidth);
+    const cw = containerRef.current.clientWidth || window.innerWidth;
+    const itemW = 120; // px, minWidth of one ticker
+    const baseW = baseTickers.length * itemW;
+    const times = baseW ? Math.ceil((cw * 2) / baseW) : 2;
     setRepeatTimes(Math.max(2, times));
   }, [baseTickers]);
 
-  // 최종 보여줄 tickers
-  const displayTickers = useMemo(
-    () => new Array(repeatTimes).fill(baseTickers).flat(),
-    [baseTickers, repeatTimes],
-  );
+  // 6) 최종 보여줄 목록
+  const displayTickers = new Array(repeatTimes).fill(baseTickers).flat();
 
-  // tapeWidth 계산 (한 사이클 너비)
-  const [tapeWidth, setTapeWidth] = useState(0);
-  useLayoutEffect(() => {
-    if (tapeInnerRef.current) {
-      setTapeWidth(tapeInnerRef.current.scrollWidth / repeatTimes);
-    }
+  // 7) 테이프 너비 계산 (한 사이클)
+  useEffect(() => {
+    if (!tapeInnerRef.current) return;
+    const fullWidth = tapeInnerRef.current.scrollWidth;
+    setTapeWidth(fullWidth / repeatTimes);
   }, [displayTickers, repeatTimes]);
 
-  // tape 애니메이션
-  const speed = 30;
-  const lastTimeRef = useRef<number | null>(null);
-  const [offset, setOffset] = useState(0);
-
+  // 8) 애니메이션
   useEffect(() => {
     let running = true;
 
@@ -188,14 +172,13 @@ function TickerTape() {
       if (lastTimeRef.current === null) lastTimeRef.current = ts;
 
       if (!isPaused && tapeWidth > 0) {
-        const dt = ts - (lastTimeRef.current ?? ts);
+        const dt = ts - lastTimeRef.current;
         setOffset((prev) => {
           let next = prev - (dt * speed) / 1000;
           if (-next >= tapeWidth) next = 0;
           return next;
         });
       }
-
       lastTimeRef.current = ts;
       requestAnimationFrame(step);
     }
