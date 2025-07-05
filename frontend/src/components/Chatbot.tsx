@@ -56,8 +56,7 @@ const Chatbot: React.FC = () => {
 
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    if (!message.trim() || isLoading) return;
+    if (!user || !message.trim() || isLoading) return;
 
     setIsLoading(true);
 
@@ -96,14 +95,17 @@ const Chatbot: React.FC = () => {
 
   return (
     <>
+      {/* 챗봇창: 티커(48px) + 버튼 위외곽(8px) + 버튼 높이(48px) + 버튼 아래여백(8px) = 112px 위에 표시 */}
       <div
-        className={`chatbot-wrapper fixed bottom-40 right-8 w-[400px] max-h-[80vh]
+        className={`chatbot-wrapper fixed right-8 w-[400px] max-h-[60vh]
           bg-white text-gray-800 shadow-2xl rounded-xl flex flex-col
-          transition-all duration-300 ease-in-out ${
+          transition-all duration-300 ease-in-out z-[1000]
+          ${
             isChatOpen
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-4 pointer-events-none"
           }`}
+        style={{ bottom: "120px" }}
       >
         <div className="px-4 py-3 border-b border-gray-200">
           <h3 className="text-lg font-semibold">팬지봇</h3>
@@ -174,10 +176,11 @@ const Chatbot: React.FC = () => {
         </div>
       </div>
 
+      {/* 챗봇 버튼: 티커(48px) + 버튼 아래여백(8px) = 56px 위에 표시 */}
       <button
         onClick={toggleChatbot}
-        className="fixed bottom-14 right-8 p-3 bg-blue-600 rounded-full
-          shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out"
+        className="fixed right-8 p-3 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out z-[1000]"
+        style={{ bottom: "56px" }}
       >
         {isChatOpen ? (
           <Icons name="close" className="w-8 h-8 text-white" />
