@@ -144,7 +144,7 @@ const TickerTape: React.FC = () => {
     setTapeWidth(tapeInnerRef.current.scrollWidth / repeatTimes);
   }, [displayTickers, repeatTimes]);
 
-  // 8) 애니메이션 (표시할 종목 없을 땐 회전 OFF)
+  // 8) 애니메이션 (마우스 호버 시 isPaused = true, 내부에서 체크하여 멈춤)
   useEffect(() => {
     let running = true;
     const speed = 30;
@@ -158,17 +158,22 @@ const TickerTape: React.FC = () => {
 
     function step(ts: number) {
       if (!running) return;
-      const dt = ts - lastTs.current;
-      setOffset((prev) => {
-        let next = prev - (dt * speed) / 1000;
-        if (-next >= tapeWidth) next = 0;
-        return next;
-      });
+
+      if (!isPaused) {
+        const dt = ts - lastTs.current;
+        setOffset((prev) => {
+          let next = prev - (dt * speed) / 1000;
+          if (-next >= tapeWidth) next = 0;
+          return next;
+        });
+      }
       lastTs.current = ts;
       requestAnimationFrame(step);
     }
 
+    lastTs.current = performance.now();
     requestAnimationFrame(step);
+
     return () => {
       running = false;
     };

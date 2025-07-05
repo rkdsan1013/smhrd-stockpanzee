@@ -46,7 +46,6 @@ const TickerItem: FC<Props> = ({ ticker, flash, onClick }) => {
               : "text-gray-300"
         }`}
       >
-        {ticker.priceChange > 0 && "+"}
         {ticker.priceChange.toFixed(2)}%
       </span>
     </div>

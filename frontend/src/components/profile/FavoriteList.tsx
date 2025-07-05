@@ -58,11 +58,13 @@ const FavoriteList: React.FC = () => {
     };
   }, [originFavorites, localFavorites, touched]);
 
-  // 필터링
+  // 즐겨찾기 & 카테고리 필터링 + 시가총액 내림차순 정렬
   const filteredAssets = useMemo(() => {
-    const favAssets = assets.filter((a) => localFavorites.has(a.id));
-    if (category === "전체") return favAssets;
-    return favAssets.filter((a) => marketToCategory(a.market) === category);
+    let favAssets = assets.filter((a) => localFavorites.has(a.id));
+    if (category !== "전체") {
+      favAssets = favAssets.filter((a) => marketToCategory(a.market) === category);
+    }
+    return favAssets.sort((a, b) => b.marketCap - a.marketCap);
   }, [assets, localFavorites, category]);
 
   // 즐겨찾기 토글
@@ -105,7 +107,7 @@ const FavoriteList: React.FC = () => {
         ))}
       </div>
 
-      {/* 한 줄에 하나씩 */}
+      {/* 즐겨찾기 리스트 (시가총액 내림차순) */}
       {filteredAssets.length === 0 ? (
         <div className="text-gray-400 py-4">즐겨찾기 종목이 없습니다.</div>
       ) : (
