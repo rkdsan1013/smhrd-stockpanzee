@@ -6,122 +6,171 @@ import ProfileDetail from "../components/profile/ProfileDetail";
 import ProfileEditForm from "../components/profile/ProfileEditForm";
 import FavoriteList from "../components/profile/FavoriteList";
 
-type Mode = "view" | "choose" | "editName" | "editPassword";
-type Page = "profile" | "favorite";
+type Mode = "view" | "choose" | "editName" | "editPassword" | "withdrawConfirm";
+type Tab = "profile" | "favorite";
 
 const EditProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [mode, setMode] = useState<Mode>("view");
-  const [page, setPage] = useState<Page>("profile");
-  
+  const [tab, setTab] = useState<Tab>("profile");
+  const [withdrawPassword, setWithdrawPassword] = useState("");
 
-  // 내 정보 조회
   useEffect(() => {
-    userService.fetchUserProfile()
-      .then((profile) => setProfile(profile))
+    userService
+      .fetchUserProfile()
+      .then(setProfile)
       .catch(() => {});
   }, []);
 
-  // 회원탈퇴
   const handleWithdraw = async () => {
-    if (!window.confirm("정말로 회원탈퇴 하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
     try {
       await userService.withdrawUser();
-      alert("탈퇴가 완료되었습니다. 그동안 이용해주셔서 감사합니다.");
+      alert("탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.");
       window.location.href = "/";
     } catch {
-      alert("탈퇴 실패. 다시 시도해주세요.");
+      alert("탈퇴 실패. 비밀번호를 확인 후 다시 시도해주세요.");
     }
   };
 
-  // 이름/비번 수정 성공 후 처리
   const handleEditSuccess = (newName?: string) => {
-    if (newName) setProfile((prev) => prev ? { ...prev, username: newName } : prev);
+    setProfile((prev) => (prev && newName ? { ...prev, username: newName } : prev));
     setMode("view");
   };
 
   if (!profile) {
-    return <div className="min-h-screen flex items-center justify-center text-white">로딩 중...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-400">로딩 중...</div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* 좌측 메뉴 */}
-      <aside className="w-60 pt-8 pr-2 flex flex-col gap-2">
+    <div className="min-h-screen bg-gray-900 text-gray-200">
+      {/* 상단 탭 */}
+      <header className="flex justify-center py-4 space-x-6 border-b border-gray-700">
         <button
-          className={`px-4 py-3 rounded-md text-left font-bold mb-2 transition-all ${
-            page === "profile" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"
+          className={`px-4 py-2 rounded-md font-medium ${
+            tab === "profile" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"
           }`}
-          onClick={() => setPage("profile")}
+          onClick={() => setTab("profile")}
         >
           내 정보
         </button>
         <button
-          className={`px-4 py-3 rounded-md text-left font-bold transition-all ${
-            page === "favorite" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"
+          className={`px-4 py-2 rounded-md font-medium ${
+            tab === "favorite" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"
           }`}
-          onClick={() => setPage("favorite")}
+          onClick={() => setTab("favorite")}
         >
-          즐겨찾기 종목
+          즐겨찾기
         </button>
-      </aside>
+      </header>
 
-      {/* 우측 정보(전체 컨테이너) */}
-      <main className="flex-1 flex flex-col p-10 w-full">
-        {/* 내 정보 */}
-        {page === "profile" && (
-          <>
-            <h2 className="text-lg font-bold text-white mb-2">내 정보</h2>
-            <hr className="border-gray-700 mb-8" />
-            {mode === "view" && (
-              <div className="max-w-2xl ml-auto">
-                <ProfileDetail profile={profile} />
-                <div className="flex justify-end mt-8">
-                  <button
-                    onClick={() => setMode("choose")}
-                    className="text-blue-400 hover:text-blue-600 font-semibold text-sm"
-                  >회원 정보 수정하기 &gt;</button>
+      <main className="p-6 max-w-3xl mx-auto space-y-8">
+        {/* 프로필 탭 */}
+        {tab === "profile" && (
+          <section>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">내 정보</h2>
+              {mode === "view" && (
+                <button
+                  onClick={() => setMode("choose")}
+                  className="text-blue-400 hover:text-blue-600 font-semibold"
+                >
+                  정보 수정하기
+                </button>
+              )}
+            </div>
+
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+              {mode === "view" && <ProfileDetail profile={profile} />}
+
+              {mode === "choose" && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <button
+                      onClick={() => setMode("editName")}
+                      className="p-4 bg-gray-700 rounded hover:bg-gray-600 font-medium"
+                    >
+                      이름 변경
+                    </button>
+                    <button
+                      onClick={() => setMode("editPassword")}
+                      className="p-4 bg-gray-700 rounded hover:bg-gray-600 font-medium"
+                    >
+                      비밀번호 변경
+                    </button>
+                    <button
+                      onClick={() => setMode("withdrawConfirm")}
+                      className="p-4 bg-red-600 rounded hover:bg-red-700 font-medium"
+                    >
+                      회원탈퇴
+                    </button>
+                  </div>
+                  <div className="mt-4 text-right">
+                    <button
+                      onClick={() => setMode("view")}
+                      className="text-gray-400 hover:text-white text-sm"
+                    >
+                      돌아가기
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {(mode === "editName" || mode === "editPassword") && (
+                <div className="mt-4 bg-gray-900 p-6 rounded-lg shadow-inner">
+                  <ProfileEditForm
+                    initialName={profile.username}
+                    mode={mode}
+                    onCancel={() => setMode("choose")}
+                    onSubmitSuccess={handleEditSuccess}
+                  />
                 </div>
-              </div>
-            )}
-            {mode === "choose" && (
-              <div className="flex flex-col items-end max-w-2xl ml-auto gap-3">
-                <button
-                  className="w-full bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-                  onClick={() => setMode("editName")}
-                >이름 수정하기</button>
-                <button
-                  className="w-full bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-                  onClick={() => setMode("editPassword")}
-                >비밀번호 수정하기</button>
-                <button
-                  className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-                  onClick={handleWithdraw}
-                >회원탈퇴</button>
-                <button
-                  className="w-full mt-2 text-gray-400 hover:text-white text-sm"
-                  onClick={() => setMode("view")}
-                >돌아가기</button>
-              </div>
-            )}
-            {(mode === "editName" || mode === "editPassword") && (
-              <ProfileEditForm
-                initialName={profile.username}
-                mode={mode}
-                onCancel={() => setMode("choose")}
-                onSubmitSuccess={handleEditSuccess}
-              />
-            )}
-          </>
+              )}
+
+              {mode === "withdrawConfirm" && (
+                <div className="mt-4 bg-gray-900 p-6 rounded-lg shadow-inner">
+                  <h3 className="text-lg font-semibold mb-2">
+                    탈퇴를 위해 비밀번호를 입력해주세요
+                  </h3>
+                  <input
+                    type="password"
+                    value={withdrawPassword}
+                    onChange={(e) => setWithdrawPassword(e.target.value)}
+                    className="w-full p-2 mb-4 bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="비밀번호"
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => {
+                        setWithdrawPassword("");
+                        setMode("choose");
+                      }}
+                      className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleWithdraw}
+                      className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+                    >
+                      탈퇴하기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         )}
 
-        {/* 즐겨찾기 */}
-        {page === "favorite" && (
-          <>
-            <h2 className="text-lg font-bold text-white mb-2">즐겨찾기 종목</h2>
-            <hr className="border-gray-700 mb-8" />
-            <FavoriteList />
-          </>
+        {/* 즐겨찾기 탭 */}
+        {tab === "favorite" && (
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">즐겨찾기 종목</h2>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
+              <FavoriteList />
+            </div>
+          </section>
         )}
       </main>
     </div>
