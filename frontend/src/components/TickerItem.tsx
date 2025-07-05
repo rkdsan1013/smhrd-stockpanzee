@@ -11,6 +11,7 @@ export type Ticker = {
   marketCap: number;
   market: string;
 };
+
 interface Props {
   ticker: Ticker;
   flash: "up" | "down" | null;
@@ -24,7 +25,11 @@ const TickerItem: FC<Props> = ({ ticker, flash, onClick }) => {
   return (
     <div
       className="flex items-center gap-1 px-5 hover:bg-gray-800 rounded cursor-pointer"
-      style={{ minWidth: 120, height: "100%", transition: "background 0.2s" }}
+      style={{
+        minWidth: 120,
+        height: "100%",
+        transition: "background 0.2s",
+      }}
       onClick={() => onClick(ticker.id)}
     >
       <span className="font-semibold text-white">{ticker.name}</span>

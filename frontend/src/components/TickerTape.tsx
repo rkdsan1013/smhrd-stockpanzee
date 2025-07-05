@@ -1,6 +1,5 @@
 // /frontend/src/components/TickerTape.tsx
-// cspell:ignore KOSPI KOSDAQ NASDAQ NYSE S&P500 Binance Upbit
-
+// cspell:ignore KOSPI KOSDAQ NASDAQ NYSE Binance
 import React, { useEffect, useLayoutEffect, useRef, useState, useContext, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -24,9 +23,9 @@ const fetchTickers = async (): Promise<Ticker[]> => {
 };
 
 const getCategory = (m: string): "한국" | "해외" | "암호화폐" | "기타" => {
-  if (["KOSPI", "KOSDAQ", "KRX"].includes(m)) return "한국";
-  if (["NASDAQ", "NYSE", "S&P500"].includes(m)) return "해외";
-  if (["Binance", "Upbit"].includes(m)) return "암호화폐";
+  if (["KOSPI", "KOSDAQ"].includes(m)) return "한국";
+  if (["NASDAQ", "NYSE"].includes(m)) return "해외";
+  if (["Binance"].includes(m)) return "암호화폐";
   return "기타";
 };
 
@@ -42,6 +41,7 @@ const TickerTape: React.FC = () => {
   const [favIds, setFavIds] = useState<number[]>([]);
   const [showFav, setShowFav] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+
   const [repeatTimes, setRepeatTimes] = useState(2);
   const [offset, setOffset] = useState(0);
 
@@ -72,12 +72,13 @@ const TickerTape: React.FC = () => {
           },
           {} as Record<number, number>,
         );
+
         alive && setPrevPrice(next);
         alive && setTickers(data);
       } catch {
         alive && setTickers([]);
       }
-      if (alive) setTimeout(load, 5000);
+      alive && setTimeout(load, 5000);
     };
     load();
     return () => {
@@ -125,7 +126,7 @@ const TickerTape: React.FC = () => {
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     const cw = containerRef.current.clientWidth || window.innerWidth;
-    const baseWidth = baseTickers.length * ITEM_WIDTH || ITEM_WIDTH;
+    const baseWidth = (baseTickers.length || 1) * ITEM_WIDTH;
     const times = Math.ceil((cw * 2) / baseWidth);
     setRepeatTimes(Math.max(2, times));
   }, [baseTickers]);
@@ -143,28 +144,35 @@ const TickerTape: React.FC = () => {
     setTapeWidth(tapeInnerRef.current.scrollWidth / repeatTimes);
   }, [displayTickers, repeatTimes]);
 
-  // 8) 애니메이션
+  // 8) 애니메이션 (표시할 종목 없을 땐 회전 OFF)
   useEffect(() => {
     let running = true;
     const speed = 30;
+
+    if (displayTickers.length === 0 || tapeWidth === 0) {
+      setOffset(0);
+      return () => {
+        running = false;
+      };
+    }
+
     function step(ts: number) {
       if (!running) return;
-      if (!isPaused && tapeWidth > 0) {
-        const dt = ts - lastTs.current;
-        setOffset((prev) => {
-          let next = prev - (dt * speed) / 1000;
-          if (-next >= tapeWidth) next = 0;
-          return next;
-        });
-      }
+      const dt = ts - lastTs.current;
+      setOffset((prev) => {
+        let next = prev - (dt * speed) / 1000;
+        if (-next >= tapeWidth) next = 0;
+        return next;
+      });
       lastTs.current = ts;
       requestAnimationFrame(step);
     }
+
     requestAnimationFrame(step);
     return () => {
       running = false;
     };
-  }, [isPaused, tapeWidth]);
+  }, [isPaused, tapeWidth, displayTickers.length]);
 
   return (
     <div
