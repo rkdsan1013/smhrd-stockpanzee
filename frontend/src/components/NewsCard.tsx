@@ -1,9 +1,10 @@
-// frontend/src/components/NewsCard.tsx
-import React, { useEffect, useState, useRef, useMemo } from "react";
+// /frontend/src/components/NewsCard.tsx
+import React, { useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import Icons from "../components/Icons";
+import Icons from "./Icons";
 import type { NewsItem } from "../services/newsService";
-import { fetchAssets, getAssetDictSync, type Asset } from "../services/assetService";
+import type { Asset } from "../services/assetService";
+import { AssetContext } from "../providers/AssetProvider";
 
 export interface NewsCardProps {
   variant?: "hero" | "default" | "compact";
@@ -17,35 +18,34 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const SENT_LABELS = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"] as const;
-const SENT_ICONS = ["arrowDown", "arrowDown", "minus", "arrowUp", "arrowUp"] as const;
 
 function getCategoryLabel(key: string) {
   return CATEGORY_LABELS[key] ?? "기타";
 }
+
 function getSentiment(v: number | string | null) {
   const idx = Math.min(4, Math.max(0, Number(v) - 1 || 2));
   return {
     label: SENT_LABELS[idx],
-    iconName: SENT_ICONS[idx],
     color: idx <= 1 ? "bg-red-600" : idx === 2 ? "bg-gray-600" : "bg-green-600",
+    iconName: idx <= 1 ? "arrowDown" : idx === 2 ? "minus" : "arrowUp",
   };
 }
 
+// 시장 구분 유틸
+function marketCategory(m: string): NewsItem["category"] {
+  const mm = m.toUpperCase();
+  if (mm === "KOSPI" || mm === "KOSDAQ") return "domestic";
+  if (mm === "NASDAQ" || mm === "NYSE") return "international";
+  if (mm.includes("BINANCE")) return "crypto";
+  return "international";
+}
+
 const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) => {
-  /* ───── 자산 딕셔너리 동기 + 필요 시 비동기 로드 ───── */
-  const dictRef = useRef<Record<string, Asset>>(getAssetDictSync());
-  const [ready, setReady] = useState<boolean>(Object.keys(dictRef.current).length > 0);
+  const { dict: assetDict, ready } = useContext(AssetContext);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!ready) {
-      fetchAssets().then(() => {
-        dictRef.current = getAssetDictSync();
-        setReady(true);
-      });
-    }
-  }, [ready]);
-
-  /* ───── 태그 파싱 + 매핑 ───── */
+  // tagsRaw 파싱
   const tagsRaw = useMemo<string[]>(() => {
     if (Array.isArray(newsItem.tags)) return newsItem.tags;
     if (typeof newsItem.tags === "string") {
@@ -59,18 +59,33 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
     return [];
   }, [newsItem.tags]);
 
-  const assetTags = useMemo(
-    () => (ready ? (tagsRaw.map((s) => dictRef.current[s]).filter(Boolean) as Asset[]) : []),
-    [ready, tagsRaw],
-  );
+  // 엄격 매칭 pickAsset: 뉴스 카테고리와 같은 마켓만
+  const pickAsset = (symRaw: string, targetCategory: NewsItem["category"]): Asset | null => {
+    const up = symRaw.toUpperCase();
+    const cands = assetDict[up] || [];
+    if (!cands.length) return null;
 
-  /* ───── 네비게이션 ───── */
-  const navigate = useNavigate();
-  const handleCardClick = () => navigate(`/news/${newsItem.id}`);
+    // 1) 정확히 일치하는 마켓만 골라
+    const matched = cands.filter((a) => marketCategory(a.market) === targetCategory);
+    if (matched.length) {
+      return matched[0];
+    }
+    // 2) 없으면 첫 번째 (fallback)
+    return cands[0];
+  };
 
-  /* ───── 기타 데이터 ───── */
+  // assetTags: 각 심볼 당 하나의 자산만 표시
+  const assetTags = useMemo<Asset[]>(() => {
+    if (!ready) return [];
+    return tagsRaw
+      .map((sym) => pickAsset(sym, newsItem.category))
+      .filter((a): a is Asset => Boolean(a));
+  }, [ready, tagsRaw, assetDict, newsItem.category]);
+
   const categoryLabel = getCategoryLabel(newsItem.category);
   const sentiment = getSentiment(newsItem.sentiment);
+
+  const handleCardClick = () => navigate(`/news/${newsItem.id}`);
 
   return (
     <div
@@ -81,7 +96,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
       className="flex flex-col h-full bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:scale-[1.02] transition cursor-pointer"
       aria-label={newsItem.title_ko || newsItem.title}
     >
-      {/* 이미지 (hero, default) */}
+      {/* 이미지 */}
       {variant !== "compact" && (
         <div className={`relative w-full ${variant === "hero" ? "h-80" : "h-48"}`}>
           <img
@@ -96,8 +111,9 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
         </div>
       )}
 
+      {/* 본문 */}
       <div className={`flex flex-col flex-1 ${variant === "compact" ? "p-4" : "p-6"}`}>
-        {/* 배지 */}
+        {/* 카테고리 & 감정 배지 */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="px-2 py-1 bg-gray-700 text-xs font-semibold rounded-full">
             {categoryLabel}
@@ -107,7 +123,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
           </span>
         </div>
 
-        {/* 회사명 태그 */}
+        {/* 자산 태그 */}
         {assetTags.length > 0 && variant !== "compact" && (
           <div className="flex flex-wrap gap-2 mb-3">
             {assetTags.map(({ id, name, symbol }) => (
@@ -115,8 +131,8 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
                 key={symbol}
                 type="button"
                 onClick={(e) => {
-                  e.stopPropagation(); // 카드 클릭 무시
-                  navigate(`/asset/${id}`); // AssetDetail 이동
+                  e.stopPropagation();
+                  navigate(`/asset/${id}`);
                 }}
                 className="px-2 py-1 bg-blue-600 text-xs font-semibold rounded-full hover:bg-blue-500 transition"
               >
