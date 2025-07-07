@@ -8,6 +8,7 @@ import Icons from "../components/Icons";
 import { fetchFavorites } from "../services/favoriteService";
 import { fetchAssets, type Asset } from "../services/assetService";
 import { AuthContext } from "../providers/AuthProvider";
+import { fuzzySearch } from "../utils/search";
 
 const tabOptions = [
   { key: "all", label: "전체" },
@@ -20,9 +21,11 @@ const itemsPerPage = 3;
 
 const News: React.FC = () => {
   const { user } = useContext(AuthContext);
+
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,6 +34,7 @@ const News: React.FC = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
+  // 1. Fetch news
   const loadNews = async () => {
     setLoading(true);
     setError(null);
@@ -43,11 +47,11 @@ const News: React.FC = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadNews();
   }, []);
 
+  // 2. Fetch favorites & assets
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -62,10 +66,12 @@ const News: React.FC = () => {
       .catch(() => setAssets([]));
   }, [user]);
 
+  // 3. Reset page on filter/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTab, viewMode]);
+  }, [selectedTab, viewMode, searchTerm]);
 
+  // 4. Map favorite symbols
   const favoriteSymbols = useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     return favorites
@@ -73,13 +79,25 @@ const News: React.FC = () => {
       .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
+  // 5. Filter, search, sort
   const filteredNews = useMemo(() => {
-    let filtered = newsItems;
-    if (selectedTab !== "all") {
-      filtered = filtered.filter((n) => n.category === selectedTab);
+    let list = newsItems;
+
+    // - fuzzy search
+    if (searchTerm.trim()) {
+      list = fuzzySearch(list, searchTerm, {
+        keys: ["title", "description"],
+      });
     }
+
+    // - category filter
+    if (selectedTab !== "all") {
+      list = list.filter((n) => n.category === selectedTab);
+    }
+
+    // - favorites view
     if (viewMode === "즐겨찾기") {
-      filtered = filtered.filter((n) => {
+      list = list.filter((n) => {
         if (!n.tags) return false;
         let tags: string[] = [];
         try {
@@ -90,14 +108,20 @@ const News: React.FC = () => {
         return tags.some((t) => favoriteSymbols.includes(t));
       });
     }
-    return filtered;
-  }, [newsItems, selectedTab, viewMode, favoriteSymbols]);
 
+    // - sort by published_at descending
+    list.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+
+    return list;
+  }, [newsItems, searchTerm, selectedTab, viewMode, favoriteSymbols]);
+
+  // 6. Infinite scroll slice
   const visibleNews = useMemo(
     () => filteredNews.slice(0, currentPage * itemsPerPage),
     [filteredNews, currentPage],
   );
 
+  // 7. Infinite scroll observer
   useEffect(() => {
     if (!loadMoreRef.current) return;
     const io = new IntersectionObserver(
@@ -112,23 +136,24 @@ const News: React.FC = () => {
     return () => io.disconnect();
   }, [visibleNews, filteredNews]);
 
+  // 8. Show scroll-to-top button
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 400);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // 9. Handlers
   const handleTabClick = (key: TabKey) => {
     setSelectedTab(key);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const toggleView = () => {
     if (!user) {
       alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
       return;
     }
-    setViewMode((prev) => (prev === "전체" ? "즐겨찾기" : "전체"));
+    setViewMode((v) => (v === "전체" ? "즐겨찾기" : "전체"));
   };
 
   if (loading) {
@@ -137,8 +162,9 @@ const News: React.FC = () => {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* Market 스타일 상단 탭 */}
-      <nav className="overflow-x-auto flex justify-start mb-8">
+      {/* ─────────── NAV + SEARCH ─────────── */}
+      <nav className="flex items-center justify-between mb-8">
+        {/* 탭 그룹 (왼쪽) */}
         <ul className="flex space-x-6 border-b border-gray-700">
           <li>
             <button
@@ -167,11 +193,34 @@ const News: React.FC = () => {
             </li>
           ))}
         </ul>
+
+        {/* 검색창 (오른쪽, 적정 크기) */}
+        <div className="relative w-48 md:w-64">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="뉴스 검색..."
+            className="w-full bg-gray-800 text-white placeholder-gray-500
+                       rounded-full px-3 py-2 pr-8 outline-none
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                       transition duration-150"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              aria-label="검색어 지우기"
+            >
+              <Icons name="x" className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </nav>
 
-      {/* 에러 처리 */}
+      {/* 에러 */}
       {error && (
-        <div className="text-center text-red-400">
+        <div className="text-center text-red-400 mb-8">
           <p className="mb-4">오류가 발생했습니다: {error}</p>
           <button
             onClick={loadNews}
@@ -183,23 +232,21 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {/* 조건에 맞는 뉴스 없음 */}
+      {/* 결과 없음 */}
       {!error && visibleNews.length === 0 && (
-        <div className="text-center text-gray-300">조건에 맞는 뉴스가 없습니다.</div>
+        <div className="text-center text-gray-300 py-12">조건에 맞는 뉴스가 없습니다.</div>
       )}
 
-      {/* 뉴스 카드 목록 */}
+      {/* 뉴스 카드 그리드 */}
       {!error && visibleNews.length > 0 && (
         <>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visibleNews.map((item) => (
               <li key={item.id}>
                 <NewsCard newsItem={item} />
               </li>
             ))}
           </ul>
-
-          {/* 무한 스크롤 로딩 */}
           {visibleNews.length < filteredNews.length && (
             <div ref={loadMoreRef} className="mt-8 flex justify-center items-center text-gray-500">
               로딩 중...
@@ -208,7 +255,7 @@ const News: React.FC = () => {
         </>
       )}
 
-      {/* 최상단 이동 버튼 */}
+      {/* 맨 위로 버튼 */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

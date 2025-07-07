@@ -7,6 +7,7 @@ import CommunitySkeleton from "../components/skeletons/CommunitySkeleton";
 import CommunityCard from "../components/CommunityCard";
 import type { CommunityPost } from "../components/CommunityCard";
 import { AuthContext } from "../providers/AuthProvider";
+import { fuzzySearch } from "../utils/search";
 
 const SORT_OPTIONS = ["latest", "popular"] as const;
 type SortKey = (typeof SORT_OPTIONS)[number];
@@ -15,9 +16,7 @@ const POSTS_PER_PAGE = 12;
 const RECENT_DAYS = 3;
 
 function getDisplayPages(total: number, current: number): (number | "...")[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "...")[] = [1];
   const start = Math.max(2, current - 2);
   const end = Math.min(total - 1, current + 2);
@@ -35,13 +34,14 @@ const Community: React.FC = () => {
 
   const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [filterCat, setFilterCat] = useState<(typeof CATEGORY_LIST)[number]>("전체");
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  // Load posts once
+  // 1) Load all posts
   useEffect(() => {
     setLoading(true);
     axios
@@ -51,17 +51,25 @@ const Community: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch comment counts on visible posts
-  useEffect(() => {
-    if (!posts.length) return;
-
-    // apply filter & sort
+  // 2) Build processed list: search → category → sort
+  const processed = useMemo(() => {
     let arr = [...posts];
+
+    // 2.1) fuzzy search against community_title & community_contents
+    if (searchTerm.trim()) {
+      arr = fuzzySearch(arr, searchTerm, {
+        keys: ["community_title", "community_contents"],
+      });
+    }
+
+    // 2.2) category filter
     if (filterCat !== "전체") {
       arr = arr.filter((p) => p.category === filterCat);
     }
+
+    // 2.3) sorting
     if (sortKey === "latest") {
-      arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+      arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else {
       const cutoff = Date.now() - RECENT_DAYS * 24 * 3600 * 1000;
       const recent = arr
@@ -73,9 +81,22 @@ const Community: React.FC = () => {
       arr = [...recent, ...older];
     }
 
-    const start = (currentPage - 1) * POSTS_PER_PAGE;
-    const visible = arr.slice(start, start + POSTS_PER_PAGE);
-    const idsToFetch = visible.map((p) => p.id).filter((id) => !(id in commentCounts));
+    return arr;
+  }, [posts, searchTerm, filterCat, sortKey]);
+
+  // 3) Pagination helpers
+  const totalPages = Math.ceil(processed.length / POSTS_PER_PAGE) || 1;
+  const displayPages = getDisplayPages(totalPages, currentPage);
+
+  const visiblePosts = useMemo(
+    () => processed.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE),
+    [processed, currentPage],
+  );
+
+  // 4) Fetch comment counts for visible posts
+  useEffect(() => {
+    if (!visiblePosts.length) return;
+    const idsToFetch = visiblePosts.map((p) => p.id).filter((id) => !(id in commentCounts));
     if (!idsToFetch.length) return;
 
     Promise.all(
@@ -96,69 +117,41 @@ const Community: React.FC = () => {
         return next;
       });
     });
-  }, [posts, sortKey, filterCat, currentPage, commentCounts]);
+  }, [visiblePosts, commentCounts]);
 
-  // Scroll to top on page change
+  // 5) Scroll to top on page change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
-  // Show “scroll to top” button
+  // 6) Show “scroll to top” button
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 300);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Combined processed list for pagination
-  const processed = useMemo(() => {
-    let arr = [...posts];
-    if (filterCat !== "전체") {
-      arr = arr.filter((p) => p.category === filterCat);
-    }
-    if (sortKey === "latest") {
-      arr.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-    } else {
-      const cutoff = Date.now() - RECENT_DAYS * 24 * 3600 * 1000;
-      const recent = arr
-        .filter((p) => new Date(p.created_at).getTime() >= cutoff)
-        .sort((a, b) => b.community_views - a.community_views);
-      const older = arr
-        .filter((p) => new Date(p.created_at).getTime() < cutoff)
-        .sort((a, b) => b.community_views - a.community_views);
-      arr = [...recent, ...older];
-    }
-    return arr;
-  }, [posts, sortKey, filterCat]);
-
-  const totalPages = Math.ceil(processed.length / POSTS_PER_PAGE) || 1;
-  const displayPages = getDisplayPages(totalPages, currentPage);
-  const visiblePosts = useMemo(
-    () => processed.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE),
-    [processed, currentPage],
-  );
-
-  // Handlers for unified nav
+  // 7) Handlers
   const handleSortClick = (key: SortKey) => {
     setSortKey(key);
     setCurrentPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const handleCategoryClick = (cat: (typeof CATEGORY_LIST)[number]) => {
     setFilterCat(cat);
     setCurrentPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
   };
 
-  if (loading) {
-    return <CommunitySkeleton />;
-  }
+  if (loading) return <CommunitySkeleton />;
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* 상단 탭: 최신/인기 + 카테고리 통합 스타일 */}
-      <nav className="overflow-x-auto flex justify-start mb-8">
+      {/* ─── 상단: 정렬·카테고리 + 검색 ─── */}
+      <nav className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 space-y-4 md:space-y-0">
+        {/* 탭 그룹 */}
         <ul className="flex space-x-6 border-b border-gray-700">
           {SORT_OPTIONS.map((key) => (
             <li key={key}>
@@ -175,7 +168,6 @@ const Community: React.FC = () => {
               </button>
             </li>
           ))}
-
           {CATEGORY_LIST.map((cat) => (
             <li key={cat}>
               <button
@@ -191,6 +183,28 @@ const Community: React.FC = () => {
             </li>
           ))}
         </ul>
+
+        {/* 검색창 */}
+        <div className="relative w-full md:w-64">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="게시글 검색..."
+            className="w-full bg-gray-800 text-white placeholder-gray-500
+                       rounded-full px-4 py-2 pr-10 outline-none
+                       focus:ring-2 focus:ring-blue-500 transition duration-150"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              aria-label="검색어 지우기"
+            >
+              <Icons name="x" className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </nav>
 
       {/* 글쓰기 버튼 */}
@@ -267,7 +281,7 @@ const Community: React.FC = () => {
         </div>
       )}
 
-      {/* 스크롤 탑 버튼 */}
+      {/* 맨 위로 버튼 */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
