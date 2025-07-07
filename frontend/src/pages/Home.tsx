@@ -58,7 +58,7 @@ const marketCategory = (m: string): NewsItem["category"] => {
 const Home: React.FC = () => {
   const { user } = useContext(AuthContext);
 
-  /* ---------- 상태 ---------- */
+  /* 상태 */
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("today");
@@ -66,15 +66,12 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* ───────── 즐겨찾기 ---------- */
+  /* 즐겨찾기 & 자산 */
   const [favorites, setFavorites] = useState<number[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
-
-  /* ---------- 자산 딕셔너리 ---------- */
   const dictRef = useRef<Record<string, Asset>>(getAssetDictSync());
   const [dictReady, setDictReady] = useState(Object.keys(dictRef.current).length > 0);
 
-  /* ───────── 뉴스 로드 ───────── */
   useEffect(() => {
     fetchNews()
       .then((data) =>
@@ -88,7 +85,6 @@ const Home: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  /* ───────── 자산 사전 로드 ───────── */
   useEffect(() => {
     if (!dictReady) {
       fetchAssets().then(() => {
@@ -98,7 +94,6 @@ const Home: React.FC = () => {
     }
   }, [dictReady]);
 
-  /* ───────── 즐겨찾기 & 자산 로드 ───────── */
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -113,7 +108,6 @@ const Home: React.FC = () => {
       .catch(() => {});
   }, [user]);
 
-  /* ───────── 심볼별 대표 자산 ───────── */
   const primaryAssetOfSym = useMemo(() => {
     if (!dictReady) return {} as Record<string, Asset>;
     const best: Record<string, Asset> = {};
@@ -131,7 +125,6 @@ const Home: React.FC = () => {
     return best;
   }, [dictReady]);
 
-  /* ───────── 즐겨찾기 심볼 리스트 ───────── */
   const favoriteSymbols = useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     return favorites
@@ -139,13 +132,11 @@ const Home: React.FC = () => {
       .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
-  /* ───────── 탭별 필터 ───────── */
   const filteredByTab = useMemo(
     () => (selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab)),
     [newsItems, selectedTab],
   );
 
-  /* ───────── 메인 리스트 (전체/즐겨찾기) ───────── */
   const filteredForMain = useMemo(() => {
     if (viewMode === "즐겨찾기") {
       return filteredByTab.filter((n) => {
@@ -163,7 +154,6 @@ const Home: React.FC = () => {
     return filteredByTab;
   }, [filteredByTab, viewMode, favoriteSymbols]);
 
-  /* ───────── 기간 컷오프 ───────── */
   const periodObj = useMemo(() => PERIODS.find((p) => p.key === selectedPeriod)!, [selectedPeriod]);
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -171,13 +161,11 @@ const Home: React.FC = () => {
     return d;
   }, [periodObj]);
 
-  /* ───────── 분석용 최근 뉴스 ───────── */
   const recent = useMemo(
     () => filteredByTab.filter((n) => new Date(n.published_at).getTime() >= cutoff.getTime()),
     [filteredByTab, cutoff],
   );
 
-  /* ───────── 메인 인기 뉴스 ───────── */
   const displayNews = useMemo(() => {
     const todayCutoff = new Date();
     todayCutoff.setDate(todayCutoff.getDate() - 1);
@@ -186,7 +174,6 @@ const Home: React.FC = () => {
       .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
   }, [filteredForMain]);
 
-  /* ───────── 로딩/오류 처리 ───────── */
   if (loading || !dictReady) return <HomeSkeleton />;
   if (error)
     return (
@@ -195,11 +182,10 @@ const Home: React.FC = () => {
       </div>
     );
 
-  /* ───────── 메인·서브 뉴스 ───────── */
   const hero = displayNews[0];
   const subNews = displayNews.slice(1, 5);
 
-  /* ───────── 감정 통계 ───────── */
+  /* 감정 통계 */
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, l) => ((acc[l] = 0), acc),
     {} as Record<Level, number>,
@@ -211,7 +197,6 @@ const Home: React.FC = () => {
   recent.forEach((n) => {
     const lvl = Math.min(5, Math.max(1, Number(n.sentiment) || 3)) as Level;
     dist[lvl] += 1;
-
     const daysAgo = (Date.now() - new Date(n.published_at).getTime()) / (1000 * 60 * 60 * 24);
     const timeWeight = Math.max(0.1, (periodObj.days - daysAgo) / periodObj.days);
     const weight = LEVEL_WEIGHTS[lvl] * timeWeight;
@@ -230,7 +215,7 @@ const Home: React.FC = () => {
     {} as Record<Level, number>,
   );
 
-  /* ───────── 키워드 통계 ───────── */
+  /* 키워드 통계 */
   type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
@@ -262,7 +247,7 @@ const Home: React.FC = () => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  /* ───────── UI 라벨 & 핸들러 ───────── */
+  /* UI 라벨 & 핸들러 */
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -285,6 +270,16 @@ const Home: React.FC = () => {
             : "😞";
   const sentimentColorClass =
     avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
+  const sentimentBarColor =
+    avgSentiment >= 4
+      ? "bg-green-500"
+      : avgSentiment >= 3.5
+        ? "bg-green-400"
+        : avgSentiment >= 2.5
+          ? "bg-gray-500"
+          : avgSentiment >= 2
+            ? "bg-red-400"
+            : "bg-red-600";
   const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
 
   const handleTabClick = (key: TabKey) => {
@@ -351,7 +346,7 @@ const Home: React.FC = () => {
 
           {/* 우측: 분석 사이드바 */}
           <aside className="space-y-6">
-            {/* 기간 선택 (위젯 전용) */}
+            {/* 기간 선택 */}
             <nav className="overflow-x-auto pb-2">
               <ul className="flex space-x-3">
                 {PERIODS.map((p) => (
@@ -376,6 +371,8 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-semibold text-white mb-4">
                 {selectedTabLabel} 뉴스 감정 분석 ({periodObj.label})
               </h3>
+
+              {/* 분포 바 */}
               <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden flex">
                 {ORDERED_LEVELS.map((lvl) => {
                   const pct = distPct[lvl].toFixed(1);
@@ -400,7 +397,9 @@ const Home: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="mt-3 text-white">
+
+              {/* 평균 감정 + 막대 + 표준편차 */}
+              <div className="mt-4 text-white">
                 <span className="text-sm">평균 감정</span>
                 <div className="flex items-center space-x-2 mt-1">
                   <span className="text-2xl">{sentimentEmoji}</span>
@@ -409,6 +408,14 @@ const Home: React.FC = () => {
                   </span>
                   <span className="text-sm text-gray-400">({avgSentiment.toFixed(1)})</span>
                 </div>
+
+                <div className="w-full bg-gray-700 h-2 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className={`${sentimentBarColor} h-full`}
+                    style={{ width: `${(avgSentiment / 5) * 100}%` }}
+                  />
+                </div>
+
                 <p className="text-xs text-gray-400 mt-1">표준편차: {stdDev.toFixed(2)}</p>
               </div>
             </div>
@@ -420,12 +427,12 @@ const Home: React.FC = () => {
               </h3>
               {topTags.length ? (
                 <ul className="space-y-4">
-                  {topTags.map(({ asset, total, pos, neg }) => {
+                  {topTags.map(({ asset, total, pos, neg }: TagStat, idx: number) => {
                     const posPct = (pos / total) * 100;
                     const negPct = (neg / total) * 100;
                     const neuPct = 100 - posPct - negPct;
                     return (
-                      <li key={asset.id} className="space-y-1">
+                      <li key={idx} className="space-y-1">
                         <div className="flex justify-between text-gray-300 text-sm">
                           <Link to={`/asset/${asset.id}`} className="hover:underline">
                             {asset.name}
