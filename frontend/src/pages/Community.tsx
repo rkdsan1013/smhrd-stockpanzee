@@ -32,6 +32,7 @@ const Community: React.FC = () => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
+
   const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [filterCat, setFilterCat] = useState<(typeof CATEGORY_LIST)[number]>("전체");
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,7 +110,7 @@ const Community: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Full processed list for pagination
+  // Combined processed list for pagination
   const processed = useMemo(() => {
     let arr = [...posts];
     if (filterCat !== "전체") {
@@ -137,46 +138,49 @@ const Community: React.FC = () => {
     [processed, currentPage],
   );
 
+  // Handlers for unified nav
+  const handleSortClick = (key: SortKey) => {
+    setSortKey(key);
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCategoryClick = (cat: (typeof CATEGORY_LIST)[number]) => {
+    setFilterCat(cat);
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   if (loading) {
     return <CommunitySkeleton />;
   }
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* 상단 탭 그룹 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 space-y-4 sm:space-y-0">
-        <div className="flex space-x-6 overflow-x-auto">
-          {/* 정렬 탭 */}
-          <nav className="flex space-x-6 border-b border-gray-700">
-            {SORT_OPTIONS.map((key) => (
+      {/* 상단 탭: 최신/인기 + 카테고리 통합 스타일 */}
+      <nav className="overflow-x-auto flex justify-start mb-8">
+        <ul className="flex space-x-6 border-b border-gray-700">
+          {SORT_OPTIONS.map((key) => (
+            <li key={key}>
               <button
-                key={key}
-                onClick={() => {
-                  setSortKey(key);
-                  setCurrentPage(1);
-                }}
-                aria-label={key === "latest" ? "최신순" : "인기순"}
-                className={`px-4 py-2 -mb-px transition-colors ${
+                onClick={() => handleSortClick(key)}
+                className={`px-4 py-2 -mb-px cursor-pointer transition-colors ${
                   sortKey === key
                     ? "text-white border-b-2 border-blue-500"
                     : "text-gray-400 hover:text-gray-200"
                 }`}
+                aria-label={key === "latest" ? "최신순" : "인기순"}
               >
                 <Icons name={key === "latest" ? "clock" : "fire"} className="w-5 h-5" />
               </button>
-            ))}
-          </nav>
+            </li>
+          ))}
 
-          {/* 카테고리 탭 */}
-          <nav className="flex space-x-6 border-b border-gray-700">
-            {CATEGORY_LIST.map((cat) => (
+          {CATEGORY_LIST.map((cat) => (
+            <li key={cat}>
               <button
-                key={cat}
-                onClick={() => {
-                  setFilterCat(cat);
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 -mb-px text-sm font-medium transition-colors ${
+                onClick={() => handleCategoryClick(cat)}
+                className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
                   filterCat === cat
                     ? "text-white border-b-2 border-blue-500"
                     : "text-gray-400 hover:text-gray-200"
@@ -184,11 +188,13 @@ const Community: React.FC = () => {
               >
                 {cat}
               </button>
-            ))}
-          </nav>
-        </div>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-        {/* 글쓰기 버튼 */}
+      {/* 글쓰기 버튼 */}
+      <div className="flex justify-end mb-6">
         <button
           onClick={() => {
             if (!user) {
