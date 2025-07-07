@@ -1,4 +1,4 @@
-// /frontend/src/pages/News.tsx
+// frontend/src/pages/News.tsx
 import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
@@ -34,7 +34,7 @@ const News: React.FC = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
-  // 1. Fetch news
+  // 1. 전체 뉴스 조회
   const loadNews = async () => {
     setLoading(true);
     setError(null);
@@ -51,7 +51,7 @@ const News: React.FC = () => {
     loadNews();
   }, []);
 
-  // 2. Fetch favorites & assets
+  // 2. 즐겨찾기 ID, 자산(symbol) 조회
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -66,12 +66,12 @@ const News: React.FC = () => {
       .catch(() => setAssets([]));
   }, [user]);
 
-  // 3. Reset page on filter/search change
+  // 3. 필터/검색/탭 변경 시 페이지 초기화
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedTab, viewMode, searchTerm]);
 
-  // 4. Map favorite symbols
+  // 4. favorites → symbol 배열
   const favoriteSymbols = useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     return favorites
@@ -79,26 +79,25 @@ const News: React.FC = () => {
       .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
-  // 5. Filter, search, sort
+  // 5. 필터링 & 정렬
   const filteredNews = useMemo(() => {
-    let list = newsItems;
+    let list = [...newsItems];
 
-    // - fuzzy search
-    if (searchTerm.trim()) {
-      list = fuzzySearch(list, searchTerm, {
-        keys: ["title", "description"],
-      });
-    }
-
-    // - category filter
+    // 5-1. 카테고리 필터
     if (selectedTab !== "all") {
       list = list.filter((n) => n.category === selectedTab);
     }
 
-    // - favorites view
+    // 5-2. 검색어 필터: title_ko 및 summary
+    if (searchTerm.trim()) {
+      list = fuzzySearch(list, searchTerm, {
+        keys: ["title_ko", "summary"],
+      });
+    }
+
+    // 5-3. 즐겨찾기 뷰 필터
     if (viewMode === "즐겨찾기") {
       list = list.filter((n) => {
-        if (!n.tags) return false;
         let tags: string[] = [];
         try {
           tags = Array.isArray(n.tags) ? n.tags : JSON.parse(n.tags);
@@ -109,22 +108,22 @@ const News: React.FC = () => {
       });
     }
 
-    // - sort by published_at descending
+    // 5-4. 최신순 정렬
     list.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
 
     return list;
-  }, [newsItems, searchTerm, selectedTab, viewMode, favoriteSymbols]);
+  }, [newsItems, selectedTab, searchTerm, viewMode, favoriteSymbols]);
 
-  // 6. Infinite scroll slice
+  // 6. 페이지네이션 (infinite scroll)
   const visibleNews = useMemo(
     () => filteredNews.slice(0, currentPage * itemsPerPage),
     [filteredNews, currentPage],
   );
 
-  // 7. Infinite scroll observer
+  // 7. IntersectionObserver로 추가 로드
   useEffect(() => {
     if (!loadMoreRef.current) return;
-    const io = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visibleNews.length < filteredNews.length) {
           setCurrentPage((p) => p + 1);
@@ -132,25 +131,25 @@ const News: React.FC = () => {
       },
       { rootMargin: "200px" },
     );
-    io.observe(loadMoreRef.current);
-    return () => io.disconnect();
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
   }, [visibleNews, filteredNews]);
 
-  // 8. Show scroll-to-top button
+  // 8. 스크롤 위치에 따라 맨위 버튼 표시
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 400);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 9. Handlers
+  // 9. UI 핸들러
   const handleTabClick = (key: TabKey) => {
     setSelectedTab(key);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const toggleView = () => {
     if (!user) {
-      alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
+      alert("즐겨찾기 뉴스는 로그인 후 확인 가능합니다.");
       return;
     }
     setViewMode((v) => (v === "전체" ? "즐겨찾기" : "전체"));
@@ -162,14 +161,13 @@ const News: React.FC = () => {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* ─────────── NAV + SEARCH ─────────── */}
+      {/* 네비게이션 + 검색 */}
       <nav className="flex items-center justify-between mb-8">
-        {/* 탭 그룹 (왼쪽) */}
         <ul className="flex space-x-6 border-b border-gray-700">
           <li>
             <button
               onClick={toggleView}
-              className={`px-4 py-2 -mb-px cursor-pointer transition-colors ${
+              className={`px-4 py-2 -mb-px transition-colors ${
                 viewMode === "즐겨찾기"
                   ? "text-yellow-400 border-b-2 border-yellow-400"
                   : "text-gray-400 hover:text-gray-200"
@@ -182,7 +180,7 @@ const News: React.FC = () => {
             <li key={t.key}>
               <button
                 onClick={() => handleTabClick(t.key)}
-                className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
+                className={`px-4 py-2 -mb-px text-sm font-medium transition-colors ${
                   selectedTab === t.key
                     ? "text-white border-b-2 border-blue-500"
                     : "text-gray-400 hover:text-gray-200"
@@ -194,7 +192,6 @@ const News: React.FC = () => {
           ))}
         </ul>
 
-        {/* 검색창 (오른쪽, 적정 크기) */}
         <div className="relative w-48 md:w-64">
           <input
             type="text"
@@ -203,8 +200,7 @@ const News: React.FC = () => {
             placeholder="뉴스 검색..."
             className="w-full bg-gray-800 text-white placeholder-gray-500
                        rounded-full px-3 py-2 pr-8 outline-none
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                       transition duration-150"
+                       focus:ring-2 focus:ring-blue-500 transition"
           />
           {searchTerm && (
             <button
@@ -218,10 +214,10 @@ const News: React.FC = () => {
         </div>
       </nav>
 
-      {/* 에러 */}
+      {/* 에러 메시지 */}
       {error && (
         <div className="text-center text-red-400 mb-8">
-          <p className="mb-4">오류가 발생했습니다: {error}</p>
+          <p className="mb-4">오류: {error}</p>
           <button
             onClick={loadNews}
             className="inline-flex items-center px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 text-white"
@@ -237,7 +233,7 @@ const News: React.FC = () => {
         <div className="text-center text-gray-300 py-12">조건에 맞는 뉴스가 없습니다.</div>
       )}
 
-      {/* 뉴스 카드 그리드 */}
+      {/* 뉴스 카드 목록 */}
       {!error && visibleNews.length > 0 && (
         <>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -260,7 +256,7 @@ const News: React.FC = () => {
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="fixed bottom-8 right-8 text-4xl text-blue-500 hover:text-blue-400 transition"
-          aria-label="Scroll to top"
+          aria-label="맨 위로"
         >
           <Icons name="arrowUpCircle" />
         </button>

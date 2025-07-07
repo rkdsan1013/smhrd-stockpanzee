@@ -66,23 +66,53 @@ const NewsDetail: React.FC = () => {
 
   const [news, setNews] = useState<NewsDetailType | null>(null);
   const [latest, setLatest] = useState<NewsItem[]>([]);
+  const [primaryAsset, setPrimaryAsset] = useState<{
+    id: number;
+    symbol: string;
+    name: string;
+    market: string;
+  } | null>(null);
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
+
+  // 태그 → 우선 첫번째 자산을 pick
+  const pickAsset = (symRaw: string) => {
+    const up = symRaw.toUpperCase();
+    const cands = assetDict[up] || [];
+    if (cands.length === 0) return null;
+    // 뉴스 카테고리 순서
+    const order =
+      news?.news_category === "crypto"
+        ? ["crypto", "domestic", "international"]
+        : news?.news_category === "domestic"
+          ? ["domestic", "international", "crypto"]
+          : ["international", "domestic", "crypto"];
+    for (const cat of order) {
+      const a = cands.find((x) => marketCategory(x.market) === cat);
+      if (a) return a;
+    }
+    return cands[0];
+  };
 
   useEffect(() => {
     setStatus("loading");
     fetchNewsDetail(newsId)
       .then((nd) => {
         setNews(nd);
-        return nd.assets_symbol
-          ? fetchLatestNewsByAsset(nd.assets_symbol, nd.id)
-          : Promise.resolve([] as NewsItem[]);
+        const tags = parseList(nd.tags);
+        const firstSym = tags.length ? tags[0] : nd.assets_symbol || "";
+        const asset = pickAsset(firstSym);
+        setPrimaryAsset(asset);
+        if (asset) {
+          return fetchLatestNewsByAsset(asset.symbol, nd.id);
+        }
+        return Promise.resolve([]);
       })
       .then((rel) => {
         setLatest(rel.slice(0, MAX_LATEST));
         setStatus("idle");
       })
       .catch(() => setStatus("error"));
-  }, [newsId]);
+  }, [newsId, assetDict]);
 
   if (!assetsReady || status === "loading") {
     return <NewsDetailSkeleton latestCount={MAX_LATEST} />;
@@ -95,11 +125,11 @@ const NewsDetail: React.FC = () => {
     );
   }
 
-  // TradingView 차트 심볼
-  const tvSymbol = news.assets_symbol
-    ? news.news_category === "crypto"
-      ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
-      : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
+  // 차트 심볼: primaryAsset 기반
+  const tvSymbol = primaryAsset
+    ? primaryAsset.market.toUpperCase().includes("BINANCE")
+      ? `BINANCE:${primaryAsset.symbol.toUpperCase()}USDT`
+      : getTradingViewSymbol(primaryAsset.symbol, primaryAsset.market)
     : "";
 
   const positives = parseList(news.news_positive);
@@ -109,34 +139,11 @@ const NewsDetail: React.FC = () => {
   const tagClasses =
     "inline-block px-3 py-1 bg-blue-600 text-sm font-semibold rounded-full transition hover:bg-blue-500";
 
-  // 태그 렌더로 asset 선택 로직
-  const pickAsset = (symbol: string) => {
-    const up = symbol.toUpperCase();
-    const cands = assetDict[up] || [];
-    // 우선순위 리스트
-    const order =
-      news.news_category === "crypto"
-        ? ["crypto", "domestic", "international"]
-        : news.news_category === "domestic"
-          ? ["domestic", "international", "crypto"]
-          : ["international", "domestic", "crypto"];
-    for (const cat of order) {
-      const a = cands.find((x) => marketCategory(x.market) === cat);
-      if (a) return a;
-    }
-    return cands[0];
-  };
-
-  // 사이드바 헤더용 종목명 선택
-  const primaryAsset = news.assets_symbol ? pickAsset(news.assets_symbol) : null;
-  const headerTitle = primaryAsset ? primaryAsset.name : news.assets_symbol || "관련";
-
-  // 태그 렌더
   const renderTag = (symRaw: string) => {
-    const a = pickAsset(symRaw);
-    const label = a ? a.name : symRaw;
-    return a ? (
-      <Link key={symRaw} to={`/asset/${a.id}`} className={tagClasses}>
+    const asset = pickAsset(symRaw);
+    const label = asset ? asset.name : symRaw;
+    return asset ? (
+      <Link key={symRaw} to={`/asset/${asset.id}`} className={tagClasses}>
         {label}
       </Link>
     ) : (
@@ -145,6 +152,9 @@ const NewsDetail: React.FC = () => {
       </span>
     );
   };
+
+  // 사이드바 헤더 제목
+  const headerTitle = primaryAsset ? primaryAsset.name : news.assets_symbol;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-8">
@@ -172,6 +182,7 @@ const NewsDetail: React.FC = () => {
                   </a>
                 </div>
               </div>
+              {/* Thumbnail */}
               <div className="w-full md:w-1/3 flex-shrink-0">
                 <img
                   src={news.thumbnail || DEFAULT_THUMB}
