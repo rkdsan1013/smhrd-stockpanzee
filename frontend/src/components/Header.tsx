@@ -89,7 +89,7 @@ const Header: React.FC = () => {
                   onClick={handleNotifClick}
                   className="p-2 hover:bg-white/30 rounded-full transition"
                 >
-                  <Icons name="messageDots" className="w-8 h-8" />
+                  <Icons name="bell" className="w-8 h-8" />
                 </button>
                 {notifOpen && (
                   <Notification

@@ -433,7 +433,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-
     volatility: (
       <svg
         className={className || "w-6 h-6 text-gray-800 dark:text-white"}
@@ -453,7 +452,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-
     more: (
       <svg
         className={className || "w-6 h-6 text-gray-800 dark:text-white"}
@@ -466,7 +464,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         <circle cx="19" cy="12" r="2" />
       </svg>
     ),
-
     eyeOpen: (
       <svg
         className={className || "w-6 h-6 text-gray-800 dark:text-white"}
@@ -504,7 +501,6 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         />
       </svg>
     ),
-
     camera: (
       <svg
         className={className || "w-6 h-6 text-gray-400"}
@@ -523,30 +519,73 @@ const Icons: React.FC<IconProps> = ({ name, className }) => {
         <circle cx="12" cy="13" r="2.5" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
-
     reply: (
       <svg
-        className={className || "w-5 h-5 text-gray-400"}
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
+        width="24"
+        height="24"
         fill="none"
-        viewBox="0 0 20 20"
+        viewBox="0 0 24 24"
       >
         <path
           stroke="currentColor"
-          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M6.667 9.167V6.667A1.667 1.667 0 0 1 8.333 5h6.667A1.667 1.667 0 0 1 16.667 6.667v6.666A1.667 1.667 0 0 1 15 15h-6.667A1.667 1.667 0 0 1 6.667 13.333v-2.5"
+          strokeWidth="2"
+          d="M14.5 8.046H11V6.119c0-.921-.9-1.446-1.524-.894l-5.108 4.49a1.2 1.2 0 0 0 0 1.739l5.108 4.49c.624.556 1.524.027 1.524-.893v-1.928h2a3.023 3.023 0 0 1 3 3.046V19a5.593 5.593 0 0 0-1.5-10.954Z"
         />
+      </svg>
+    ),
+    moreHorizontal: (
+      <svg
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        xmlns="http://www.w3.org/2000/svg"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle cx="6" cy="12" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="18" cy="12" r="2" />
+      </svg>
+    ),
+    messageCircle: (
+      <svg
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
         <path
           stroke="currentColor"
-          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M6.667 10.833 3.333 8.333l3.334-2.5"
+          strokeWidth="2"
+          d="M16 10.5h.01m-4.01 0h.01M8 10.5h.01M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-6.6a1 1 0 0 0-.69.275l-2.866 2.723A.5.5 0 0 1 8 18.635V17a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+        />
+      </svg>
+    ),
+    bell: (
+      <svg
+        className={className || "w-6 h-6 text-gray-800 dark:text-white"}
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 5.365V3m0 2.365a5.338 5.338 0 0 1 5.133 5.368v1.8c0 2.386 1.867 2.982 1.867 4.175 0 .593 0 1.292-.538 1.292H5.538C5 18 5 17.301 5 16.708c0-1.193 1.867-1.789 1.867-4.175v-1.8A5.338 5.338 0 0 1 12 5.365ZM8.733 18c.094.852.306 1.54.944 2.112a3.48 3.48 0 0 0 4.646 0c.638-.572 1.236-1.26 1.33-2.112h-6.92Z"
         />
       </svg>
     ),

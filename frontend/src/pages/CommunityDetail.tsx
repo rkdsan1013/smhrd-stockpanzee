@@ -229,7 +229,7 @@ const CommunityDetail: React.FC = () => {
             {totalCommentCount}
           </span>
           <span className="flex items-center">
-            <Icons name="eye" className="w-5 h-5 mr-1" />
+            <Icons name="eyeOpen" className="w-5 h-5 mr-1" />
             {post.community_views}
           </span>
         </div>
