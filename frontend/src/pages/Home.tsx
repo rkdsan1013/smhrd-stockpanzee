@@ -337,7 +337,7 @@ const Home: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* 좌측: 인기 뉴스 & 리스트 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
-            <p className="text-lg text-white font-semibold mb-4">지금 인기 뉴스</p>
+            <p className="text-lg text-white font-semibold mb-4">오늘 인기 뉴스</p>
             {hero && <NewsCard newsItem={hero} variant="hero" />}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

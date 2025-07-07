@@ -2,7 +2,6 @@
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icons from "./Icons";
-import SearchResults from "./SearchResults";
 import Notification from "./Notification";
 import { AuthContext } from "../providers/AuthProvider";
 
@@ -10,12 +9,6 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
   const pathname = location.pathname;
-
-  // 검색 상태
-  const [searchActive, setSearchActive] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 유저 메뉴
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,18 +27,6 @@ const Header: React.FC = () => {
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
-
-  const activateSearch = () => {
-    if (blurTimeout.current) clearTimeout(blurTimeout.current);
-    setSearchActive(true);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-  const deactivateSearch = () => {
-    blurTimeout.current = setTimeout(() => {
-      setSearchActive(false);
-      setSearchTerm("");
-    }, 150);
-  };
 
   const navItems = [
     { key: "news", label: "뉴스", path: "/news" },
@@ -71,56 +52,31 @@ const Header: React.FC = () => {
           <span className="ml-2 text-xl font-bold hidden lg:inline">STOCKPANZEE</span>
         </Link>
 
-        {/* 중앙: 검색 + 네비 */}
+        {/* 중앙: 네비 */}
         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          {!searchActive ? (
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={activateSearch}
-                className="p-2 hover:bg-white/30 rounded-full transition"
-              >
-                <Icons name="search" className="w-6 h-6" />
-              </button>
-              {navItems.map((item) => {
-                const isActive =
-                  pathname === item.path ||
-                  pathname.startsWith(item.path) ||
-                  // '/asset/*' 경로도 '마켓' 탭으로 간주
-                  (item.key === "market" && pathname.startsWith("/asset")) ||
-                  // '/post' 경로도 '팬지's TALK' 탭으로 간주
-                  (item.key === "community" && pathname.startsWith("/post"));
+          <div className="flex items-center space-x-4">
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.path ||
+                pathname.startsWith(item.path) ||
+                // '/asset/*' 경로도 '마켓' 탭으로 간주
+                (item.key === "market" && pathname.startsWith("/asset")) ||
+                // '/post' 경로도 '팬지's TALK' 탭으로 간주
+                (item.key === "community" && pathname.startsWith("/post"));
 
-                return (
-                  <Link
-                    key={item.key}
-                    to={item.path}
-                    className={`px-4 py-1 whitespace-nowrap rounded-full transition ${
-                      isActive
-                        ? "text-blue-500"
-                        : "text-gray-300 hover:bg-white/30 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center" style={{ width: "20rem" }}>
-              <div className="relative w-full">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onBlur={deactivateSearch}
-                  placeholder="검색어를 입력하세요..."
-                  className="w-full bg-white text-black rounded-full px-4 py-2 outline-none transition-all duration-300 ease-in-out"
-                />
-                {searchTerm && <SearchResults searchTerm={searchTerm} />}
-              </div>
-            </div>
-          )}
+              return (
+                <Link
+                  key={item.key}
+                  to={item.path}
+                  className={`px-4 py-1 whitespace-nowrap rounded-full transition ${
+                    isActive ? "text-blue-500" : "text-gray-300 hover:bg-white/30 hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         {/* 우측: 알림 + 프로필 */}
