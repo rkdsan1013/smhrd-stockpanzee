@@ -130,8 +130,8 @@ const News: React.FC = () => {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* 상단 탭 (언더라인은 탭 너비만큼) */}
-      <nav className="overflow-x-auto mb-8 flex justify-center">
+      {/* 상단 탭: 왼쪽 정렬 */}
+      <nav className="overflow-x-auto mb-8 flex justify-start">
         <ul className="inline-flex space-x-6 border-b border-gray-700">
           <li>
             <button

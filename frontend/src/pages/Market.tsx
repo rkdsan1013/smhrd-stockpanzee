@@ -251,13 +251,9 @@ const Market: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <header className="py-4 text-center">
-        <h1 className="text-white text-3xl font-bold">자산 마켓</h1>
-      </header>
-
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-        {/* Nav tabs with left-side banana icon */}
-        <nav className="overflow-x-auto">
+        {/* Nav tabs: 왼쪽 정렬 */}
+        <nav className="overflow-x-auto flex justify-start">
           <ul className="flex space-x-6 border-b border-gray-700">
             <li>
               <button
