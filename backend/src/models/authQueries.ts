@@ -56,7 +56,7 @@ export const DELETE_FAVORITES_BY_USER = `
 `;
 
 export const DELETE_COMMENTS_BY_USER = `
-  DELETE FROM community_com
+  DELETE FROM comments
   WHERE writer_uuid = ?
 `;
 

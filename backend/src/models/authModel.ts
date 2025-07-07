@@ -70,17 +70,31 @@ export async function updateUserProfile(uuid: Buffer, username: string): Promise
 export async function deleteUserCascade(uuid: Buffer): Promise<void> {
   const conn = await pool.getConnection();
   try {
+    console.log("트랜잭션 시작 - 회원탈퇴 uuid:", uuid.toString("hex"));
     await conn.beginTransaction();
 
-    await conn.query(DELETE_LIKES_BY_USER, [uuid]);
-    await conn.query(DELETE_FAVORITES_BY_USER, [uuid]);
-    await conn.query(DELETE_COMMENTS_BY_USER, [uuid]);
-    await conn.query(DELETE_POSTS_BY_USER, [uuid]);
-    await conn.query(DELETE_PROFILE_BY_USER, [uuid]);
+    // console.log("likes 삭제");
+    // await conn.query(DELETE_LIKES_BY_USER, [uuid]);
+
+    // console.log("favorites 삭제");
+    // await conn.query(DELETE_FAVORITES_BY_USER, [uuid]);
+
+    // // console.log("comments 삭제");
+    // // await conn.query(DELETE_COMMENTS_BY_USER, [uuid]);
+
+    // // console.log("posts 삭제");
+    // // await conn.query(DELETE_POSTS_BY_USER, [uuid]);
+
+    // console.log("profile 삭제");
+    // await conn.query(DELETE_PROFILE_BY_USER, [uuid]);
+
+    console.log("users 삭제");
     await conn.query(DELETE_USER, [uuid]);
 
     await conn.commit();
+    console.log("트랜잭션 커밋 완료");
   } catch (err) {
+    console.error("트랜잭션 에러 발생, 롤백합니다.", err);
     await conn.rollback();
     throw err;
   } finally {
