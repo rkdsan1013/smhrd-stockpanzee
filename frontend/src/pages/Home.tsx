@@ -1,14 +1,17 @@
 // /frontend/src/pages/Home.tsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useContext } from "react";
 import { Link } from "react-router-dom";
+import Icons from "../components/Icons";
+import { AuthContext } from "../providers/AuthProvider";
 import { fetchNews } from "../services/newsService";
+import { fetchFavorites } from "../services/favoriteService";
+import { fetchAssets, getAssetDictSync, type Asset } from "../services/assetService";
 import type { NewsItem } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
 import Tooltip from "../components/Tooltip";
 import FavoriteAssetsWidget from "../components/FavoriteAssetsWidget";
 import CommunityPopularWidget from "../components/CommunityPopularWidget";
 import HomeSkeleton from "../components/skeletons/HomeSkeleton";
-import { fetchAssets, getAssetDictSync, type Asset } from "../services/assetService";
 
 /* ───────── 탭 & 기간 상수 ───────── */
 const TABS = [
@@ -45,7 +48,6 @@ const LEVEL_WEIGHTS: Record<Level, number> = {
   5: 2,
 };
 
-/* ───────── market → category ───────── */
 const marketCategory = (m: string): NewsItem["category"] => {
   const upper = m.toUpperCase();
   if (/KRX|KOSPI|KOSDAQ|KONEX/.test(upper)) return "domestic";
@@ -54,27 +56,25 @@ const marketCategory = (m: string): NewsItem["category"] => {
 };
 
 const Home: React.FC = () => {
+  const { user } = useContext(AuthContext);
+
   /* ---------- 상태 ---------- */
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("today");
+  const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  /* ───────── 즐겨찾기 ---------- */
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
 
   /* ---------- 자산 딕셔너리 ---------- */
   const dictRef = useRef<Record<string, Asset>>(getAssetDictSync());
   const [dictReady, setDictReady] = useState(Object.keys(dictRef.current).length > 0);
 
-  useEffect(() => {
-    if (!dictReady) {
-      fetchAssets().then(() => {
-        dictRef.current = getAssetDictSync();
-        setDictReady(true);
-      });
-    }
-  }, [dictReady]);
-
-  /* ---------- 뉴스 로드 ---------- */
+  /* ───────── 뉴스 로드 ───────── */
   useEffect(() => {
     fetchNews()
       .then((data) =>
@@ -88,7 +88,32 @@ const Home: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  /* ---------- 심볼별 대표 자산 ---------- */
+  /* ───────── 자산 사전 로드 ───────── */
+  useEffect(() => {
+    if (!dictReady) {
+      fetchAssets().then(() => {
+        dictRef.current = getAssetDictSync();
+        setDictReady(true);
+      });
+    }
+  }, [dictReady]);
+
+  /* ───────── 즐겨찾기 & 자산 로드 ───────── */
+  useEffect(() => {
+    if (!user) {
+      setFavorites([]);
+      setAssets([]);
+      return;
+    }
+    fetchFavorites()
+      .then(setFavorites)
+      .catch(() => setFavorites([]));
+    fetchAssets()
+      .then(setAssets)
+      .catch(() => {});
+  }, [user]);
+
+  /* ───────── 심볼별 대표 자산 ───────── */
   const primaryAssetOfSym = useMemo(() => {
     if (!dictReady) return {} as Record<string, Asset>;
     const best: Record<string, Asset> = {};
@@ -106,35 +131,62 @@ const Home: React.FC = () => {
     return best;
   }, [dictReady]);
 
-  /* ───────── 필터 & 정렬 준비 ───────── */
-  const filtered = useMemo(
+  /* ───────── 즐겨찾기 심볼 리스트 ───────── */
+  const favoriteSymbols = useMemo(() => {
+    if (!favorites.length || !assets.length) return [];
+    return favorites
+      .map((fid) => assets.find((a) => a.id === fid)?.symbol)
+      .filter((s): s is string => Boolean(s));
+  }, [favorites, assets]);
+
+  /* ───────── 탭별 필터 ───────── */
+  const filteredByTab = useMemo(
     () => (selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab)),
     [newsItems, selectedTab],
   );
 
-  const periodObj = useMemo(() => PERIODS.find((p) => p.key === selectedPeriod)!, [selectedPeriod]);
+  /* ───────── 메인 리스트 (전체/즐겨찾기) ───────── */
+  const filteredForMain = useMemo(() => {
+    if (viewMode === "즐겨찾기") {
+      return filteredByTab.filter((n) => {
+        if (!n.tags) return false;
+        let tags: string[] = [];
+        if (Array.isArray(n.tags)) tags = n.tags;
+        else
+          try {
+            const p = JSON.parse(n.tags as string);
+            if (Array.isArray(p)) tags = p;
+          } catch {}
+        return tags.some((t) => favoriteSymbols.includes(t));
+      });
+    }
+    return filteredByTab;
+  }, [filteredByTab, viewMode, favoriteSymbols]);
 
+  /* ───────── 기간 컷오프 ───────── */
+  const periodObj = useMemo(() => PERIODS.find((p) => p.key === selectedPeriod)!, [selectedPeriod]);
   const cutoff = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - periodObj.days);
     return d;
   }, [periodObj]);
 
+  /* ───────── 분석용 최근 뉴스 ───────── */
   const recent = useMemo(
-    () => filtered.filter((n) => new Date(n.published_at) >= cutoff),
-    [filtered, cutoff],
+    () => filteredByTab.filter((n) => new Date(n.published_at).getTime() >= cutoff.getTime()),
+    [filteredByTab, cutoff],
   );
 
-  // 항상 오늘 인기 뉴스만 표시
+  /* ───────── 메인 인기 뉴스 ───────── */
   const displayNews = useMemo(() => {
     const todayCutoff = new Date();
     todayCutoff.setDate(todayCutoff.getDate() - 1);
-    return filtered
+    return filteredForMain
       .filter((n) => new Date(n.published_at) >= todayCutoff)
       .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-  }, [filtered]);
+  }, [filteredForMain]);
 
-  /* ---------- 로딩/오류 ---------- */
+  /* ───────── 로딩/오류 처리 ───────── */
   if (loading || !dictReady) return <HomeSkeleton />;
   if (error)
     return (
@@ -143,7 +195,7 @@ const Home: React.FC = () => {
       </div>
     );
 
-  /* ───────── 메인·서브 뉴스 분할 ───────── */
+  /* ───────── 메인·서브 뉴스 ───────── */
   const hero = displayNews[0];
   const subNews = displayNews.slice(1, 5);
 
@@ -170,10 +222,8 @@ const Home: React.FC = () => {
 
   const avgSentiment = sumWeights ? sumWeighted / sumWeights : 3;
   const stdDev = Math.sqrt(
-    weightedEntries.reduce(
-      (s, { level, weight }) => s + weight * Math.pow(level - avgSentiment, 2),
-      0,
-    ) / (sumWeights || 1),
+    weightedEntries.reduce((s, { level, weight }) => s + weight * (level - avgSentiment) ** 2, 0) /
+      (sumWeights || 1),
   );
   const distPct: Record<Level, number> = LEVELS.reduce(
     (acc, l) => ((acc[l] = (dist[l] / (recent.length || 1)) * 100), acc),
@@ -212,7 +262,7 @@ const Home: React.FC = () => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  /* ───────── 시각화 라벨 ───────── */
+  /* ───────── UI 라벨 & 핸들러 ───────── */
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -237,16 +287,40 @@ const Home: React.FC = () => {
     avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
   const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
 
+  const handleTabClick = (key: TabKey) => {
+    setSelectedTab(key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const toggleView = () => {
+    if (!user) {
+      alert("즐겨찾기 페이지는 로그인 후 확인할 수 있습니다.");
+      return;
+    }
+    setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
+  };
+
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-8">
-        {/* 카테고리 탭 */}
-        <nav className="overflow-x-auto">
+        {/* 카테고리 & 즐겨찾기 탭 */}
+        <nav className="overflow-x-auto flex justify-start mb-8">
           <ul className="flex space-x-6 border-b border-gray-700">
+            <li>
+              <button
+                onClick={toggleView}
+                className={`px-4 py-2 -mb-px transition-colors ${
+                  viewMode === "즐겨찾기"
+                    ? "text-yellow-400 border-b-2 border-yellow-400"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <Icons name="banana" className="w-5 h-5" />
+              </button>
+            </li>
             {TABS.map((t) => (
               <li key={t.key}>
                 <button
-                  onClick={() => setSelectedTab(t.key)}
+                  onClick={() => handleTabClick(t.key)}
                   className={`px-4 py-2 -mb-px text-sm font-medium transition-colors ${
                     selectedTab === t.key
                       ? "text-white border-b-2 border-blue-500"
@@ -261,7 +335,7 @@ const Home: React.FC = () => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 좌측: 지금 인기 뉴스 & 뉴스 카드 */}
+          {/* 좌측: 인기 뉴스 & 리스트 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
             <p className="text-lg text-white font-semibold mb-4">지금 인기 뉴스</p>
             {hero && <NewsCard newsItem={hero} variant="hero" />}
@@ -271,10 +345,11 @@ const Home: React.FC = () => {
                 <NewsCard key={n.id} newsItem={n} variant="compact" />
               ))}
             </div>
+
             <CommunityPopularWidget selectedTab={selectedTab} />
           </div>
 
-          {/* 우측 분석 영역 */}
+          {/* 우측: 분석 사이드바 */}
           <aside className="space-y-6">
             {/* 기간 선택 (위젯 전용) */}
             <nav className="overflow-x-auto pb-2">

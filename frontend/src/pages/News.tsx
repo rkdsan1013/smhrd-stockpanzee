@@ -1,5 +1,5 @@
 // /frontend/src/pages/News.tsx
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import type { NewsItem } from "../services/newsService";
 import { fetchNews } from "../services/newsService";
 import NewsCard from "../components/NewsCard";
@@ -9,27 +9,27 @@ import { fetchFavorites } from "../services/favoriteService";
 import { fetchAssets, type Asset } from "../services/assetService";
 import { AuthContext } from "../providers/AuthProvider";
 
-const tabs = [
+const tabOptions = [
   { key: "all", label: "전체" },
   { key: "domestic", label: "국내" },
   { key: "international", label: "해외" },
   { key: "crypto", label: "암호화폐" },
-  { key: "favorites", label: "즐겨찾기" },
 ] as const;
-type TabKey = (typeof tabs)[number]["key"];
+type TabKey = (typeof tabOptions)[number]["key"];
 const itemsPerPage = 3;
 
 const News: React.FC = () => {
   const { user } = useContext(AuthContext);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
+  const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [showTopBtn, setShowTopBtn] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [showTopBtn, setShowTopBtn] = useState(false);
 
   const loadNews = async () => {
     setLoading(true);
@@ -64,19 +64,22 @@ const News: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTab]);
+  }, [selectedTab, viewMode]);
 
-  const favoriteSymbols = React.useMemo(() => {
+  const favoriteSymbols = useMemo(() => {
     if (!favorites.length || !assets.length) return [];
     return favorites
       .map((fid) => assets.find((a) => a.id === fid)?.symbol)
       .filter((s): s is string => Boolean(s));
   }, [favorites, assets]);
 
-  const filtered = React.useMemo(() => {
-    if (selectedTab === "all") return newsItems;
-    if (selectedTab === "favorites") {
-      return newsItems.filter((n) => {
+  const filteredNews = useMemo(() => {
+    let filtered = newsItems;
+    if (selectedTab !== "all") {
+      filtered = filtered.filter((n) => n.category === selectedTab);
+    }
+    if (viewMode === "즐겨찾기") {
+      filtered = filtered.filter((n) => {
         if (!n.tags) return false;
         let tags: string[] = [];
         try {
@@ -87,19 +90,19 @@ const News: React.FC = () => {
         return tags.some((t) => favoriteSymbols.includes(t));
       });
     }
-    return newsItems.filter((n) => n.category === selectedTab);
-  }, [newsItems, selectedTab, favoriteSymbols]);
+    return filtered;
+  }, [newsItems, selectedTab, viewMode, favoriteSymbols]);
 
-  const visibleNews = React.useMemo(
-    () => filtered.slice(0, currentPage * itemsPerPage),
-    [filtered, currentPage],
+  const visibleNews = useMemo(
+    () => filteredNews.slice(0, currentPage * itemsPerPage),
+    [filteredNews, currentPage],
   );
 
   useEffect(() => {
     if (!loadMoreRef.current) return;
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && visibleNews.length < filtered.length) {
+        if (entry.isIntersecting && visibleNews.length < filteredNews.length) {
           setCurrentPage((p) => p + 1);
         }
       },
@@ -107,7 +110,7 @@ const News: React.FC = () => {
     );
     io.observe(loadMoreRef.current);
     return () => io.disconnect();
-  }, [visibleNews, filtered]);
+  }, [visibleNews, filteredNews]);
 
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 400);
@@ -116,12 +119,16 @@ const News: React.FC = () => {
   }, []);
 
   const handleTabClick = (key: TabKey) => {
-    if (key === "favorites" && !user) {
+    setSelectedTab(key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const toggleView = () => {
+    if (!user) {
       alert("즐겨찾기 종목 뉴스는 로그인 후 확인할 수 있습니다.");
       return;
     }
-    setSelectedTab(key);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setViewMode((prev) => (prev === "전체" ? "즐겨찾기" : "전체"));
   };
 
   if (loading) {
@@ -130,14 +137,14 @@ const News: React.FC = () => {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      {/* 상단 탭: 왼쪽 정렬 */}
-      <nav className="overflow-x-auto mb-8 flex justify-start">
-        <ul className="inline-flex space-x-6 border-b border-gray-700">
+      {/* Market 스타일 상단 탭 */}
+      <nav className="overflow-x-auto flex justify-start mb-8">
+        <ul className="flex space-x-6 border-b border-gray-700">
           <li>
             <button
-              onClick={() => handleTabClick("favorites")}
+              onClick={toggleView}
               className={`px-4 py-2 -mb-px cursor-pointer transition-colors ${
-                selectedTab === "favorites"
+                viewMode === "즐겨찾기"
                   ? "text-yellow-400 border-b-2 border-yellow-400"
                   : "text-gray-400 hover:text-gray-200"
               }`}
@@ -145,26 +152,24 @@ const News: React.FC = () => {
               <Icons name="banana" className="w-5 h-5" />
             </button>
           </li>
-          {tabs
-            .filter((t) => t.key !== "favorites")
-            .map((t) => (
-              <li key={t.key}>
-                <button
-                  onClick={() => handleTabClick(t.key)}
-                  className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
-                    selectedTab === t.key
-                      ? "text-white border-b-2 border-blue-500"
-                      : "text-gray-400 hover:text-gray-200"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              </li>
-            ))}
+          {tabOptions.map((t) => (
+            <li key={t.key}>
+              <button
+                onClick={() => handleTabClick(t.key)}
+                className={`px-4 py-2 -mb-px text-sm font-medium cursor-pointer transition-colors ${
+                  selectedTab === t.key
+                    ? "text-white border-b-2 border-blue-500"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {t.label}
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
 
-      {/* Error */}
+      {/* 에러 처리 */}
       {error && (
         <div className="text-center text-red-400">
           <p className="mb-4">오류가 발생했습니다: {error}</p>
@@ -178,12 +183,12 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {/* No Results */}
+      {/* 조건에 맞는 뉴스 없음 */}
       {!error && visibleNews.length === 0 && (
         <div className="text-center text-gray-300">조건에 맞는 뉴스가 없습니다.</div>
       )}
 
-      {/* News Grid */}
+      {/* 뉴스 카드 목록 */}
       {!error && visibleNews.length > 0 && (
         <>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
@@ -194,8 +199,8 @@ const News: React.FC = () => {
             ))}
           </ul>
 
-          {/* Infinite Scroll Loader */}
-          {visibleNews.length < filtered.length && (
+          {/* 무한 스크롤 로딩 */}
+          {visibleNews.length < filteredNews.length && (
             <div ref={loadMoreRef} className="mt-8 flex justify-center items-center text-gray-500">
               로딩 중...
             </div>
@@ -203,7 +208,7 @@ const News: React.FC = () => {
         </>
       )}
 
-      {/* Scroll to Top */}
+      {/* 최상단 이동 버튼 */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
