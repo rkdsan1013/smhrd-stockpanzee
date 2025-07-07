@@ -1,4 +1,4 @@
-// /frontend/src/components/SkeletonCard.tsx
+// /frontend/src/components/skeleton/SkeletonCard.tsx
 import React from "react";
 
 const SkeletonCard: React.FC = () => (

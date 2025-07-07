@@ -37,9 +37,12 @@ function timeAgo(dateString: string) {
 // ---------- 이미지 url 합성 ----------
 function getFullImgUrl(img_url?: string) {
   if (!img_url) return undefined;
-  const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
-  const ORIGIN = API_BASE.replace("/api", "");
-  return ORIGIN + img_url;
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  if (img_url.startsWith("http")) return img_url;
+  if (img_url.startsWith("/uploads/")) {
+    return API_BASE + img_url;
+  }
+  return API_BASE + img_url;
 }
 
 // ---------- 모든 댓글(대댓글 포함) 개수 카운트 ----------  // 👈 추가!
@@ -71,8 +74,8 @@ const Comments: React.FC<{
       formData,
       {
         withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" }
-      }
+        headers: { "Content-Type": "multipart/form-data" },
+      },
     );
     fetchComments();
   };
@@ -86,11 +89,7 @@ const Comments: React.FC<{
       <div className="space-y-4 mt-4">
         {comments.map((comment, idx) => (
           <React.Fragment key={comment.id}>
-            <CommentItem
-              comment={comment}
-              fetchComments={fetchComments}
-              postId={postId}
-            />
+            <CommentItem comment={comment} fetchComments={fetchComments} postId={postId} />
             {idx < comments.length - 1 && <hr className="border-black opacity-80 my-2" />}
           </React.Fragment>
         ))}
@@ -100,7 +99,9 @@ const Comments: React.FC<{
 };
 
 // ---------- 댓글 입력 ----------
-const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void }> = ({ onSubmit }) => {
+const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void }> = ({
+  onSubmit,
+}) => {
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const { user } = useContext(AuthContext);
@@ -108,7 +109,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
   return (
     <form
       className="flex flex-col gap-2"
-      onSubmit={e => {
+      onSubmit={(e) => {
         e.preventDefault();
         if (!user) {
           alert("로그인 후 작성 가능합니다!");
@@ -124,7 +125,7 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
       <textarea
         className="flex-1 p-3 rounded bg-gray-800 border border-gray-700 text-white"
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
         rows={3}
         placeholder="자신의 의견을 남기세요."
       />
@@ -136,14 +137,23 @@ const CommentInput: React.FC<{ onSubmit: (content: string, file?: File) => void 
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={e => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
-        <button className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" type="submit">
+        <button
+          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          type="submit"
+        >
           포스트
         </button>
       </div>
-      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-24 h-24 object-cover rounded" />}
+      {file && (
+        <img
+          src={URL.createObjectURL(file)}
+          alt="미리보기"
+          className="w-24 h-24 object-cover rounded"
+        />
+      )}
     </form>
   );
 };
@@ -155,10 +165,17 @@ const CommentMenu: React.FC<{
 }> = ({ onEdit, onDelete }) => (
   <div
     className="absolute left-0 top-7 w-24 bg-gray-900 border border-gray-700 rounded z-20"
-    onClick={e => e.stopPropagation()}
+    onClick={(e) => e.stopPropagation()}
   >
-    <button className="w-full px-3 py-2 text-left text-white hover:bg-gray-700" onClick={onEdit}>수정</button>
-    <button className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700" onClick={onDelete}>삭제</button>
+    <button className="w-full px-3 py-2 text-left text-white hover:bg-gray-700" onClick={onEdit}>
+      수정
+    </button>
+    <button
+      className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700"
+      onClick={onDelete}
+    >
+      삭제
+    </button>
   </div>
 );
 
@@ -180,17 +197,16 @@ const CommentItem: React.FC<{
     await axios.put(
       `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}`,
       { content },
-      { withCredentials: true }
+      { withCredentials: true },
     );
     setEditing(false);
     fetchComments();
   };
   // 댓글 삭제
   const handleDelete = async () => {
-    await axios.delete(
-      `${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}`,
-      { withCredentials: true }
-    );
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/comments/${comment.id}`, {
+      withCredentials: true,
+    });
     fetchComments();
   };
   // 좋아요
@@ -216,8 +232,8 @@ const CommentItem: React.FC<{
       formData,
       {
         withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" }
-      }
+        headers: { "Content-Type": "multipart/form-data" },
+      },
     );
     setShowReply(false);
     fetchComments();
@@ -232,7 +248,7 @@ const CommentItem: React.FC<{
           <div className="relative flex items-center ml-2">
             <button
               className="w-6 h-6 flex items-center justify-center hover:bg-gray-700 rounded-full"
-              onClick={e => {
+              onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
@@ -241,7 +257,10 @@ const CommentItem: React.FC<{
             </button>
             {showMenu && (
               <CommentMenu
-                onEdit={() => { setEditing(true); setShowMenu(false); }}
+                onEdit={() => {
+                  setEditing(true);
+                  setShowMenu(false);
+                }}
                 onDelete={() => {
                   if (window.confirm("정말 삭제하시겠습니까?")) {
                     handleDelete();
@@ -264,7 +283,7 @@ const CommentItem: React.FC<{
           {/* 답글 아이콘 */}
           <button
             className="flex items-center text-gray-500 hover:text-pink-400"
-            onClick={() => setShowReply(v => !v)}
+            onClick={() => setShowReply((v) => !v)}
             type="button"
             title="답글 달기"
           >
@@ -272,14 +291,16 @@ const CommentItem: React.FC<{
           </button>
         </div>
       </div>
-      
+
       {/* 첨부 이미지 표시 */}
       {comment.img_url && (
         <img
           src={getFullImgUrl(comment.img_url)}
           alt="첨부이미지"
           className="max-h-40 my-2 rounded"
-          onError={e => { e.currentTarget.style.display = "none"; }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
         />
       )}
 
@@ -292,12 +313,22 @@ const CommentItem: React.FC<{
           <textarea
             className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2"
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
             rows={2}
           />
           <div className="flex gap-2 mt-1">
-            <button className="px-2 py-1 bg-blue-700 rounded" onClick={handleEdit}>저장</button>
-            <button className="px-2 py-1 bg-gray-700 rounded" onClick={() => { setEditing(false); setContent(comment.content); }}>취소</button>
+            <button className="px-2 py-1 bg-blue-700 rounded" onClick={handleEdit}>
+              저장
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={() => {
+                setEditing(false);
+                setContent(comment.content);
+              }}
+            >
+              취소
+            </button>
           </div>
         </div>
       )}
@@ -305,19 +336,19 @@ const CommentItem: React.FC<{
       {comment.replies.length > 0 && (
         <button
           className="ml-8 mb-1 text-xs text-white-400 hover:underline"
-          onClick={() => setShowReplies(v => !v)}
+          onClick={() => setShowReplies((v) => !v)}
         >
-          {showReplies ? `▼ 대댓글 숨기기 (${comment.replies.length})` : `▶ 대댓글 보기 (${comment.replies.length})`}
+          {showReplies
+            ? `▼ 대댓글 숨기기 (${comment.replies.length})`
+            : `▶ 대댓글 보기 (${comment.replies.length})`}
         </button>
       )}
       {/* 대댓글 입력 */}
-      {showReply && (
-        <ReplyInput onSubmit={handleReply} onCancel={() => setShowReply(false)} />
-      )}
+      {showReply && <ReplyInput onSubmit={handleReply} onCancel={() => setShowReply(false)} />}
       {/* 대댓글 목록 */}
       {showReplies && comment.replies.length > 0 && (
         <div className="mt-1 space-y-2 ml-8">
-          {comment.replies.map(reply => (
+          {comment.replies.map((reply) => (
             <ReplyItem key={reply.id} reply={reply} fetchComments={fetchComments} />
           ))}
         </div>
@@ -344,7 +375,7 @@ const ReplyInput: React.FC<{
       <textarea
         className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
         rows={2}
         placeholder="대댓글을 입력하세요"
       />
@@ -355,13 +386,31 @@ const ReplyInput: React.FC<{
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={e => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
-        <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto" onClick={handleRegister} type="button">등록</button>
-        <button className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm" onClick={onCancel} type="button">취소</button>
+        <button
+          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 font-bold ml-auto"
+          onClick={handleRegister}
+          type="button"
+        >
+          등록
+        </button>
+        <button
+          className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
+          onClick={onCancel}
+          type="button"
+        >
+          취소
+        </button>
       </div>
-      {file && <img src={URL.createObjectURL(file)} alt="미리보기" className="w-20 h-20 object-cover rounded" />}
+      {file && (
+        <img
+          src={URL.createObjectURL(file)}
+          alt="미리보기"
+          className="w-20 h-20 object-cover rounded"
+        />
+      )}
     </div>
   );
 };
@@ -380,16 +429,15 @@ const ReplyItem: React.FC<{
     await axios.put(
       `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}`,
       { content },
-      { withCredentials: true }
+      { withCredentials: true },
     );
     setEditing(false);
     fetchComments();
   };
   const handleDelete = async () => {
-    await axios.delete(
-      `${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}`,
-      { withCredentials: true }
-    );
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/community/comments/${reply.id}`, {
+      withCredentials: true,
+    });
     fetchComments();
   };
   const handleLike = async () => {
@@ -412,7 +460,7 @@ const ReplyItem: React.FC<{
           <div className="relative flex items-center ml-2">
             <button
               className="w-6 h-6 flex items-center justify-center hover:bg-gray-700 rounded-full"
-              onClick={e => {
+              onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
@@ -421,7 +469,10 @@ const ReplyItem: React.FC<{
             </button>
             {showMenu && (
               <CommentMenu
-                onEdit={() => { setEditing(true); setShowMenu(false); }}
+                onEdit={() => {
+                  setEditing(true);
+                  setShowMenu(false);
+                }}
                 onDelete={() => {
                   if (window.confirm("정말 삭제하시겠습니까?")) {
                     handleDelete();
@@ -448,7 +499,9 @@ const ReplyItem: React.FC<{
           src={getFullImgUrl(reply.img_url)}
           alt="첨부이미지"
           className="max-h-32 my-2 rounded"
-          onError={e => { e.currentTarget.style.display = "none"; }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
         />
       )}
       {editing ? (
@@ -456,16 +509,28 @@ const ReplyItem: React.FC<{
           <textarea
             className="w-full bg-gray-900 text-white border border-gray-700 rounded p-2"
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
             rows={2}
           />
           <div className="flex gap-2 mt-1">
-            <button className="px-2 py-1 bg-blue-700 rounded" onClick={handleEdit}>저장</button>
-            <button className="px-2 py-1 bg-gray-700 rounded" onClick={() => { setEditing(false); setContent(reply.content); }}>취소</button>
+            <button className="px-2 py-1 bg-blue-700 rounded" onClick={handleEdit}>
+              저장
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={() => {
+                setEditing(false);
+                setContent(reply.content);
+              }}
+            >
+              취소
+            </button>
           </div>
         </div>
       ) : (
-        <div className="text-white whitespace-pre-wrap px-3 pb-2">{reply.content?.trim() ? reply.content : "(내용 없음)"}</div>
+        <div className="text-white whitespace-pre-wrap px-3 pb-2">
+          {reply.content?.trim() ? reply.content : "(내용 없음)"}
+        </div>
       )}
     </div>
   );

@@ -4,31 +4,37 @@ import SkeletonCard from "./SkeletonCard";
 
 const CommunitySkeleton: React.FC = () => (
   <section className="container mx-auto px-4 py-8">
-    {/* 상단 컨트롤 스켈레톤 */}
-    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-      {/* 정렬 버튼 스켈레톤 (2개) */}
-      <div className="flex items-center space-x-2">
+    {/* ─── 상단: 정렬·카테고리 + 검색 ─── */}
+    <nav className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 space-y-4 md:space-y-0">
+      {/* 정렬 & 카테고리 탭 스켈레톤 */}
+      <ul className="flex flex-wrap space-x-6 border-b border-gray-700 pb-2">
+        {/* 정렬 옵션(2개) */}
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="h-8 w-20 bg-gray-700 rounded-md animate-pulse" />
+          <li key={`sort-${i}`}>
+            <div className="h-8 w-8 bg-gray-700 rounded-full animate-pulse" />
+          </li>
         ))}
-      </div>
-
-      {/* 카테고리 버튼 스켈레톤 (4개) */}
-      <div className="flex items-center space-x-2">
+        {/* 카테고리 옵션(4개) */}
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-8 w-24 bg-gray-700 rounded-full animate-pulse" />
+          <li key={`cat-${i}`}>
+            <div className="h-8 w-20 bg-gray-700 rounded-full animate-pulse" />
+          </li>
         ))}
-      </div>
+      </ul>
 
-      {/* 글쓰기 버튼 스켈레톤 */}
-      <div className="h-8 w-24 bg-gray-700 rounded-full animate-pulse" />
+      {/* 검색창 스켈레톤 */}
+      <div className="w-full md:w-64">
+        <div className="h-10 bg-gray-700 rounded-full animate-pulse" />
+      </div>
+    </nav>
+
+    {/* 글쓰기 버튼 스켈레톤 */}
+    <div className="flex justify-end mb-6">
+      <div className="h-10 w-24 bg-gray-700 rounded-full animate-pulse" />
     </div>
 
     {/* 게시글 그리드 스켈레톤 */}
-    <div
-      id="posts-top"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: 12 }).map((_, i) => (
         <SkeletonCard key={i} />
       ))}

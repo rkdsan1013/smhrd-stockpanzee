@@ -27,6 +27,7 @@ const marketCategory = (m: string): NewsDetailType["news_category"] => {
   return "international";
 };
 
+// ProgressBar 컴포넌트
 const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   if (score == null || isNaN(score))
     return <span className="text-gray-400 text-sm">데이터 없음</span>;
@@ -47,6 +48,7 @@ const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   );
 };
 
+// JSON 파싱 유틸
 const parseList = (val?: string | string[]): string[] => {
   if (Array.isArray(val)) return val;
   if (!val) return [];
@@ -74,12 +76,11 @@ const NewsDetail: React.FC = () => {
   } | null>(null);
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
 
-  // 태그 → 우선 첫번째 자산을 pick
+  // pickAsset: 태그 혹은 심볼에서 우선 종목 선택
   const pickAsset = (symRaw: string) => {
     const up = symRaw.toUpperCase();
     const cands = assetDict[up] || [];
-    if (cands.length === 0) return null;
-    // 뉴스 카테고리 순서
+    if (!cands.length) return null;
     const order =
       news?.news_category === "crypto"
         ? ["crypto", "domestic", "international"]
@@ -93,26 +94,30 @@ const NewsDetail: React.FC = () => {
     return cands[0];
   };
 
+  // 1) 뉴스 상세 & 연관 뉴스 fetch: newsId 변경 시 한 번만
   useEffect(() => {
     setStatus("loading");
     fetchNewsDetail(newsId)
       .then((nd) => {
         setNews(nd);
-        const tags = parseList(nd.tags);
-        const firstSym = tags.length ? tags[0] : nd.assets_symbol || "";
-        const asset = pickAsset(firstSym);
-        setPrimaryAsset(asset);
-        if (asset) {
-          return fetchLatestNewsByAsset(asset.symbol, nd.id);
-        }
-        return Promise.resolve([]);
+        return nd.assets_symbol
+          ? fetchLatestNewsByAsset(nd.assets_symbol, nd.id)
+          : Promise.resolve([]);
       })
       .then((rel) => {
         setLatest(rel.slice(0, MAX_LATEST));
         setStatus("idle");
       })
       .catch(() => setStatus("error"));
-  }, [newsId, assetDict]);
+  }, [newsId]);
+
+  // 2) assetDict 또는 news 준비되면 primaryAsset 설정
+  useEffect(() => {
+    if (!news) return;
+    const tags = parseList(news.tags);
+    const firstSym = tags.length ? tags[0] : news.assets_symbol || "";
+    setPrimaryAsset(pickAsset(firstSym));
+  }, [assetDict, news]);
 
   if (!assetsReady || status === "loading") {
     return <NewsDetailSkeleton latestCount={MAX_LATEST} />;
@@ -125,7 +130,7 @@ const NewsDetail: React.FC = () => {
     );
   }
 
-  // 차트 심볼: primaryAsset 기반
+  // TradingView 차트 심볼
   const tvSymbol = primaryAsset
     ? primaryAsset.market.toUpperCase().includes("BINANCE")
       ? `BINANCE:${primaryAsset.symbol.toUpperCase()}USDT`
@@ -153,7 +158,6 @@ const NewsDetail: React.FC = () => {
     );
   };
 
-  // 사이드바 헤더 제목
   const headerTitle = primaryAsset ? primaryAsset.name : news.assets_symbol;
 
   return (
@@ -182,7 +186,6 @@ const NewsDetail: React.FC = () => {
                   </a>
                 </div>
               </div>
-              {/* Thumbnail */}
               <div className="w-full md:w-1/3 flex-shrink-0">
                 <img
                   src={news.thumbnail || DEFAULT_THUMB}
