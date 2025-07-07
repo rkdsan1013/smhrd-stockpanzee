@@ -125,6 +125,7 @@ const Home: React.FC = () => {
     [filtered, cutoff],
   );
 
+  // 항상 오늘 인기 뉴스만 표시
   const displayNews = useMemo(() => {
     const todayCutoff = new Date();
     todayCutoff.setDate(todayCutoff.getDate() - 1);
@@ -180,12 +181,7 @@ const Home: React.FC = () => {
   );
 
   /* ───────── 키워드 통계 ───────── */
-  type TagStat = {
-    total: number;
-    pos: number;
-    neg: number;
-    asset: Asset;
-  };
+  type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
   recent.forEach((item) => {
@@ -198,19 +194,13 @@ const Home: React.FC = () => {
       } catch {}
 
     const lvl = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
-
     tags.forEach((sym) => {
       const asset = primaryAssetOfSym[sym];
       if (!asset) return;
       if (marketCategory(asset.market) !== item.category) return;
 
       const key = asset.id;
-      const stat = tagStats[key] || {
-        total: 0,
-        pos: 0,
-        neg: 0,
-        asset,
-      };
+      const stat = tagStats[key] || { total: 0, pos: 0, neg: 0, asset };
       stat.total += 1;
       if (lvl >= 4) stat.pos += 1;
       else if (lvl <= 2) stat.neg += 1;
@@ -273,10 +263,9 @@ const Home: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* 좌측: 지금 인기 뉴스 & 뉴스 카드 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
-            <div>
-              <p className="text-lg text-white font-semibold mb-2">지금 인기 뉴스</p>
-              {hero && <NewsCard newsItem={hero} variant="hero" />}
-            </div>
+            <p className="text-lg text-white font-semibold mb-4">지금 인기 뉴스</p>
+            {hero && <NewsCard newsItem={hero} variant="hero" />}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {subNews.map((n) => (
                 <NewsCard key={n.id} newsItem={n} variant="compact" />
