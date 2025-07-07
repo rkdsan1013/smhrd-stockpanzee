@@ -1,3 +1,4 @@
+// /frontend/src/pages/Home.tsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { fetchNews } from "../services/newsService";
@@ -36,7 +37,6 @@ const levelLabels: Record<Level, string> = {
   4: "긍정",
   5: "매우 긍정",
 };
-/* 레벨별 가중치 (기본) */
 const LEVEL_WEIGHTS: Record<Level, number> = {
   1: 2,
   2: 1.5,
@@ -46,7 +46,6 @@ const LEVEL_WEIGHTS: Record<Level, number> = {
 };
 
 /* ───────── market → category ───────── */
-/** 주식 거래소 목록 외의 마켓은 전부 crypto 로 간주 */
 const marketCategory = (m: string): NewsItem["category"] => {
   const upper = m.toUpperCase();
   if (/KRX|KOSPI|KOSDAQ|KONEX/.test(upper)) return "domestic";
@@ -101,11 +100,39 @@ const Home: React.FC = () => {
         (cat === "crypto" && marketCategory(prev.market) !== "crypto") ||
         (cat === "domestic" && marketCategory(prev.market) === "international")
       ) {
-        best[a.symbol] = a; // crypto > domestic > international
+        best[a.symbol] = a;
       }
     });
     return best;
   }, [dictReady]);
+
+  /* ───────── 필터 & 정렬 준비 ───────── */
+  const filtered = useMemo(
+    () => (selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab)),
+    [newsItems, selectedTab],
+  );
+
+  const periodObj = useMemo(() => PERIODS.find((p) => p.key === selectedPeriod)!, [selectedPeriod]);
+
+  const cutoff = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - periodObj.days);
+    return d;
+  }, [periodObj]);
+
+  const recent = useMemo(
+    () => filtered.filter((n) => new Date(n.published_at) >= cutoff),
+    [filtered, cutoff],
+  );
+
+  // 항상 오늘 인기 뉴스만 표시
+  const displayNews = useMemo(() => {
+    const todayCutoff = new Date();
+    todayCutoff.setDate(todayCutoff.getDate() - 1);
+    return filtered
+      .filter((n) => new Date(n.published_at) >= todayCutoff)
+      .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+  }, [filtered]);
 
   /* ---------- 로딩/오류 ---------- */
   if (loading || !dictReady) return <HomeSkeleton />;
@@ -116,25 +143,15 @@ const Home: React.FC = () => {
       </div>
     );
 
-  /* ---------- 뉴스 필터 ---------- */
-  const filtered =
-    selectedTab === "all" ? newsItems : newsItems.filter((n) => n.category === selectedTab);
+  /* ───────── 메인·서브 뉴스 분할 ───────── */
+  const hero = displayNews[0];
+  const subNews = displayNews.slice(1, 5);
 
-  const hero = filtered[0];
-  const subNews = filtered.slice(1, 5);
-
-  /* 기간 필터 */
-  const periodObj = PERIODS.find((p) => p.key === selectedPeriod)!;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - periodObj.days);
-  const recent = filtered.filter((n) => new Date(n.published_at) >= cutoff);
-
-  /* ---------- 감정 통계 ---------- */
+  /* ───────── 감정 통계 ───────── */
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, l) => ((acc[l] = 0), acc),
     {} as Record<Level, number>,
   );
-
   let sumWeighted = 0;
   let sumWeights = 0;
   const weightedEntries: Array<{ level: Level; weight: number }> = [];
@@ -143,7 +160,6 @@ const Home: React.FC = () => {
     const lvl = Math.min(5, Math.max(1, Number(n.sentiment) || 3)) as Level;
     dist[lvl] += 1;
 
-    /* 시간 가중치 */
     const daysAgo = (Date.now() - new Date(n.published_at).getTime()) / (1000 * 60 * 60 * 24);
     const timeWeight = Math.max(0.1, (periodObj.days - daysAgo) / periodObj.days);
     const weight = LEVEL_WEIGHTS[lvl] * timeWeight;
@@ -159,13 +175,12 @@ const Home: React.FC = () => {
       0,
     ) / (sumWeights || 1),
   );
-
   const distPct: Record<Level, number> = LEVELS.reduce(
     (acc, l) => ((acc[l] = (dist[l] / (recent.length || 1)) * 100), acc),
     {} as Record<Level, number>,
   );
 
-  /* ---------- 키워드 통계 ---------- */
+  /* ───────── 키워드 통계 ───────── */
   type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
@@ -179,19 +194,13 @@ const Home: React.FC = () => {
       } catch {}
 
     const lvl = Math.min(5, Math.max(1, Number(item.sentiment) || 3)) as Level;
-
     tags.forEach((sym) => {
       const asset = primaryAssetOfSym[sym];
       if (!asset) return;
-      if (marketCategory(asset.market) !== item.category) return; // 카테고리 불일치
+      if (marketCategory(asset.market) !== item.category) return;
 
       const key = asset.id;
-      const stat = tagStats[key] || {
-        total: 0,
-        pos: 0,
-        neg: 0,
-        asset,
-      };
+      const stat = tagStats[key] || { total: 0, pos: 0, neg: 0, asset };
       stat.total += 1;
       if (lvl >= 4) stat.pos += 1;
       else if (lvl <= 2) stat.neg += 1;
@@ -203,7 +212,7 @@ const Home: React.FC = () => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  /* ---------- 시각화 라벨 ---------- */
+  /* ───────── 시각화 라벨 ───────── */
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -214,7 +223,6 @@ const Home: React.FC = () => {
           : avgSentiment >= 2
             ? "부정"
             : "매우 부정";
-
   const sentimentEmoji =
     avgSentiment >= 4
       ? "😄"
@@ -225,13 +233,10 @@ const Home: React.FC = () => {
           : avgSentiment >= 2
             ? "😕"
             : "😞";
-
   const sentimentColorClass =
     avgSentiment >= 3.5 ? "text-green-300" : avgSentiment <= 2.5 ? "text-red-300" : "text-gray-300";
-
   const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
 
-  /* ───────── Render ───────── */
   return (
     <div className="bg-gray-900 min-h-screen py-8 px-4">
       <div className="max-w-screen-xl mx-auto space-y-8">
@@ -256,9 +261,11 @@ const Home: React.FC = () => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* 메인 & 서브 뉴스 */}
+          {/* 좌측: 지금 인기 뉴스 & 뉴스 카드 */}
           <div className="lg:col-span-2 flex flex-col space-y-8">
+            <p className="text-lg text-white font-semibold mb-4">지금 인기 뉴스</p>
             {hero && <NewsCard newsItem={hero} variant="hero" />}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {subNews.map((n) => (
                 <NewsCard key={n.id} newsItem={n} variant="compact" />
@@ -269,7 +276,7 @@ const Home: React.FC = () => {
 
           {/* 우측 분석 영역 */}
           <aside className="space-y-6">
-            {/* 기간 선택 */}
+            {/* 기간 선택 (위젯 전용) */}
             <nav className="overflow-x-auto pb-2">
               <ul className="flex space-x-3">
                 {PERIODS.map((p) => (
