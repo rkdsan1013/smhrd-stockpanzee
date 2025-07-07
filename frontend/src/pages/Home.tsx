@@ -58,7 +58,7 @@ const marketCategory = (m: string): NewsItem["category"] => {
 const Home: React.FC = () => {
   const { user } = useContext(AuthContext);
 
-  /* 상태 */
+  // 상태
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [selectedTab, setSelectedTab] = useState<TabKey>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("today");
@@ -66,7 +66,7 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* 즐겨찾기 & 자산 */
+  // 즐겨찾기 & 자산
   const [favorites, setFavorites] = useState<number[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const dictRef = useRef<Record<string, Asset>>(getAssetDictSync());
@@ -185,7 +185,7 @@ const Home: React.FC = () => {
   const hero = displayNews[0];
   const subNews = displayNews.slice(1, 5);
 
-  /* 감정 통계 */
+  // 감정 통계
   const dist = LEVELS.reduce<Record<Level, number>>(
     (acc, l) => ((acc[l] = 0), acc),
     {} as Record<Level, number>,
@@ -215,7 +215,7 @@ const Home: React.FC = () => {
     {} as Record<Level, number>,
   );
 
-  /* 키워드 통계 */
+  // 키워드 통계
   type TagStat = { total: number; pos: number; neg: number; asset: Asset };
   const tagStats: Record<number, TagStat> = {};
 
@@ -247,7 +247,7 @@ const Home: React.FC = () => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  /* UI 라벨 & 핸들러 */
+  // UI 라벨 & 핸들러
   const sentimentCategory =
     avgSentiment >= 4
       ? "매우 긍정"
@@ -280,6 +280,10 @@ const Home: React.FC = () => {
           : avgSentiment >= 2
             ? "bg-red-400"
             : "bg-red-600";
+
+  // avgLabel: "3.2/5"
+  const avgLabel = `${avgSentiment.toFixed(1)}/5`;
+
   const selectedTabLabel = TABS.find((t) => t.key === selectedTab)?.label || "";
 
   const handleTabClick = (key: TabKey) => {
@@ -398,7 +402,7 @@ const Home: React.FC = () => {
                 })}
               </div>
 
-              {/* 평균 감정 + 막대 + 표준편차 */}
+              {/* 평균 감정 + 슬래시 표시 + 표준편차 */}
               <div className="mt-4 text-white">
                 <span className="text-sm">평균 감정</span>
                 <div className="flex items-center space-x-2 mt-1">
@@ -406,16 +410,14 @@ const Home: React.FC = () => {
                   <span className={`text-lg font-semibold ${sentimentColorClass}`}>
                     {sentimentCategory}
                   </span>
-                  <span className="text-sm text-gray-400">({avgSentiment.toFixed(1)})</span>
+                  <span className="text-sm text-gray-400">({avgLabel})</span>
                 </div>
-
                 <div className="w-full bg-gray-700 h-2 rounded-full mt-2 overflow-hidden">
                   <div
                     className={`${sentimentBarColor} h-full`}
                     style={{ width: `${(avgSentiment / 5) * 100}%` }}
                   />
                 </div>
-
                 <p className="text-xs text-gray-400 mt-1">표준편차: {stdDev.toFixed(2)}</p>
               </div>
             </div>
@@ -427,7 +429,7 @@ const Home: React.FC = () => {
               </h3>
               {topTags.length ? (
                 <ul className="space-y-4">
-                  {topTags.map(({ asset, total, pos, neg }: TagStat, idx: number) => {
+                  {topTags.map(({ asset, total, pos, neg }, idx) => {
                     const posPct = (pos / total) * 100;
                     const negPct = (neg / total) * 100;
                     const neuPct = 100 - posPct - negPct;
