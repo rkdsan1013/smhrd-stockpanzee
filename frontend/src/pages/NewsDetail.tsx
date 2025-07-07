@@ -1,36 +1,42 @@
 // /frontend/src/pages/NewsDetail.tsx
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   fetchNewsDetail,
   fetchLatestNewsByAsset,
-  type NewsDetail,
+  type NewsDetail as NewsDetailType,
   type NewsItem,
 } from "../services/newsService";
-import { fetchAssets, type Asset } from "../services/assetService";
+import { AssetContext } from "../providers/AssetProvider";
 import { TradingViewMiniChart } from "../components/Chart/TradingViewMiniChart";
 import { getTradingViewSymbol } from "../services/tradingViewService";
 import NewsCard from "../components/NewsCard";
 import NewsDetailSkeleton from "../components/skeletons/NewsDetailSkeleton";
 
-/* ───────── 상수 ───────── */
 const MAX_LATEST = 5;
 const DEFAULT_THUMB = "/placeholder.webp";
 const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"] as const;
 const stepColors = ["bg-red-600", "bg-orange-500", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
 
-/* ProgressBar */
+// 시장 구분 유틸
+const marketCategory = (m: string): NewsDetailType["news_category"] => {
+  const mm = m.toUpperCase();
+  if (mm === "KOSPI" || mm === "KOSDAQ") return "domestic";
+  if (mm === "NASDAQ" || mm === "NYSE") return "international";
+  if (mm.includes("BINANCE")) return "crypto";
+  return "international";
+};
+
 const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
-  if (score == null || isNaN(score)) {
+  if (score == null || isNaN(score))
     return <span className="text-gray-400 text-sm">데이터 없음</span>;
-  }
   const valid = Math.min(5, Math.max(1, Math.round(score)));
-  const fillColor = stepColors[valid - 1];
+  const fill = stepColors[valid - 1];
   return (
     <div className="flex flex-col space-y-1">
       <div className="flex h-2 w-32 space-x-[2px]">
         {Array.from({ length: 5 }).map((_, i) => {
-          const bg = i < valid ? fillColor : "bg-gray-700";
+          const bg = i < valid ? fill : "bg-gray-700";
           const left = i === 0 ? "rounded-l-full" : "";
           const right = i === 4 ? "rounded-r-full" : "";
           return <div key={i} className={`flex-1 ${bg} ${left} ${right}`} />;
@@ -41,7 +47,6 @@ const ProgressBar: React.FC<{ score?: number }> = ({ score }) => {
   );
 };
 
-/* 리스트 파싱 */
 const parseList = (val?: string | string[]): string[] => {
   if (Array.isArray(val)) return val;
   if (!val) return [];
@@ -53,43 +58,24 @@ const parseList = (val?: string | string[]): string[] => {
   }
 };
 
-/* 거래소 → 카테고리 */
-const marketCategory = (m: string): NewsDetail["news_category"] =>
-  /KRX|KOSPI|KOSDAQ|KONEX/i.test(m) ? "domestic" : /CRYPTO/i.test(m) ? "crypto" : "international";
-
 const NewsDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const newsId = Number(id);
 
-  const [news, setNews] = useState<NewsDetail | null>(null);
+  const { dict: assetDict, ready: assetsReady } = useContext(AssetContext);
+
+  const [news, setNews] = useState<NewsDetailType | null>(null);
   const [latest, setLatest] = useState<NewsItem[]>([]);
-  const [assetsBySymbol, setAssetsBySymbol] = useState<Record<string, Asset[]>>({});
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
 
-  /* 자산 맵 로드 */
-  useEffect(() => {
-    fetchAssets()
-      .then((list) => {
-        const map: Record<string, Asset[]> = {};
-        list.forEach((a) => {
-          const sym = a.symbol.toUpperCase();
-          (map[sym] ||= []).push(a);
-        });
-        setAssetsBySymbol(map);
-      })
-      .catch(() => {});
-  }, []);
-
-  /* 상세 & 연관 뉴스 */
   useEffect(() => {
     setStatus("loading");
     fetchNewsDetail(newsId)
       .then((nd) => {
         setNews(nd);
-        if (nd.assets_symbol) {
-          return fetchLatestNewsByAsset(nd.assets_symbol, nd.id);
-        }
-        return [] as NewsItem[];
+        return nd.assets_symbol
+          ? fetchLatestNewsByAsset(nd.assets_symbol, nd.id)
+          : Promise.resolve([] as NewsItem[]);
       })
       .then((rel) => {
         setLatest(rel.slice(0, MAX_LATEST));
@@ -98,7 +84,7 @@ const NewsDetail: React.FC = () => {
       .catch(() => setStatus("error"));
   }, [newsId]);
 
-  if (status === "loading") {
+  if (!assetsReady || status === "loading") {
     return <NewsDetailSkeleton latestCount={MAX_LATEST} />;
   }
   if (status === "error" || !news) {
@@ -109,43 +95,61 @@ const NewsDetail: React.FC = () => {
     );
   }
 
-  /* 차트 심볼 */
+  // TradingView 차트 심볼
   const tvSymbol = news.assets_symbol
     ? news.news_category === "crypto"
       ? `BINANCE:${news.assets_symbol.toUpperCase()}USDT`
       : getTradingViewSymbol(news.assets_symbol, news.assets_market!)
     : "";
 
-  /* 긍정/부정/태그 */
   const positives = parseList(news.news_positive);
   const negatives = parseList(news.news_negative);
   const tags = parseList(news.tags);
 
-  /* 태그 렌더러 (뉴스 카드와 동일한 hover 효과) */
-  const baseTagClasses =
+  const tagClasses =
     "inline-block px-3 py-1 bg-blue-600 text-sm font-semibold rounded-full transition hover:bg-blue-500";
-  const renderTag = (symRaw: string) => {
-    const sym = symRaw.toUpperCase();
-    const cands = assetsBySymbol[sym];
-    if (!cands?.length) {
-      return (
-        <span key={symRaw} className={baseTagClasses}>
-          {symRaw}
-        </span>
-      );
+
+  // 태그 렌더로 asset 선택 로직
+  const pickAsset = (symbol: string) => {
+    const up = symbol.toUpperCase();
+    const cands = assetDict[up] || [];
+    // 우선순위 리스트
+    const order =
+      news.news_category === "crypto"
+        ? ["crypto", "domestic", "international"]
+        : news.news_category === "domestic"
+          ? ["domestic", "international", "crypto"]
+          : ["international", "domestic", "crypto"];
+    for (const cat of order) {
+      const a = cands.find((x) => marketCategory(x.market) === cat);
+      if (a) return a;
     }
-    const primary = cands.find((a) => marketCategory(a.market) === news.news_category) || cands[0];
-    return (
-      <Link key={symRaw} to={`/asset/${primary.id}`} className={baseTagClasses}>
-        {primary.name}
+    return cands[0];
+  };
+
+  // 사이드바 헤더용 종목명 선택
+  const primaryAsset = news.assets_symbol ? pickAsset(news.assets_symbol) : null;
+  const headerTitle = primaryAsset ? primaryAsset.name : news.assets_symbol || "관련";
+
+  // 태그 렌더
+  const renderTag = (symRaw: string) => {
+    const a = pickAsset(symRaw);
+    const label = a ? a.name : symRaw;
+    return a ? (
+      <Link key={symRaw} to={`/asset/${a.id}`} className={tagClasses}>
+        {label}
       </Link>
+    ) : (
+      <span key={symRaw} className={tagClasses}>
+        {label}
+      </span>
     );
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-8">
       <div className="max-w-screen-xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Main */}
+        {/* Main Column */}
         <div className="md:col-span-2 space-y-6">
           {/* Header */}
           <div className="bg-gray-800 rounded-2xl p-6 shadow-lg">
@@ -168,7 +172,6 @@ const NewsDetail: React.FC = () => {
                   </a>
                 </div>
               </div>
-              {/* Thumbnail */}
               <div className="w-full md:w-1/3 flex-shrink-0">
                 <img
                   src={news.thumbnail || DEFAULT_THUMB}
@@ -183,7 +186,7 @@ const NewsDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* AI 요약 & 평가 (커뮤니티 반응 제거) */}
+          {/* AI 요약 & 평가 */}
           <div className="bg-gray-800 rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">AI 요약 & 평가</h2>
@@ -225,9 +228,7 @@ const NewsDetail: React.FC = () => {
             <TradingViewMiniChart symbol={tvSymbol} />
           </div>
           <div>
-            <h4 className="text-white font-bold mb-4">
-              {news.assets_name ?? news.assets_symbol ?? "관련"} 최신 뉴스
-            </h4>
+            <h4 className="text-white font-bold mb-4">{headerTitle} 최신 뉴스</h4>
             <div className="flex flex-col gap-4">
               {latest.length ? (
                 latest.map((n) => <NewsCard key={n.id} newsItem={n} variant="compact" />)
