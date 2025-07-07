@@ -154,7 +154,7 @@ const CommunityDetail: React.FC = () => {
     ? post.img_url.startsWith("http")
       ? post.img_url
       : `${apiBase}/${imgPath}`
-    : "/placeholder.webp";
+    : "/panzee.webp";
 
   return (
     <div className="mx-auto px-4 py-8 max-w-4xl">
