@@ -167,10 +167,12 @@ const Home: React.FC = () => {
   );
 
   const displayNews = useMemo(() => {
-    const todayCutoff = new Date();
-    todayCutoff.setDate(todayCutoff.getDate() - 1);
+    // 오늘 0시를 기준으로 필터링
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     return filteredForMain
-      .filter((n) => new Date(n.published_at) >= todayCutoff)
+      .filter((n) => new Date(n.published_at) >= todayStart)
       .sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
   }, [filteredForMain]);
 
