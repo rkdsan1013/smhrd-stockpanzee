@@ -10,22 +10,22 @@ const Footer: React.FC = () => {
           <ul>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                About Us
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Careers
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Press
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Blog
+                STOCKPANZEE
               </a>
             </li>
           </ul>
@@ -35,22 +35,22 @@ const Footer: React.FC = () => {
           <ul>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Pricing
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Features
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Integrations
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Demo
+                STOCKPANZEE
               </a>
             </li>
           </ul>
@@ -60,22 +60,22 @@ const Footer: React.FC = () => {
           <ul>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Help Center
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Terms of Service
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Privacy Policy
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Status
+                STOCKPANZEE
               </a>
             </li>
           </ul>
@@ -85,22 +85,22 @@ const Footer: React.FC = () => {
           <ul>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Contact
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Facebook
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                Twitter
+                STOCKPANZEE
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="hover:text-white">
-                LinkedIn
+                STOCKPANZEE
               </a>
             </li>
           </ul>
