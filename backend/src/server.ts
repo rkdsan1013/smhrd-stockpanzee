@@ -91,19 +91,19 @@ async function start() {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 
-    // KRX 실전 데이터 루프
+    // // KRX 실전 데이터 루프
     // startKrXRealLoop(io).catch(console.error);
 
-    // 모의투자 상위 25개 종목 emit
+    // // 모의투자 상위 25개 종목 emit
     // emitMockTop25(io).catch(console.error);
 
-    // Polygon 실시간 주가 스트림 (옵션)
-    // startPolygonPriceStream(io).catch(console.error);
+    // // Polygon 실시간 주가 스트림 (옵션)
+    // // startPolygonPriceStream(io).catch(console.error);
 
-    // 암호화폐 DB 업데이트 주기 (옵션)
+    // // 암호화폐 DB 업데이트 주기 (옵션)
     // setInterval(updateCryptoAssetInfoPeriodically, 5000);
 
-    // 뉴스 스케줄러 시작
+    // // 뉴스 스케줄러 시작
     // startNewsScheduler();
   });
 }
