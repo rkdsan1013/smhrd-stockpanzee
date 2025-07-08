@@ -39,6 +39,10 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// 정적 파일 제공
+const uploadsPath = path.resolve(__dirname, "../uploads");
+app.use("/api/uploads", express.static(uploadsPath));
+
 // API 라우터
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
@@ -49,10 +53,6 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/favorites", favoriteRouter);
 app.use("/api", notificationRoutes);
-
-// 정적 파일 제공
-const uploadsPath = path.resolve(__dirname, "../uploads");
-app.use("/api/uploads", express.static(uploadsPath));
 
 // 기본 엔드포인트
 app.get("/", (_req: Request, res: Response) => {
