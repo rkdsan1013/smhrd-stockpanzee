@@ -27,7 +27,7 @@ const marketToCategory = (m: string): Category => {
 
 const CATEGORY_ORDER: Category[] = ["국내", "해외", "암호화폐"];
 const LABEL: Record<Category, string> = {
-  국내: "한국",
+  국내: "국내",
   해외: "해외",
   암호화폐: "암호화폐",
   기타: "기타",
@@ -74,14 +74,7 @@ const FavoriteAssetsWidget: React.FC = () => {
   };
 
   function getDisplayList(): { cat: Category; items: Asset[] }[] {
-    if (!assets.length) return [];
-    // if not logged in, show none
-    if (!user) return [];
-
-    // logged-in but no favorites
-    if (user && !favorites.length) return [];
-
-    // logged-in with favorites
+    if (!assets.length || !user || (user && !favorites.length)) return [];
     const favAssets = assets
       .filter((a) => favorites.includes(a.id))
       .sort((a, b) => b.marketCap - a.marketCap);
