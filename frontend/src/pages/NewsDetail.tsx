@@ -1,5 +1,5 @@
 // /frontend/src/pages/NewsDetail.tsx
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   fetchNewsDetail,
@@ -64,7 +64,19 @@ const NewsDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const newsId = Number(id);
 
-  const { dict: assetDict, ready: assetsReady } = useContext(AssetContext);
+  // 변경: AssetContext에서 staticAssets, ready를 가져옴
+  const { staticAssets, ready: assetsReady } = useContext(AssetContext);
+
+  // symbol → Asset[] 맵 생성
+  const assetDict = useMemo(() => {
+    const dict: Record<string, typeof staticAssets> = {};
+    staticAssets.forEach((a) => {
+      const key = a.symbol.toUpperCase();
+      if (!dict[key]) dict[key] = [];
+      dict[key].push(a);
+    });
+    return dict;
+  }, [staticAssets]);
 
   const [news, setNews] = useState<NewsDetailType | null>(null);
   const [latest, setLatest] = useState<NewsItem[]>([]);
@@ -94,7 +106,7 @@ const NewsDetail: React.FC = () => {
     return cands[0];
   };
 
-  // 1) 뉴스 상세 & 연관 뉴스 fetch: newsId 변경 시 한 번만
+  // 1) 뉴스 상세 & 연관 뉴스 fetch
   useEffect(() => {
     setStatus("loading");
     fetchNewsDetail(newsId)
@@ -111,7 +123,7 @@ const NewsDetail: React.FC = () => {
       .catch(() => setStatus("error"));
   }, [newsId]);
 
-  // 2) assetDict 또는 news 준비되면 primaryAsset 설정
+  // 2) primaryAsset 설정
   useEffect(() => {
     if (!news) return;
     const tags = parseList(news.tags);

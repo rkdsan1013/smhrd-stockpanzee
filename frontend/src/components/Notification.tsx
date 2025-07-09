@@ -1,59 +1,75 @@
 // /frontend/src/components/Notification.tsx
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import { Link } from "react-router-dom";
-import { fetchAssets } from "../services/assetService";
+import { AssetContext } from "../providers/AssetProvider";
 import type { Asset } from "../services/assetService";
+import { fetchAssetPrices, type AssetPrice } from "../services/assetService";
 import { fetchFavorites } from "../services/favoriteService";
 import { fetchDismissedNotifications, dismissNotification } from "../services/notificationService";
 import Icons from "./Icons";
 
 interface NotifiedAsset extends Asset {
+  priceChange: number;
   thresholdCrossed: number;
 }
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  // allow nullable HTMLButtonElement
   anchorRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
+  const { staticAssets, ready: assetsReady } = useContext(AssetContext);
   const [notifiedAssets, setNotifiedAssets] = useState<NotifiedAsset[]>([]);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // load data when opened
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !assetsReady) return;
     setLoading(true);
+
     Promise.all([fetchFavorites(), fetchDismissedNotifications()])
       .then(([favIds, dismissedList]) => {
         const favSet = new Set<number>(favIds);
         const dismissedSet = new Set<string>(
           dismissedList.map((d) => `${d.assetId}_${d.threshold}`),
         );
-        return fetchAssets()
-          .then((assets) => assets.filter((a) => favSet.has(a.id)))
-          .then((favAssets) =>
-            favAssets
-              .map((a) => ({
+
+        // pull only the favorites' metadata
+        const favAssets = staticAssets.filter((a) => favSet.has(a.id));
+
+        return fetchAssetPrices().then((prices) => {
+          const priceMap = prices.reduce<Record<number, AssetPrice>>((acc, p) => {
+            acc[p.id] = p;
+            return acc;
+          }, {});
+
+          return favAssets
+            .map((a) => {
+              const priceInfo = priceMap[a.id];
+              const change = priceInfo?.priceChange ?? 0;
+              const threshold = Math.floor(Math.abs(change) / 5) * 5;
+              return {
                 ...a,
-                thresholdCrossed: Math.floor(Math.abs(a.priceChange) / 5) * 5,
-              }))
-              .filter(
-                (a) => a.thresholdCrossed > 0 && !dismissedSet.has(`${a.id}_${a.thresholdCrossed}`),
-              ),
-          );
+                priceChange: change,
+                thresholdCrossed: threshold,
+              };
+            })
+            .filter(
+              (a) => a.thresholdCrossed > 0 && !dismissedSet.has(`${a.id}_${a.thresholdCrossed}`),
+            );
+        });
       })
-      .then((list) => setNotifiedAssets(list))
+      .then(setNotifiedAssets)
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, assetsReady, staticAssets]);
 
   // close when clicking outside panel or anchor
   useEffect(() => {
     if (!isOpen) return;
-    function handleClickOutside(e: MouseEvent) {
+    const handleClickOutside = (e: MouseEvent) => {
       if (
         panelRef.current &&
         anchorRef.current &&
@@ -62,7 +78,7 @@ const Notification: React.FC<Props> = ({ isOpen, onClose, anchorRef }) => {
       ) {
         onClose();
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose, anchorRef]);

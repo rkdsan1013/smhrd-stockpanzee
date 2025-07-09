@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Icons from "../components/Icons";
 import MarketSkeleton from "../components/skeletons/MarketSkeleton";
 import MarketSidebar from "../components/MarketSidebar";
-import { fetchAssets } from "../services/assetService";
+import { AssetContext } from "../providers/AssetProvider";
+import { fetchAssetPrices, type AssetPrice } from "../services/assetService";
 import { fuzzySearch } from "../utils/search";
 import { formatCurrency, formatPercentage } from "../utils/formats";
 import { AuthContext } from "../providers/AuthProvider";
@@ -26,71 +27,89 @@ type SortKey = "name" | "currentPrice" | "priceChange" | "marketCap";
 const BIG_CHANGE = 5;
 const ITEMS_PER_PAGE = 12;
 
+const getCategory = (m: string): StockItem["category"] => {
+  if (["KOSPI", "KOSDAQ"].includes(m)) return "국내";
+  if (["NASDAQ", "NYSE"].includes(m)) return "해외";
+  if (m === "Binance") return "암호화폐";
+  return "기타";
+};
+
 const Market: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const { staticAssets, ready } = useContext(AssetContext);
+
   const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<StockItem[]>([]);
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [highlightMap] = useState(() => new Map<number, "up" | "down">());
+  const prevPrices = useRef(new Map<number, number>());
 
   const [tab, setTab] = useState<StockItem["category"] | "전체">("전체");
   const [viewMode, setViewMode] = useState<"전체" | "즐겨찾기">("전체");
   const [search, setSearch] = useState("");
-  const [data, setData] = useState<StockItem[]>([]);
-  const [favorites, setFavorites] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     dir: "asc" | "desc";
   }>({ key: "marketCap", dir: "desc" });
   const [page, setPage] = useState(1);
-
-  const prevPrices = useRef<Map<number, number>>(new Map());
-  const highlight = useRef<Map<number, "up" | "down">>(new Map());
-  const [, rerender] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // 1) load & highlight
+  // 1) 초기 price load & 반복 업데이트
   useEffect(() => {
-    const load = async () => {
-      try {
-        const assets = await fetchAssets();
-        const list = assets.map<StockItem>((a) => ({
-          id: a.id,
-          name: a.name,
-          symbol: a.symbol,
-          currentPrice: a.currentPrice,
-          priceChange: a.priceChange,
-          marketCap: a.marketCap,
-          category: ["KOSPI", "KOSDAQ"].includes(a.market)
-            ? "국내"
-            : ["NASDAQ", "NYSE"].includes(a.market)
-              ? "해외"
-              : a.market === "Binance"
-                ? "암호화폐"
-                : "기타",
-        }));
+    if (!ready) return;
+    let alive = true;
 
-        list.forEach((item) => {
-          const prev = prevPrices.current.get(item.id);
-          if (prev !== undefined && prev !== item.currentPrice) {
-            highlight.current.set(item.id, item.currentPrice > prev ? "up" : "down");
+    const loadPrices = async () => {
+      try {
+        const prices = await fetchAssetPrices();
+        const priceMap = prices.reduce<Record<number, AssetPrice>>((acc, p) => {
+          acc[p.id] = p;
+          return acc;
+        }, {});
+
+        const list: StockItem[] = staticAssets.map((a) => {
+          const prev = prevPrices.current.get(a.id);
+          const cur = priceMap[a.id]?.currentPrice ?? prev ?? 0;
+          // highlight 계산
+          if (prev !== undefined && cur !== prev) {
+            highlightMap.set(a.id, cur > prev ? "up" : "down");
             setTimeout(() => {
-              highlight.current.delete(item.id);
-              rerender((v) => v + 1);
+              highlightMap.delete(a.id);
+              // force rerender
+              setData((d) => [...d]);
             }, 500);
           }
-          prevPrices.current.set(item.id, item.currentPrice);
+          prevPrices.current.set(a.id, cur);
+
+          return {
+            id: a.id,
+            name: a.name,
+            symbol: a.symbol,
+            currentPrice: cur,
+            priceChange: priceMap[a.id]?.priceChange ?? 0,
+            marketCap: a.marketCap,
+            category: getCategory(a.market),
+          };
         });
 
+        if (!alive) return;
         setData(list);
-      } catch {}
-      setLoading(false);
+        if (loading) setLoading(false);
+      } catch {
+        // ignore
+      }
     };
 
-    load();
-    const iv = setInterval(load, 5000);
-    return () => clearInterval(iv);
-  }, []);
+    loadPrices();
+    const iv = setInterval(loadPrices, 5000);
+    return () => {
+      alive = false;
+      clearInterval(iv);
+    };
+  }, [ready, staticAssets]);
 
-  // 2) socket updates
+  // 2) socket: 국내 실시간 업데이트
   useEffect(() => {
     const handler = (upd: { symbol: string; price: number; rate: number; marketCap: number }) => {
       setData((prev) =>
@@ -98,12 +117,13 @@ const Market: React.FC = () => {
           if (s.symbol === upd.symbol && s.category === "국내") {
             const prevPrice = s.currentPrice;
             if (prevPrice !== upd.price) {
-              highlight.current.set(s.id, upd.price > prevPrice ? "up" : "down");
+              highlightMap.set(s.id, upd.price > prevPrice ? "up" : "down");
               setTimeout(() => {
-                highlight.current.delete(s.id);
-                rerender((v) => v + 1);
+                highlightMap.delete(s.id);
+                setData((d) => [...d]);
               }, 500);
             }
+            prevPrices.current.set(s.id, upd.price);
             return {
               ...s,
               currentPrice: upd.price,
@@ -115,10 +135,11 @@ const Market: React.FC = () => {
         }),
       );
     };
-
     socket.on("stockPrice", handler);
-    return () => void socket.off("stockPrice", handler);
-  }, []);
+    return () => {
+      socket.off("stockPrice", handler);
+    };
+  }, [highlightMap]);
 
   // 3) favorites load
   useEffect(() => {
@@ -131,18 +152,17 @@ const Market: React.FC = () => {
     }
   }, [user]);
 
-  // 4) reset pagination
+  // 4) reset pagination on filters change
   useEffect(() => {
     setPage(1);
   }, [tab, viewMode, sortConfig, search]);
 
-  // filtered by tab
+  // 필터 & 정렬 & 검색 & 페이징
   const byTab = useMemo(
     () => (tab === "전체" ? data : data.filter((s) => s.category === tab)),
     [data, tab],
   );
 
-  // prioritize or filter favorites
   const byView = useMemo(() => {
     if (viewMode === "즐겨찾기") {
       return byTab.filter((s) => favorites.includes(s.id));
@@ -152,7 +172,6 @@ const Market: React.FC = () => {
     );
   }, [byTab, viewMode, favorites]);
 
-  // sorting vs search
   const sorted = useMemo(() => {
     if (search.trim()) return byView;
     const mult = sortConfig.dir === "asc" ? 1 : -1;
@@ -163,7 +182,6 @@ const Market: React.FC = () => {
     );
   }, [byView, sortConfig, search]);
 
-  // fuzzy-search if needed
   const finalList = useMemo(
     () =>
       search.trim()
@@ -182,7 +200,11 @@ const Market: React.FC = () => {
     const el = loadMoreRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => e.isIntersecting && visible.length < finalList.length && setPage((p) => p + 1),
+      ([e]) => {
+        if (e.isIntersecting && visible.length < finalList.length) {
+          setPage((p) => p + 1);
+        }
+      },
       { threshold: 1 },
     );
     obs.observe(el);
@@ -217,7 +239,7 @@ const Market: React.FC = () => {
     );
   };
 
-  // toggle 전체/즐겨찾기 view
+  // toggle view mode
   const toggleView = () => setViewMode((m) => (m === "전체" ? "즐겨찾기" : "전체"));
 
   // summary stats
@@ -245,14 +267,12 @@ const Market: React.FC = () => {
 
   const statusTitle = `${tab} 시장 현황`;
 
-  if (loading) {
-    return <MarketSkeleton />;
-  }
+  if (loading) return <MarketSkeleton />;
 
   return (
     <div className="min-h-screen bg-gray-900">
       <section className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-        {/* Nav tabs: 왼쪽 정렬 */}
+        {/* Nav tabs */}
         <nav className="overflow-x-auto flex justify-start">
           <ul className="flex space-x-6 border-b border-gray-700">
             <li>
@@ -315,7 +335,7 @@ const Market: React.FC = () => {
             </div>
 
             {visible.map((s) => {
-              const hl = highlight.current.get(s.id);
+              const hl = highlightMap.get(s.id);
               const border =
                 hl === "up"
                   ? "border-green-400"
