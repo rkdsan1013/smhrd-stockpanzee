@@ -14,7 +14,7 @@ import NewsCard from "../components/NewsCard";
 import NewsDetailSkeleton from "../components/skeletons/NewsDetailSkeleton";
 
 const MAX_LATEST = 5;
-const DEFAULT_THUMB = "/placeholder.webp";
+const DEFAULT_THUMB = "/panzee.webp";
 const sentimentLabels = ["매우 부정", "부정", "중립", "긍정", "매우 긍정"] as const;
 const stepColors = ["bg-red-600", "bg-orange-500", "bg-yellow-400", "bg-blue-400", "bg-green-500"];
 
