@@ -243,6 +243,7 @@ const News: React.FC = () => {
               </li>
             ))}
           </ul>
+
           {visibleNews.length < filteredNews.length && (
             <div ref={loadMoreRef} className="mt-8 flex justify-center items-center text-gray-500">
               로딩 중...

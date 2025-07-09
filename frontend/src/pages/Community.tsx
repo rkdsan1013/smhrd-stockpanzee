@@ -36,7 +36,6 @@ const Community: React.FC = () => {
   const [filterCat, setFilterCat] = useState<(typeof CATEGORY_LIST)[number]>("전체");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showTopBtn, setShowTopBtn] = useState(false);
 
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
@@ -123,13 +122,6 @@ const Community: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
-
-  // 6) Show “scroll to top” button
-  useEffect(() => {
-    const onScroll = () => setShowTopBtn(window.scrollY > 300);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   // 7) Handlers
   const handleSortClick = (key: SortKey) => {
@@ -279,17 +271,6 @@ const Community: React.FC = () => {
             <Icons name="angleRight" className="w-5 h-5" />
           </button>
         </div>
-      )}
-
-      {/* 맨 위로 버튼 */}
-      {showTopBtn && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 right-8 text-4xl text-blue-500 hover:text-blue-400 transition"
-          aria-label="Scroll to top"
-        >
-          <Icons name="arrowUpCircle" />
-        </button>
       )}
     </section>
   );
