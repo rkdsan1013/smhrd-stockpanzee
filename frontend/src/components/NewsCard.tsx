@@ -32,7 +32,6 @@ function getSentiment(v: number | string | null) {
   };
 }
 
-// 시장 구분 유틸
 function marketCategory(m: string): NewsItem["category"] {
   const mm = m.toUpperCase();
   if (mm === "KOSPI" || mm === "KOSDAQ") return "domestic";
@@ -42,8 +41,19 @@ function marketCategory(m: string): NewsItem["category"] {
 }
 
 const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) => {
-  const { dict: assetDict, ready } = useContext(AssetContext);
+  const { staticAssets, ready } = useContext(AssetContext);
   const navigate = useNavigate();
+
+  // symbol → Asset[] 맵 생성
+  const assetDict = useMemo<Record<string, Asset[]>>(() => {
+    const dict: Record<string, Asset[]> = {};
+    staticAssets.forEach((a) => {
+      const key = a.symbol.toUpperCase();
+      if (!dict[key]) dict[key] = [];
+      dict[key].push(a);
+    });
+    return dict;
+  }, [staticAssets]);
 
   // tagsRaw 파싱
   const tagsRaw = useMemo<string[]>(() => {
@@ -59,22 +69,17 @@ const NewsCard: React.FC<NewsCardProps> = ({ variant = "default", newsItem }) =>
     return [];
   }, [newsItem.tags]);
 
-  // 엄격 매칭 pickAsset: 뉴스 카테고리와 같은 마켓만
+  // pickAsset: 뉴스 카테고리와 동일한 마켓 우선으로 매칭
   const pickAsset = (symRaw: string, targetCategory: NewsItem["category"]): Asset | null => {
     const up = symRaw.toUpperCase();
     const cands = assetDict[up] || [];
     if (!cands.length) return null;
 
-    // 1) 정확히 일치하는 마켓만 골라
     const matched = cands.filter((a) => marketCategory(a.market) === targetCategory);
-    if (matched.length) {
-      return matched[0];
-    }
-    // 2) 없으면 첫 번째 (fallback)
-    return cands[0];
+    return matched.length ? matched[0] : cands[0];
   };
 
-  // assetTags: 각 심볼 당 하나의 자산만 표시
+  // assetTags: 각 심볼당 하나의 자산만
   const assetTags = useMemo<Asset[]>(() => {
     if (!ready) return [];
     return tagsRaw

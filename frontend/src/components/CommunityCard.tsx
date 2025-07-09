@@ -66,7 +66,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({ post, commentCount = 0 })
               {commentCount}
             </span>
             <span className="flex items-center">
-              <Icons name="eye" className="w-4 h-4 mr-1" />
+              <Icons name="eyeOpen" className="w-4 h-4 mr-1" />
               {post.community_views}
             </span>
           </div>

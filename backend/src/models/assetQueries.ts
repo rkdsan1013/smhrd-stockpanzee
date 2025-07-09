@@ -1,4 +1,5 @@
 // /backend/src/models/assetQueries.ts
+
 export const SELECT_ALL_ASSETS = `
   SELECT
     a.id,
@@ -13,6 +14,15 @@ export const SELECT_ALL_ASSETS = `
   FROM assets a
   LEFT JOIN asset_info ai ON ai.asset_id = a.id
   ORDER BY a.id;
+`;
+
+// 새로 추가: 가격 정보만 조회
+export const SELECT_ASSET_PRICES = `
+  SELECT
+    asset_id    AS id,
+    current_price AS current_price,
+    price_change  AS price_change
+  FROM asset_info;
 `;
 
 export const INSERT_ASSET = `
@@ -79,8 +89,8 @@ export const SELECT_STOCK_ASSETS = `
     a.name,
     a.market,
     ai.current_price AS current_price,
-    ai.price_change AS price_change,
-    ai.market_cap AS market_cap,
+    ai.price_change  AS price_change,
+    ai.market_cap    AS market_cap,
     a.created_at,
     a.updated_at
   FROM assets a

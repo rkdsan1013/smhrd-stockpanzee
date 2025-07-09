@@ -39,6 +39,10 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// 정적 파일 제공
+const uploadsPath = path.resolve(__dirname, "../uploads");
+app.use("/api/uploads", express.static(uploadsPath));
+
 // API 라우터
 app.use("/api/auth", authRoutes);
 app.use("/api/assets", assetsRoutes);
@@ -49,10 +53,6 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/favorites", favoriteRouter);
 app.use("/api", notificationRoutes);
-
-// 정적 파일 제공
-const uploadsPath = path.resolve(__dirname, "../uploads");
-app.use("/api/uploads", express.static(uploadsPath));
 
 // 기본 엔드포인트
 app.get("/", (_req: Request, res: Response) => {
@@ -98,7 +98,7 @@ async function start() {
     // emitMockTop25(io).catch(console.error);
 
     // Polygon 실시간 주가 스트림 (옵션)
-    // startPolygonPriceStream(io).catch(console.error);
+    // // startPolygonPriceStream(io).catch(console.error);
 
     // 암호화폐 DB 업데이트 주기 (옵션)
     // setInterval(updateCryptoAssetInfoPeriodically, 5000);

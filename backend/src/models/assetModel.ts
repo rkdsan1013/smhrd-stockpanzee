@@ -1,8 +1,10 @@
 // /backend/src/models/assetModel.ts
+
 import type { RowDataPacket } from "mysql2/promise";
 import pool from "../config/db";
 import {
   SELECT_ALL_ASSETS,
+  SELECT_ASSET_PRICES,
   UPSERT_ASSET_INFO,
   UPSERT_CRYPTO_INFO,
   GET_ASSET_BY_SYMBOL_AND_MARKET,
@@ -22,15 +24,23 @@ export interface Asset extends RowDataPacket {
   updated_at: Date;
 }
 
-export interface CryptoAsset extends RowDataPacket {
+export interface AssetPriceRow extends RowDataPacket {
   id: number;
-  symbol: string;
-  coin_id: string;
+  current_price: number | null;
+  price_change: number | null;
 }
 
 export async function findAllAssets(): Promise<Asset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_ALL_ASSETS);
   return rows as Asset[];
+}
+
+/**
+ * 가격 정보만 조회 (listAssetPrices용)
+ */
+export async function findAllAssetPrices(): Promise<AssetPriceRow[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(SELECT_ASSET_PRICES);
+  return rows as AssetPriceRow[];
 }
 
 export async function upsertAssetInfo(
@@ -62,9 +72,9 @@ export async function getAssetBySymbolAndMarket(
   return (rows as Asset[])[0] || null;
 }
 
-export async function findCryptoAssets(): Promise<CryptoAsset[]> {
+export async function findCryptoAssets(): Promise<Asset[]> {
   const [rows] = await pool.query<RowDataPacket[]>(SELECT_CRYPTO_ASSETS);
-  return rows as CryptoAsset[];
+  return rows as Asset[];
 }
 
 export async function findStockAssets(): Promise<Asset[]> {
@@ -72,9 +82,7 @@ export async function findStockAssets(): Promise<Asset[]> {
   return rows as Asset[];
 }
 
-export async function findAssetWithInfoById(
-  assetId: number,
-): Promise<{
+export async function findAssetWithInfoById(assetId: number): Promise<{
   id: number;
   symbol: string;
   name: string;
@@ -91,7 +99,7 @@ export async function findAssetWithInfoById(
        ai.current_price,
        ai.price_change
      FROM assets a
-     LEFT JOIN asset_info ai ON a.id = ai.asset_id
+     LEFT JOIN asset_info ai ON ai.asset_id = a.id
      WHERE a.id = ?`,
     [assetId],
   );

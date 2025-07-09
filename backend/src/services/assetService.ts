@@ -21,9 +21,8 @@ export async function listAssets(): Promise<AssetWithPrice[]> {
 
     if (memory) {
       const cp = memory.price;
-      // 만약 기존 dbPrice가 0이면 변동률을 0으로 처리
+      // 기존 dbPrice가 0이면 변동률과 시총을 0으로 처리
       const pc = dbPrice === 0 ? 0 : Number((((cp - dbPrice) / dbPrice) * 100).toFixed(2));
-      // dbPrice가 0일 경우 시총도 0으로 처리
       const mc = dbPrice === 0 ? 0 : Number(((cp / dbPrice) * (a.market_cap ?? 0)).toFixed(2));
       return { ...a, currentPrice: cp, priceChange: pc, marketCap: mc };
     }
@@ -35,6 +34,20 @@ export async function listAssets(): Promise<AssetWithPrice[]> {
       marketCap: a.market_cap ?? 0,
     };
   });
+}
+
+/**
+ * 가격 정보(현재가, 변동률)만 반환
+ */
+export async function listAssetPrices(): Promise<
+  { id: number; currentPrice: number; priceChange: number }[]
+> {
+  const allAssets = await listAssets();
+  return allAssets.map(({ id, currentPrice, priceChange }) => ({
+    id,
+    currentPrice,
+    priceChange,
+  }));
 }
 
 /**
