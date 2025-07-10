@@ -1,27 +1,22 @@
 // /frontend/src/components/FavoriteAssetsWidget.tsx
 import React, { useEffect, useState, useContext } from "react";
-import { fetchAssets } from "../services/assetService";
+import {
+  fetchAssets,
+  type Asset as MetaAsset,
+  fetchAssetPrices,
+  type AssetPrice,
+} from "../services/assetService";
 import { fetchFavorites, addFavorite, removeFavorite } from "../services/favoriteService";
 import { AuthContext } from "../providers/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import Icons from "./Icons";
 
-type Asset = {
-  id: number;
-  name: string;
-  symbol: string;
-  market: string;
-  currentPrice: number;
-  priceChange: number;
-  marketCap: number;
-};
-
 type Category = "국내" | "해외" | "암호화폐" | "기타";
 
 const marketToCategory = (m: string): Category => {
-  if (["KOSPI", "KOSDAQ", "KRX"].includes(m)) return "국내";
-  if (["NASDAQ", "NYSE", "AMEX"].includes(m)) return "해외";
-  if (["Binance", "Upbit"].includes(m)) return "암호화폐";
+  if (["KOSPI", "KOSDAQ"].includes(m)) return "국내";
+  if (["NASDAQ", "NYSE"].includes(m)) return "해외";
+  if (["Binance"].includes(m)) return "암호화폐";
   return "기타";
 };
 
@@ -41,51 +36,88 @@ const COLOR: Record<Category, string> = {
 
 const FavoriteAssetsWidget: React.FC = () => {
   const { user } = useContext(AuthContext);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assets, setAssets] = useState<MetaAsset[]>([]);
+  const [prices, setPrices] = useState<Record<number, AssetPrice>>({});
   const [favorites, setFavorites] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      fetchAssets().catch(() => []),
-      user ? fetchFavorites().catch(() => []) : Promise.resolve([]),
-    ])
-      .then(([allAssets, favIds]) => {
-        setAssets(allAssets as Asset[]);
-        setFavorites(favIds as number[]);
-      })
-      .catch(() => setErr("데이터를 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
+    let alive = true;
+    const load = async () => {
+      setLoading(true);
+      setErr("");
+      try {
+        // 1) 메타데이터
+        const metas = await fetchAssets();
+        if (!alive) return;
+        setAssets(metas);
+
+        // 2) 가격 정보
+        const priceList = await fetchAssetPrices();
+        if (!alive) return;
+        const priceMap: Record<number, AssetPrice> = {};
+        priceList.forEach((p) => {
+          priceMap[p.id] = p;
+        });
+        setPrices(priceMap);
+
+        // 3) 즐겨찾기
+        if (user) {
+          const favIds = await fetchFavorites();
+          if (!alive) return;
+          setFavorites(favIds);
+        } else {
+          setFavorites([]);
+        }
+      } catch (e) {
+        console.error(e);
+        if (!alive) return;
+        setErr("데이터를 불러오지 못했습니다.");
+        setAssets([]);
+        setPrices({});
+        setFavorites([]);
+      } finally {
+        alive && setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      alive = false;
+    };
   }, [user]);
 
   const toggleFavorite = async (assetId: number) => {
     const isFav = favorites.includes(assetId);
+    // Optimistic update
     setFavorites((prev) => (isFav ? prev.filter((id) => id !== assetId) : [...prev, assetId]));
     try {
-      if (isFav) await removeFavorite(assetId);
-      else await addFavorite(assetId);
-    } catch {
-      // rollback on error
+      if (isFav) {
+        await removeFavorite(assetId);
+      } else {
+        await addFavorite(assetId);
+      }
+    } catch (e) {
+      console.error(e);
+      // Rollback
       setFavorites((prev) => (isFav ? [...prev, assetId] : prev.filter((id) => id !== assetId)));
     }
   };
 
-  function getDisplayList(): { cat: Category; items: Asset[] }[] {
-    if (!assets.length || !user || (user && !favorites.length)) return [];
-    const favAssets = assets
-      .filter((a) => favorites.includes(a.id))
-      .sort((a, b) => b.marketCap - a.marketCap);
+  // 즐겨찾기 자산 & 가격 병합
+  const favAssets = assets
+    .filter((a) => favorites.includes(a.id))
+    .map((a) => ({
+      ...a,
+      currentPrice: prices[a.id]?.currentPrice ?? 0,
+      priceChange: prices[a.id]?.priceChange ?? 0,
+    }));
 
-    return CATEGORY_ORDER.map((cat) => ({
-      cat,
-      items: favAssets.filter((a) => marketToCategory(a.market) === cat),
-    })).filter((grp) => grp.items.length);
-  }
-
-  const list = getDisplayList();
+  const grouped = CATEGORY_ORDER.map((cat) => ({
+    cat,
+    items: favAssets.filter((a) => marketToCategory(a.market) === cat),
+  })).filter((g) => g.items.length > 0);
 
   if (loading) {
     return (
@@ -94,6 +126,7 @@ const FavoriteAssetsWidget: React.FC = () => {
       </div>
     );
   }
+
   if (err) {
     return <div className="bg-gray-800 rounded-lg p-6 mt-6 shadow text-red-400">{err}</div>;
   }
@@ -102,7 +135,7 @@ const FavoriteAssetsWidget: React.FC = () => {
     <div className="bg-gray-800 rounded-lg p-6 mt-6 shadow">
       <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">내 관심종목</h3>
 
-      {list.length === 0 ? (
+      {grouped.length === 0 ? (
         user ? (
           <div className="text-gray-400 text-center py-8">아직 즐겨찾기한 종목이 없습니다.</div>
         ) : (
@@ -116,7 +149,7 @@ const FavoriteAssetsWidget: React.FC = () => {
         )
       ) : (
         <div className="space-y-6">
-          {list.map(({ cat, items }) => (
+          {grouped.map(({ cat, items }) => (
             <div key={cat}>
               <div className={`mb-2 text-sm font-bold ${COLOR[cat]}`}>{LABEL[cat]}</div>
               <ul className="divide-y divide-gray-700 max-h-40 overflow-y-auto no-scrollbar">
@@ -169,4 +202,4 @@ const FavoriteAssetsWidget: React.FC = () => {
   );
 };
 
-export default FavoriteAssetsWidget;
+export default React.memo(FavoriteAssetsWidget);
